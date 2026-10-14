@@ -108,7 +108,7 @@ junior-muneer/
 - [x] **P0-14 Frontend setup**
   - Next.js + TypeScript + Tailwind CSS. A 3-column layout (sidebar · chat · today panel), light and dark mode, and a phone layout where the side panels fold away.
   - *Done when:* `http://localhost:3000` shows the empty layout on PC and phone sizes.
-- [ ] **P0-15 Chat screen**
+- [x] **P0-15 Chat screen**
   - Message list with formatting (lists, code, links), live streaming, live steps ("Searching the web…"), a **Show work** panel (steps and cost), and an input box.
   - **Urdu support:** right-to-left text displays correctly (`dir="auto"`), with a font that supports Urdu.
   - *Done when:* a full chat in English and Urdu looks right and streams smoothly.

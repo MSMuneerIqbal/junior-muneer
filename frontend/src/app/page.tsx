@@ -1,7 +1,11 @@
+import { Suspense } from "react";
+import { ChatView } from "@/components/chat/ChatView";
+
 export default function ChatPage() {
+  // ChatView reads ?c= (the open chat) from the URL, which needs a Suspense boundary.
   return (
-    <div className="flex h-full items-center justify-center p-6 text-muted">
-      Chat comes in P0-15.
-    </div>
+    <Suspense>
+      <ChatView />
+    </Suspense>
   );
 }

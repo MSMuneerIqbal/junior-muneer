@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://localhost:3000"
     # The background scheduler (daily backups). Tests switch it off.
     scheduler_enabled: bool = True
+    # Use a fake AI (echoes your messages, no cost) to try the dashboard without a key.
+    fake_ai: bool = False
 
     @property
     def data_path(self) -> Path:

@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from junior import __version__
 from junior.agent.builder import ModelProvider, openai_model_provider
+from junior.agent.fake import fake_model_provider
 from junior.audit import router as audit_router
 from junior.backup import router as backup_router
 from junior.chat.api import router as chat_router
@@ -28,10 +29,14 @@ from junior.scheduler import scheduler_loop
 log = logging.getLogger(__name__)
 
 
-def create_app(model_provider: Callable[[], ModelProvider] = openai_model_provider) -> FastAPI:
+def create_app(model_provider: Callable[[], ModelProvider] | None = None) -> FastAPI:
     """The app. Tests pass a fake model_provider so no real AI is called."""
     settings = get_settings()
     setup_logging(settings.log_level)
+    if model_provider is None:
+        model_provider = fake_model_provider if settings.fake_ai else openai_model_provider
+        if settings.fake_ai:
+            log.warning("FAKE_AI is on: answers are fake echoes, not real AI.")
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
