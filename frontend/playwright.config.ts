@@ -13,6 +13,11 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:3100",
     trace: "retain-on-failure",
+    // A fake microphone (a test tone) for the voice tests.
+    permissions: ["microphone"],
+    launchOptions: {
+      args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"],
+    },
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },

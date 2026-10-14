@@ -11,8 +11,10 @@ The full design is in [PLAN.md](PLAN.md); progress is tracked in [TASK.md](TASK.
 
 ## Status
 
-**Phase 0 (foundation + text chat)** is built: live streaming chat, chat history, long-term memory,
-web search, Activity log, spend tracking with a daily cap, Pause, daily backups, and the dashboard.
+- **Phase 0 (foundation + text chat):** live streaming chat, chat history, long-term memory,
+  web search, Activity log, spend tracking with a daily cap, Pause, daily backups, and the dashboard.
+- **Phase 1 (voice):** voice messages (hold 🎙 to talk; he answers aloud), and **📞 live calls**:
+  hands-free, real-time, interruptible, in English and Urdu, saved in your chat history with their cost.
 
 ## Start it
 
@@ -38,6 +40,9 @@ Run it on **one PC at a time**.
 | What | How |
 |---|---|
 | Change your name, language, time zone or daily cap | Dashboard → Settings |
+| Talk instead of typing | Hold 🎙 next to Send (or tap to start, tap again to send) |
+| Have a real-time voice conversation | 📞 Live call, at the top of the chat |
+| His voice, speaking speed, auto-play, call minutes per day | Dashboard → Settings → Voice |
 | See or edit what he remembers | Dashboard → Memory |
 | See everything he did, with costs | Dashboard → Activity |
 | Stop all background work and actions | **Pause everything** in the Today panel |
@@ -57,6 +62,12 @@ Run it on **one PC at a time**.
 | `playbooks/` | One expert file per platform (from phase 2) |
 | `prototype/` | The early Claude SDK prototype, kept for reference only |
 | `data/` | Database, backups, uploads (never in Git) |
+
+## Voice notes
+
+- The microphone works on this PC (`localhost`). Voice from your phone needs HTTPS, which comes with the server phase.
+- Live calls cost the most: roughly $0.02–0.05 per minute. They have a daily minutes limit (Settings).
+- Your browser connects the call through the backend, which holds the API key; the browser never gets one.
 
 ## Privacy
 

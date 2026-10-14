@@ -71,13 +71,18 @@ function ShowWork({ steps, cost }: { steps: Step[]; cost: number }) {
   );
 }
 
+// Memories undone this session. Shared, because the note under a live answer is
+// replaced by the saved answer's note when the answer finishes.
+const undoneMemories = new Set<number>();
+
 function MemoryNoteLine({ note }: { note: MemoryNote }) {
-  const [undone, setUndone] = useState(note.undone ?? false);
+  const [undone, setUndone] = useState(() => note.undone || undoneMemories.has(note.id));
   const [error, setError] = useState<string | null>(null);
 
   async function undo() {
     try {
       await send("DELETE", `/api/memories/${note.id}`);
+      undoneMemories.add(note.id);
       setUndone(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Undo failed");

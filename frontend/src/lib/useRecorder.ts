@@ -16,6 +16,7 @@ export function useRecorder() {
   const recorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const startedAt = useRef(0);
+  const stoppedAt = useRef(0);
   const finish = useRef<((r: Recording | null) => void) | null>(null);
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -46,7 +47,8 @@ export function useRecorder() {
     rec.ondataavailable = (e) => e.data.size && chunks.current.push(e.data);
     rec.onstop = () => {
       stream.getTracks().forEach((t) => t.stop());
-      const seconds = (Date.now() - startedAt.current) / 1000;
+      // Measured to when you let go, not to when the browser finished the file.
+      const seconds = ((stoppedAt.current || Date.now()) - startedAt.current) / 1000;
       const type = rec.mimeType || mimeType || "audio/webm";
       const done = finish.current;
       finish.current = null;
@@ -54,6 +56,7 @@ export function useRecorder() {
     };
     recorder.current = rec;
     startedAt.current = Date.now();
+    stoppedAt.current = 0;
     setElapsed(0);
     rec.start(250);
     setRecording(true);
@@ -64,6 +67,7 @@ export function useRecorder() {
   const stop = useCallback((cancel = false): Promise<Recording | null> => {
     const rec = recorder.current;
     recorder.current = null;
+    stoppedAt.current = Date.now();
     setRecording(false);
     if (!rec || rec.state === "inactive") return Promise.resolve(null);
     return new Promise((resolve) => {
