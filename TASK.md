@@ -160,7 +160,7 @@ junior-muneer/
   - The backend creates the call at OpenAI from the browser's WebRTC offer ("unified" set-up), so **no key ever reaches the browser**, then stays attached to the call.
   - The session is set up with Junior Muneer's personality, a summary of your memories, and tools: memory (same "only your words" rule), plus a bridge to ask the full Junior Muneer (for web search and later subagents).
   - *Done when:* a test call connects and he greets you in character.
-- [ ] **P1-05 Live call: screen**
+- [x] **P1-05 Live call: screen**
   - The 📞 button opens a call view: talk hands-free, interrupt him, mute, end the call, see the live transcript.
   - *Done when:* a natural back-and-forth conversation works, including interruptions.
 - [ ] **P1-06 Calls in history + cost**

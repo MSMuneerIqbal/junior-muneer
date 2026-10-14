@@ -1,8 +1,9 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
+import { CallView } from "@/components/call/CallView";
 import { Composer } from "@/components/chat/Composer";
 import type { VoiceMessage } from "@/components/chat/MicButton";
 import { AssistantMessage, ErrorNotice, UserMessage } from "@/components/chat/MessageView";
@@ -104,6 +105,8 @@ export function ChatView() {
   );
 
   const { send, connected } = useChatSocket(onEvent);
+  const router = useRouter();
+  const [inCall, setInCall] = useState(false);
   const busy = turn?.status === "streaming";
 
   function onSend(text: string): boolean {
@@ -144,6 +147,23 @@ export function ChatView() {
 
   return (
     <div className="flex h-full flex-col">
+      <div className="flex items-center justify-end border-b border-line px-3 py-1.5 sm:px-6">
+        <button
+          onClick={() => setInCall(true)}
+          className="rounded-full border border-line px-3 py-1 text-sm hover:bg-panel-2"
+          title="Talk hands-free, like a phone call"
+        >
+          📞 Live call
+        </button>
+      </div>
+      {inCall && (
+        <CallView
+          onClose={(id) => {
+            setInCall(false);
+            if (id) router.push(`/?c=${id}`);
+          }}
+        />
+      )}
       <div
         ref={scroller}
         onScroll={(e) => {

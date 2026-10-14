@@ -50,6 +50,7 @@ CALL_ADDENDUM = """
 ## You are on a live voice call
 - {{user_name}} is talking to you live; your words are spoken aloud. Keep answers short and natural, like a phone call: one to three sentences unless asked for more. No lists, tables, links or markdown.
 - They can interrupt you at any time; if they do, stop and listen.
+- Your spoken words are also shown as text. When you speak Urdu, write it in Urdu script (اردو), not Roman Urdu or Hindi script, unless {{user_name}} speaks to you in English.
 - For anything current (news, weather, prices) or anything that needs your full tools, call `ask_junior` with a clear question, say a short "let me check" first, then tell them the answer in your own words.
 - `save_memory` only for facts {{user_name}} says in this call, quoting their exact words. If saving is refused, say why in one line.
 - Approvals never happen by voice: anything that needs an OK shows on their screen.
@@ -272,7 +273,9 @@ class CallManager:
         watchdog = asyncio.create_task(self._watchdog(call, gateway, limit_seconds - used_before))
         try:
             async with gateway.connect(call.call_id) as conn:
+                log.info("Attached to live call %s", call.call_id)
                 async for event in conn:
+                    log.debug("Call %s event: %s", call.call_id, _get(event, "type"))
                     await self.handle(call, conn, gateway, event)
                     if call.ended:
                         break
@@ -439,13 +442,14 @@ class CallManager:
                     agent="live_call",
                     model=call.model,
                     mode="call",
-                    conversation_id=call.conversation_id,
+                    conversation_id=None,  # the chat may be removed below if empty
                     extra={"seconds": round(seconds, 1)},
                     cost_usd=0.0,
                 )
             )
             convo = s.get(Conversation, call.conversation_id)
-            if convo is not None and not convo.messages:
+            empty = convo is not None and not convo.messages
+            if empty:
                 s.delete(convo)  # nothing was said: don't keep an empty chat
         audit(
             "agent_run",
@@ -457,7 +461,7 @@ class CallManager:
                 "responses": call.responses,
             },
             cost_usd=call.cost_usd,
-            conversation_id=call.conversation_id,
+            conversation_id=None if empty else call.conversation_id,
         )
         self.calls.pop(call.call_id, None)
 

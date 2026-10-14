@@ -240,3 +240,13 @@ def test_cap_blocks_starting_a_call(client):
 
 def test_end_unknown_call(client):
     assert client.post("/api/call/end", json={"call_id": "nope"}).json() == {"ended": False}
+
+
+def test_an_empty_call_is_still_logged_and_counted():
+    from junior.db import AuditLog
+
+    run_call([])
+    with session_scope() as s:
+        ended = s.scalars(select(AuditLog).where(AuditLog.name == "live_call")).all()[-1]
+        assert ended.detail["event"] == "ended" and ended.conversation_id is None
+        assert s.scalars(select(Usage).where(Usage.agent == "live_call")).one().extra["seconds"] >= 0
