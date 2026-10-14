@@ -47,7 +47,7 @@ junior-muneer/
 - [x] **P0-02 Backend skeleton**
   - FastAPI app, settings loaded from `backend/.env` (with a `.env.example`), logging, `/health` endpoint, `requirements.txt`, virtual environment, pytest set up.
   - *Done when:* `http://127.0.0.1:8000/health` answers OK, and `pytest` runs.
-- [ ] **P0-03 Database**
+- [x] **P0-03 Database**
   - SQLite with SQLAlchemy and Alembic (migrations, so the database can grow phase by phase without losing data).
   - Tables: `conversations`, `messages`, `memories`, `usage`, `audit_log`, `settings`.
   - Each message stores its **source**: `user` (your words) or `outside` (pasted text, email, web result, subagent report). Memory rules depend on it.
