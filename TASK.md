@@ -112,7 +112,7 @@ junior-muneer/
   - Message list with formatting (lists, code, links), live streaming, live steps ("Searching the web…"), a **Show work** panel (steps and cost), and an input box.
   - **Urdu support:** right-to-left text displays correctly (`dir="auto"`), with a font that supports Urdu.
   - *Done when:* a full chat in English and Urdu looks right and streams smoothly.
-- [ ] **P0-16 Chat history sidebar**
+- [x] **P0-16 Chat history sidebar**
   - All chats grouped by date (Today, Yesterday, Last week…), New chat, search, rename, pin, delete.
   - *Done when:* every action works and survives a page reload.
 - [ ] **P0-17 Today panel**

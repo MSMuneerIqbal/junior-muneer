@@ -6,6 +6,7 @@ import useSWR, { useSWRConfig } from "swr";
 import { Composer } from "@/components/chat/Composer";
 import { AssistantMessage, ErrorNotice, UserMessage } from "@/components/chat/MessageView";
 import { fetcher } from "@/lib/api";
+import { isChatsKey, USAGE_KEY } from "@/lib/keys";
 import type { ChatEvent, MemoryNote, Message, Step } from "@/lib/types";
 import { useChatSocket } from "@/lib/useChatSocket";
 
@@ -21,9 +22,6 @@ type Turn = {
   error?: string;
   messageId?: number;
 };
-
-export const CHATS_KEY = "/api/conversations";
-export const USAGE_KEY = "/api/usage/today";
 
 function upsertStep(steps: Step[], step: Step): Step[] {
   const i = steps.findIndex((s) => s.id === step.id);
@@ -47,7 +45,7 @@ export function ChatView() {
         case "conversation":
           window.history.replaceState(null, "", `/?c=${event.id}`);
           setTurn((t) => t && { ...t, conversationId: event.id });
-          mutateGlobal(CHATS_KEY);
+          mutateGlobal(isChatsKey);
           break;
         case "user_message":
           setTurn((t) => t && { ...t, userMessageId: event.id });
@@ -75,12 +73,12 @@ export function ChatView() {
             return t && { ...t, status: "done", messageId: event.message_id, text: event.text };
           });
           mutateGlobal(`/api/conversations/${event.conversation_id}/messages`);
-          mutateGlobal(CHATS_KEY);
+          mutateGlobal(isChatsKey);
           mutateGlobal(USAGE_KEY);
           break;
         case "error":
           setTurn((t) => t && { ...t, status: "error", error: event.message });
-          mutateGlobal(CHATS_KEY);
+          mutateGlobal(isChatsKey);
           if (messagesKey) mutate();
           break;
       }

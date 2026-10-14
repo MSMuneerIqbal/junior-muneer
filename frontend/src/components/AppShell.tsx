@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import { ChatHistory } from "@/components/ChatHistory";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { TodayPanel } from "@/components/TodayPanel";
@@ -41,6 +41,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
 
       <aside
+        onClick={(e) => {
+          // Picking a chat or page closes the drawer on phones.
+          if ((e.target as HTMLElement).closest("a")) setLeftOpen(false);
+        }}
         className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-line bg-panel transition-transform lg:static lg:translate-x-0 ${
           leftOpen ? "translate-x-0" : "-translate-x-full"
         }`}
@@ -52,7 +56,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           <ThemeToggle />
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-2">
-          <ChatHistory />
+          <Suspense>
+            <ChatHistory />
+          </Suspense>
         </div>
         <nav className="border-t border-line p-2">
           {NAV.map((item) => {
