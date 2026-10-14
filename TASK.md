@@ -72,7 +72,7 @@ junior-muneer/
   - **Language:** understands English, Urdu script and Roman Urdu, and replies in the language you use.
   - Built with the OpenAI Agents SDK. Tools: **web search** and **read-only database questions** (chats, usage). Memory tools are added in P0-09.
   - *Done when:* he answers a general question in English, the same question in Urdu, and a "what's new today" question using web search.
-- [ ] **P0-07 Live chat (backend)**
+- [x] **P0-07 Live chat (backend)**
   - A WebSocket chat: your message → Junior Muneer → the answer streams back word by word, plus "step" events (searching the web, saving a memory…).
   - REST API for chats: list, create, rename, pin, delete, search, read messages.
   - Every message is saved, along with its steps and cost.
