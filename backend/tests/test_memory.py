@@ -152,3 +152,13 @@ def test_memory_rest_api(client):
     assert client.post("/api/memories", json={"content": ""}).status_code == 422
     assert client.delete(f"/api/memories/{created['id']}").status_code == 204
     assert client.get("/api/memories").json() == []
+
+
+def test_editing_a_memory_changes_his_next_answer(client, model):
+    m = client.post("/api/memories", json={"content": "Rate is $25/hr"}).json()
+    client.patch(f"/api/memories/{m['id']}", json={"content": "Rate is $30/hr"})
+    model.enqueue(chunked_answer("$30/hr"))
+    chat(client, "What's my rate?")
+    prompt = model.last_call.system_instructions
+    assert f"[{m['id']}] Rate is $30/hr" in prompt
+    assert "Rate is $25/hr" not in prompt

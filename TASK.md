@@ -118,7 +118,7 @@ junior-muneer/
 - [x] **P0-17 Today panel**
   - Today's spend, the Pause button, and placeholders for "Needs your OK" and Mode (these become real in phase 2).
   - *Done when:* the spend updates after each message and Pause works.
-- [ ] **P0-18 Memory page**
+- [x] **P0-18 Memory page**
   - List, edit and delete what Junior Muneer remembers.
   - *Done when:* editing a memory changes his answers.
 - [ ] **P0-19 Activity page**
