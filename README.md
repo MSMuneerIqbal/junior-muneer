@@ -6,8 +6,8 @@ Ask / Auto / Deny permission rules.
 
 ## Status
 
-**Planning.** The full design is in [PLAN.md](PLAN.md). Development starts with Phase 0 once the open
-questions in the plan (section 16) are answered.
+**Plan complete.** The full design is in [PLAN.md](PLAN.md), and the working checklist is in [TASK.md](TASK.md).
+Development starts with Phase 0.
 
 `junior/` holds an early, untested prototype of the social media writing team, built with the Claude SDK.
 It will be reworked onto the OpenAI Agents SDK during phases 0 to 2.

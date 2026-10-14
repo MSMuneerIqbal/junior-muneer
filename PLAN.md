@@ -1,12 +1,13 @@
-# Junior Muneer: Project Plan (v5: reviewed)
+# Junior Muneer: Project Plan (v6: all questions answered)
 
-> Status: planning only. No new code until this plan is approved.
+> Status: plan complete. Development starts with Phase 0 once you give the go-ahead.
 
 ## 1. Goal
 
 **Junior Muneer** is your personal AI assistant and friend. You talk to him by text, voice messages or a live voice call.
 He chats about anything and helps with your work. Through his specialist subagents, he manages your freelance work, social media and email on
-**Upwork, Fiverr, LinkedIn, Facebook, Instagram, X and Gmail**.
+**Upwork, Fiverr, LinkedIn, Facebook, Instagram, X and Gmail**, and helps with your code on **GitHub**.
+He speaks **English and Urdu**.
 He finds, reads, plans, drafts, checks and prepares the work. **You decide what goes out**, by approving items or by switching an
 action type to Auto (section 7). He runs on your PC first (on any PC you choose), with a VPS (24/7) later.
 
@@ -14,7 +15,7 @@ action type to Auto (section 7). He runs on your PC first (on any PC you choose)
 
 1. **Permission rules decide every outgoing action:** Ask, Auto or Deny, like Claude's permission modes (section 7).
 2. **Outside text is data, not instructions.** Job posts, client messages, emails, comments, web pages and web search results can contain hidden instructions ("prompt injection"). Agents never follow them.
-3. **Agents that read outside text cannot send anything.** Only the **Browser Executor** and the **Gmail sender** act. They perform exactly one approved action with the exact approved content, and they cannot write or change content themselves.
+3. **Agents that read outside text cannot send anything.** Only the **Browser Executor**, the **Gmail sender** and the **Dev Executor** act. They perform exactly one approved action with the exact approved content, and they cannot write or change content themselves.
 4. **Actions caused by outside content always go to Ask.** If an action comes from an email, web page, comment or message, it goes to your approval queue even when its type is set to Auto. Auto only applies to actions you set up yourself (your requests, your schedules).
 5. **Every action runs at most once.** If the result is unclear (for example, the page didn't confirm), it's marked "check manually" instead of being retried. No double posts and no double messages.
 6. The browser works **only on allowed sites**, with **daily limits**.
@@ -28,14 +29,16 @@ action type to Auto (section 7). He runs on your PC first (on any PC you choose)
 | Language (backend) | Python 3.13 | Installed |
 | Agent framework | **OpenAI Agents SDK** | Agents, agents-as-tools, guardrails, tracing, MCP, voice and realtime support |
 | AI models | **OpenAI only** for now: a **strong** model for Junior Muneer and the writers, a **small** model for routine steps | Exact models picked from OpenAI's current list at build time |
-| Voice | OpenAI **speech-to-text**, **text-to-speech** and **Realtime** (live voice) models | Section 6.2 |
+| Voice | OpenAI **speech-to-text**, **text-to-speech** and **Realtime** (live voice) models, in **English and Urdu** | Section 6.2 |
 | Web search | OpenAI's built-in web search tool, read-only | So Junior Muneer can answer questions about current events |
 | Model router | One settings file: which model each agent uses | Claude or others can be added later without rewrites |
 | Backend | **FastAPI** | REST API + **WebSocket** for live streaming chat and voice |
-| Frontend (proposed change) | **Next.js (React)** | Chat, voice and live updates need a real app UI. You already know Next.js. **Needs your OK** (section 16) |
+| Frontend | **Next.js (React)** | Chat, voice and live updates need a real app UI. You already know Next.js |
 | Browser control | **Playwright MCP** + **one separate Chrome profile** for the agent | You log in once to every account in that profile. Node.js v22 is installed |
 | Email | **Gmail API**: read, and send through the permission rules | Browser as backup |
 | Official APIs | Meta Graph API (Facebook **Page**, Instagram **professional**), LinkedIn API | Everything else goes through the browser |
+| GitHub | GitHub's official **MCP server** + a **fine-grained token** limited to the repos you choose | More reliable than Chrome, and safer than handing over your full GitHub login |
+| Terminal (later) | A **command runner** limited to a projects folder and an allowed-commands list (`git`, `gh`, `npm`, `python`...) | For dev tasks the GitHub API can't do |
 | Database | SQLite (one file) | Chats, memory, drafts, approvals, rules, clients, logs, costs |
 | Scheduler | Built into the backend | Checks every few minutes, runs scheduled posts. Times are stored in UTC and shown in your time zone |
 | Code storage | **Git** (private GitHub repo) | History of every change; easy to move to another PC or the VPS |
@@ -54,6 +57,7 @@ action type to Auto (section 7). He runs on your PC first (on any PC you choose)
 | Instagram **professional** | Meta API | **Meta API** (needs the account linked to your Facebook Page) |
 | X | Browser Reader | **Browser Executor** |
 | Gmail | Gmail API | Gmail API |
+| GitHub | GitHub MCP (read-only tools) | Dev Executor through the GitHub MCP |
 
 ## 5. The team
 
@@ -70,14 +74,14 @@ LEVEL 1             ┌────────────────┐  • 
 ORCHESTRATOR        │ JUNIOR MUNEER  │  • Answers simple questions himself
                     └───────┬────────┘    (memory, web search, database: chats, queue, stats, logs)
                             │ calls subagents only when needed (several at once if useful)
-        ┌───────────────────┼────────────────────┬──────────────────────┐
-LEVEL 2  SOCIAL MEDIA     FREELANCE            EMAIL AGENT          + future subagents
-SUBAGENTS MANAGER         MANAGER                                   (research, invoices,
-        │                   │                    │                   projects, coding...)
-        └───────────────────┼────────────────────┘
+     ┌───────────────┬──────┴────────┬───────────────┬──────────────────┐
+LEVEL 2  SOCIAL MEDIA    FREELANCE       EMAIL AGENT     DEVELOPER AGENT     + future subagents
+         MANAGER         MANAGER                         (GitHub, terminal)  (research, invoices...)
+     └───────────────┴──────┬────────┴───────────────┴──────────────────┘
 LEVEL 3  SHARED WORKERS:  Writing team (Writer → Checker → Humanizer)
                           Browser Reader (read only) · Browser Executor (approved actions only)
-                          Gmail sender · Safety Guard (code, not AI)
+                          Gmail sender · Dev Executor (approved GitHub/terminal actions)
+                          Safety Guard (code, not AI)
 ```
 
 **How Junior Muneer decides:**
@@ -86,7 +90,8 @@ LEVEL 3  SHARED WORKERS:  Writing team (Writer → Checker → Humanizer)
 - **Simple data question** ("how many proposals this week?") → he answers from the database. No subagent needed.
 
 **His personality** (it lives in one editable file, `agents/junior_muneer.md`):
-- friendly, warm, a bit of humour, simple English;
+- friendly, warm, a bit of humour, simple language;
+- speaks **English and Urdu**, both Urdu script and Roman Urdu, and replies in the language you use. Client work (posts, proposals, messages) stays in English unless you ask otherwise;
 - calls you by your name and remembers what you tell him (section 10);
 - honest: he says when he doesn't know, and pushes back when an idea is risky;
 - always clear that he is an AI. No pretending to be human.
@@ -107,6 +112,8 @@ and posts the result in the chat when it's ready.
 | **Social Media Manager** | Plans content, reads feeds and notifications, picks posts worth commenting on, watches comments on your posts | Browser Reader, Meta API (read) | No, drafts only |
 | **Freelance Manager** | Finds and scores Upwork jobs, tracks Fiverr orders and deadlines, handles client conversations | Browser Reader, email (read) | No, drafts only |
 | **Email Agent** | Reads, sorts and summarizes your inbox; drafts replies; turns Upwork/Fiverr alerts into tasks | Gmail API (read) | No, drafts only |
+| **Developer Agent** | Your GitHub helper: lists repos, summarizes issues, PRs and commits, reviews code, drafts issues, PR descriptions and commit messages. Later it runs allowed terminal commands in your projects folder | GitHub MCP (read-only tools) | No, it drafts and plans; the Dev Executor runs approved actions |
+| **Dev Executor** | Runs **one approved** GitHub action (create an issue, push a branch...) or terminal command, exactly as approved | GitHub MCP (write tools), terminal (later) | **Yes, approved items only** |
 | **Writer** | Writes posts, comments, proposals, messages and emails, using the platform's playbook | None | No |
 | **Checker** | Checks facts, voice, platform rules and red lines, then gives a score out of 10 | None | No |
 | **Humanizer** | Rewrites in simple, natural English | None | No |
@@ -172,7 +179,7 @@ On a phone the side panels fold away and the chat fills the screen.
 - **Live calls** use OpenAI's real-time voice model, set up with **the same personality, memory and tools**. For work that needs subagents
   he says "let me check", and the result arrives in the call and in the chat.
 - **Approvals need a click, not your voice** (at least at first). Voice can be misheard, so during a call any approval card appears on screen for you to tap.
-- **Settings:** voice choice, speaking speed, auto-play replies, language.
+- **Settings:** voice choice, speaking speed, auto-play replies, language (**English / Urdu / match me**).
 - **Cost:** text is cheapest, voice messages cost a little more, and live calls cost the most per minute. The dashboard shows spend per mode, and live calls have a daily minutes limit.
 
 ### 6.3 All chats in one place
@@ -216,6 +223,12 @@ Global switch: **Ask everything** · **Use my rules** · **Pause everything**.
 | Send email | Ask | Yes (not recommended) |
 | **Upwork:** fill in the proposal form (you press Submit yourself) | Ask | **No, locked** |
 | **Upwork / Fiverr:** send a message to a client | Ask | **No, locked** |
+| **GitHub:** read repos, issues, PRs, code | Auto | n/a |
+| **GitHub:** create an issue, comment, open a PR, push to a branch | Ask | Yes |
+| **GitHub:** merge, push to `main`, create a release | Ask | **No, locked** |
+| **GitHub:** delete a repo or branch, force-push, change visibility or settings | **Deny** | **No, locked** |
+| **Terminal:** run an allowed command (e.g. `git status`, `npm test`) | Ask | Yes, read-only commands only |
+| **Terminal:** any command outside the allowed list | **Deny** | **No, locked** |
 | Anything not listed | Ask | Yes |
 | Delete anything, payments, account settings, typing passwords | **Deny** | **No, locked** |
 
@@ -234,12 +247,13 @@ Each platform gets a **playbook**: a file in `playbooks/` holding the expert kno
 | **Instagram** | Visual first, short caption, 3 to 5 hashtags; personal vs professional | Every post needs an image or video |
 | **X** | 280 characters, one clear point, replies | No reply spam |
 | **Email** | Clear subjects, short polite replies, follow-ups | Never send to new addresses without Ask; never open unknown links or attachments on its own |
+| **GitHub** | Clear commit messages, PR descriptions, issue templates, your branch naming | Never commit secrets (.env, keys); never force-push; never touch `main` without Ask |
 
 ## 9. Main workflows
 
 **A. Your posts:** Social Media Manager plans → Writer → Checker (sends it back up to 2 times) → Humanizer → final check → permission rule → API or Browser Executor.
-**Images:** Instagram needs an image or video, and other posts do better with one. Each draft comes with an image idea; you upload the image
-(and AI-made images are an option; see section 16).
+**Images:** you upload your own images; the team focuses on text. Each draft comes with an image idea to guide you. Instagram drafts wait
+until you attach an image.
 
 **B. Comments on others' posts:** the Browser Reader reads your feeds a few times a day → the Social Media Manager picks posts worth engaging with → the writing team drafts a useful comment → **Ask** (it comes from outside content) → the Browser Executor posts it. Daily limit applies.
 
@@ -254,6 +268,10 @@ Each platform gets a **playbook**: a file in `playbooks/` holding the expert kno
 **G. Email:** new mail is read → sorted and summarized in **Inbox** → reply drafts → **Ask** → sent through the Gmail API.
 
 **H. Chat with Junior Muneer:** general chat is answered directly; work requests go to subagents; actions follow the rules; everything is saved in chat history.
+
+**I. GitHub and dev work:** "What changed in my e-commerce repo this week?", "Open an issue for the checkout bug", "Write a PR description for my branch" →
+the Developer Agent reads through the GitHub MCP → drafts → **Ask** → the Dev Executor does it. Terminal commands (later) follow the same path,
+limited to your projects folder and the allowed-commands list.
 
 ## 10. Data and memory
 
@@ -278,6 +296,9 @@ Each platform gets a **playbook**: a file in `playbooks/` holding the expert kno
 - The dashboard is local-only on your PC; on the VPS it gets a login and HTTPS
 - **Microphone note:** browsers allow the mic only on `localhost` or HTTPS. On your PC it works; **voice from your phone needs HTTPS**, so it comes with the VPS phase or a secure tunnel
 - **Biggest costs:** the Browser Reader and Executor (page snapshots) and live calls (per minute). Both have caps and show on the dashboard
+- **GitHub:** a **fine-grained token** that you create and paste into `.env`, limited to the repos you pick. It is not your main GitHub login,
+  so the agent can never reach repos you didn't give it
+- **Terminal:** only inside your projects folder, only allowed commands, every command logged; dangerous commands (delete, format, system changes) are always denied
 - **Privacy:** chats, emails and client messages are sent to OpenAI for processing. By default OpenAI doesn't train on API data, but check its current data policy. Everything else stays in your local database
 
 ## 12. How we test
@@ -293,19 +314,20 @@ Each phase ends with you testing it. We only move on when it works for you.
 | Phase | What you get | Done when |
 |---|---|---|
 | **0. Foundation + text chat** | Git repo, FastAPI backend, Next.js dashboard shell, OpenAI Agents SDK, model router, agent registry, **Junior Muneer text chat with live streaming**, chat history, memory, web search, audit log, cost tracking, $5/day cap, Pause, daily backups | You chat with Junior Muneer like a friend; the chats are saved and show in the sidebar |
-| **1. Voice** | Voice messages (speak, and he answers aloud) + **live call** mode + transcripts saved in history | You hold a 5-minute live call and it shows in the chat history |
+| **1. Voice** | Voice messages (speak, and he answers aloud) + **live call** mode + transcripts saved in history, in English and Urdu | You hold a 5-minute live call in English and one in Urdu, and both show in the chat history |
 | **2. Social writing team + approvals** | Social Media Manager (planner), Writer, Checker, Humanizer, playbooks, **permission rules (Ask/Auto/Deny), approval queue, approval cards in chat**, image upload; posts with copy and paste | You approve 5 posts you'd really publish |
 | **3. Browser** | Browser Reader + Browser Executor with the agent's Chrome profile, Safety Guard. Read first, then actions on LinkedIn, Facebook personal, Instagram personal, X | It reads notifications on every account and posts one approved comment |
 | **4. Official APIs** | Facebook Page and Instagram professional (Meta), LinkedIn posts | An approved post goes live through the API |
 | **5. Email** | Email Agent: inbox summary, sorting, reply drafts, sending | You answer a real email from the dashboard |
 | **6. Freelance** | Upwork job scoring + proposals (prepare mode), Fiverr messages and orders, client replies | A real proposal is prepared in the Upwork form for you to submit |
-| **7. Junior Muneer, full power** | Multi-step tasks across subagents, daily briefing, combined reports, smarter memory | "What happened today?" gives a full, correct summary |
-| **8. WhatsApp + VPS** | Chat, voice notes and approvals on WhatsApp (in the same chat history); Docker, HTTPS, login, 24/7 server | It runs for a week without your PC |
+| **7. Developer Agent** | GitHub MCP (read, then approved actions through the Dev Executor), then the terminal with allowed commands | You ask "what changed in my repo this week?" and get a correct answer; an approved issue gets created |
+| **8. Junior Muneer, full power** | Multi-step tasks across subagents, daily briefing, combined reports, smarter memory | "What happened today?" gives a full, correct summary |
+| **9. WhatsApp + VPS** | Chat, voice notes and approvals on WhatsApp (in the same chat history); Docker, HTTPS, login, 24/7 server | It runs for a week without your PC |
 
-You can change the order (for example, Social before Voice).
+Text chat (phase 0) and voice (phase 1) come first, as you chose. You can still change the order of the later phases.
 
 **Existing code:** the backend parts already written (database, approval flow, platform rules, AI-phrase checks) get reused.
-The HTML pages get replaced by the Next.js dashboard (if you approve it), and the AI part switches from the Claude SDK to the OpenAI Agents SDK.
+The HTML pages get replaced by the Next.js dashboard, and the AI part switches from the Claude SDK to the OpenAI Agents SDK.
 
 **Needed from you:**
 - **Phase 0:** an OpenAI API key, which you paste into `.env` yourself
@@ -314,7 +336,8 @@ The HTML pages get replaced by the Next.js dashboard (if you approve it), and th
   - **LinkedIn** API logins expire after about 60 days, so you reconnect with one click every 2 months.
   - The **Instagram** API needs the image at a public web address. While on your PC, we'll use a temporary image host; on the VPS it's simple.
 - **Phase 5:** a Google Cloud project for Gmail access (I'll guide you; set up so Google doesn't log you out every 7 days)
-- **Phase 8:** the official WhatsApp Business API needs **a separate phone number** (your personal WhatsApp number can't be used for both)
+- **Phase 7:** a GitHub fine-grained token for the repos you choose (I'll guide you)
+- **Phase 9:** the official WhatsApp Business API needs **a separate phone number** (your personal WhatsApp number can't be used for both)
 
 ## 14. Using it on another PC
 
@@ -339,15 +362,17 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 | 8 | Provider | OpenAI only for now; others later through the model router |
 | 9 | Name and role | **Junior Muneer**: a friend who answers anything himself and uses subagents only when needed |
 | 10 | Talking | Text chat (live streaming), voice messages, live call; all chats saved and shown |
+| 11 | Frontend | Next.js (React) dashboard + FastAPI backend |
+| 12 | Live chat | A live voice call (hands-free, real-time); text chat also streams live |
+| 13 | Language | English and Urdu (Urdu script and Roman Urdu); he replies in the language you use; client work stays in English |
+| 14 | Phase order | Text chat first, then voice, then the rest |
+| 15 | Images | You upload your own; the agents focus on text. No AI-made images |
+| 16 | Code storage | Private GitHub repo: https://github.com/MSMuneerIqbal/junior-muneer |
+| 17 | GitHub agent | A Developer Agent through GitHub's official MCP server + a fine-grained token; terminal later, limited to allowed commands |
 
 ## 16. Open questions
 
-1. **Frontend:** OK to build the dashboard in **Next.js** (proposed), instead of plain HTML pages?
-2. **"Live chat":** I've read it as a **live voice call** (hands-free, real-time), with text chat that also streams live. Is that what you meant?
-3. **Language:** should Junior Muneer understand and speak **English only**, or also **Urdu / Roman Urdu**?
-4. **Phase order:** Voice as phase 1, or Social first?
-5. **Images for posts:** you upload your own (default), or should the agent also make images with OpenAI's image model (extra cost per image)?
-6. **GitHub:** OK to create a **private** GitHub repo for the code?
+None. The plan is complete.
 
 ## 17. Known risks
 
@@ -358,3 +383,5 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 - **Costs:** the browser and live calls cost the most; both are capped.
 - **Expiring connections:** LinkedIn (every 60 days) and some site logins need reconnecting. The dashboard warns you before they expire.
 - **VPS move:** logins from a new server or country may trigger verification on Upwork and Fiverr.
+- **Urdu voice quality:** speech recognition and the speaking voice may be weaker in Urdu than in English. We test this early in phase 1 and pick the best voice and model.
+- **Terminal access** is powerful. It stays limited to one folder and an allowed-commands list, and dangerous commands are always denied.
