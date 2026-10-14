@@ -44,7 +44,7 @@ junior-muneer/
 - [x] **P0-01 Reorganize the repo**
   - Create `backend/`, `frontend/`, `agents/`, `playbooks/`; move `junior/` to `prototype/`; update `.gitignore`.
   - *Done when:* the new folders exist and Git ignores `data/`, `.env`, `node_modules/` and `.venv/`.
-- [ ] **P0-02 Backend skeleton**
+- [x] **P0-02 Backend skeleton**
   - FastAPI app, settings loaded from `backend/.env` (with a `.env.example`), logging, `/health` endpoint, `requirements.txt`, virtual environment, pytest set up.
   - *Done when:* `http://127.0.0.1:8000/health` answers OK, and `pytest` runs.
 - [ ] **P0-03 Database**

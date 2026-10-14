@@ -1,0 +1,13 @@
+# Runtime
+fastapi==0.143.1
+uvicorn[standard]==0.54.0
+pydantic-settings==2.16.0
+sqlalchemy==2.1.4
+alembic==1.20.0
+openai==3.31.0
+openai-agents==0.23.1
+python-multipart==0.0.32
+
+# Tests
+pytest==9.1.1
+httpx==0.28.1
