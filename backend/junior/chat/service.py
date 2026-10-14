@@ -7,6 +7,7 @@ from typing import Any
 from junior.agent.builder import ModelProvider, NoApiKeyError, build_agent
 from junior.agent.context import TurnContext
 from junior.agent.runner import TurnResult, stream_turn
+from junior.audit import audit
 from junior.chat.history import build_input, save_usage, summarize_if_long
 from junior.costs import BudgetExceeded, budget_left
 from junior.db import Conversation, Message, session_scope
@@ -79,6 +80,22 @@ class ChatService:
             with session_scope() as s:
                 save_usage(s, context.usage, conversation_id, None)
 
+    def _audit_run(
+        self, conversation_id: int, context: TurnContext, result: str, **detail: object
+    ) -> None:
+        audit(
+            "agent_run",
+            MAIN_AGENT,
+            result=result,
+            detail={
+                "models": sorted({u.model for u in context.usage}),
+                "model_calls": len(context.usage),
+                **detail,
+            },
+            cost_usd=sum(u.cost_usd for u in context.usage),
+            conversation_id=conversation_id,
+        )
+
     # ---- the turn -------------------------------------------------------------
 
     async def reply(self, conversation_id: int | None, text: str) -> AsyncIterator[dict[str, Any]]:
@@ -113,16 +130,20 @@ class ChatService:
                     yield event
         except (NoApiKeyError, BudgetExceeded) as e:
             self._save_partial_usage(conversation_id, context)
+            self._audit_run(conversation_id, context, "blocked", error=str(e))
             yield {"type": "error", "message": str(e)}
             return
         except Exception as e:  # shown in the chat; details in the log
             log.exception("Chat turn failed")
             self._save_partial_usage(conversation_id, context)
-            yield {"type": "error", "message": f"Something went wrong: {type(e).__name__}: {e}"}
+            message = f"Something went wrong: {type(e).__name__}: {e}"
+            self._audit_run(conversation_id, context, "error", error=message)
+            yield {"type": "error", "message": message}
             return
 
         assert result is not None
         message_id = self._finish(conversation_id, result)
+        self._audit_run(conversation_id, context, "ok", steps=[st["label"] for st in result.steps])
         yield {
             "type": "done",
             "conversation_id": conversation_id,

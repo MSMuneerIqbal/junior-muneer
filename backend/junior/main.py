@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from junior import __version__
 from junior.agent.builder import ModelProvider, openai_model_provider
+from junior.audit import router as audit_router
 from junior.chat.api import router as chat_router
 from junior.chat.service import ChatService
 from junior.config import get_settings
@@ -52,6 +53,7 @@ def create_app(model_provider: Callable[[], ModelProvider] = openai_model_provid
     app.include_router(chat_router)
     app.include_router(memories_router)
     app.include_router(costs_router)
+    app.include_router(audit_router)
     return app
 
 

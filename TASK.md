@@ -93,7 +93,7 @@ junior-muneer/
   - Tokens and cost recorded per call, per agent and per chat. A price table in settings.
   - **$5/day cap** (editable): when it's reached, new AI work stops with a clear message.
   - *Done when:* the dashboard can show today's spend, and a test cap of $0.01 blocks the next message. Tests included.
-- [ ] **P0-11 Audit log**
+- [x] **P0-11 Audit log**
   - Every agent run and tool call is logged: what, when, result, cost.
   - *Done when:* one chat message produces readable log lines.
 - [ ] **P0-12 Pause everything**

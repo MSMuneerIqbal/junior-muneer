@@ -13,6 +13,7 @@ from sqlalchemy import select
 from junior.agent.builder import ModelProvider, build_agent
 from junior.agent.context import ModelUsage, TurnContext
 from junior.agent.runner import TurnResult, run_once
+from junior.audit import audit
 from junior.costs import budget_left
 from junior.db import Conversation, Message, Usage, session_scope
 from junior.models import get_router
@@ -118,10 +119,18 @@ async def summarize_if_long(
         result = await run_once(
             agent, model_name, router, [{"role": "user", "content": prompt}], context, budget
         )
-    except Exception:
+    except Exception as e:
         if context.usage:  # a failed run still cost money
             with session_scope() as s:
                 save_usage(s, context.usage, conversation_id, None)
+        audit(
+            "agent_run",
+            "summarizer",
+            result="error",
+            detail={"error": f"{type(e).__name__}: {e}"},
+            cost_usd=sum(u.cost_usd for u in context.usage),
+            conversation_id=conversation_id,
+        )
         raise
     with session_scope() as s:
         if result.text.strip():
@@ -129,5 +138,12 @@ async def summarize_if_long(
             convo.summary = result.text.strip()
             convo.summary_upto_id = upto_id
         save_usage(s, result.usage, conversation_id, None)
+    audit(
+        "agent_run",
+        "summarizer",
+        detail={"messages_summarized": len(old), "model": model_name},
+        cost_usd=result.cost_usd,
+        conversation_id=conversation_id,
+    )
     log.info("Chat %s: summarized %d older messages", conversation_id, len(old))
     return result

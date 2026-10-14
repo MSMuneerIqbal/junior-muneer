@@ -8,6 +8,7 @@ from agents import FunctionTool, RunContextWrapper, Tool, WebSearchTool, functio
 from sqlalchemy import func, or_, select
 
 from junior.agent.context import TurnContext
+from junior.audit import audit
 from junior.db import Conversation, Memory, Message, Usage, session_scope
 from junior.timeutil import start_of_today_utc, zone
 
@@ -184,6 +185,12 @@ def save_memory(ctx: Ctx, fact: str, your_words: str) -> str:
     ctx.context.pending_events.append(
         {"type": "memory", "action": "saved", "id": memory_id, "content": fact}
     )
+    audit(
+        "memory",
+        "saved",
+        detail={"id": memory_id, "content": fact, "from_message": backing},
+        conversation_id=ctx.context.conversation_id,
+    )
     return f"Saved as memory {memory_id}. Mention it briefly; the user can undo it."
 
 
@@ -204,6 +211,12 @@ def forget_memory(ctx: Ctx, memory_id: int) -> str:
         s.delete(memory)
     ctx.context.pending_events.append(
         {"type": "memory", "action": "deleted", "id": memory_id, "content": content}
+    )
+    audit(
+        "memory",
+        "deleted",
+        detail={"id": memory_id, "content": content},
+        conversation_id=ctx.context.conversation_id,
     )
     return f"Forgot memory {memory_id}: {content}"
 

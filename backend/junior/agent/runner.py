@@ -22,6 +22,7 @@ from agents import (
 from agents.items import ModelResponse, TResponseInputItem
 
 from junior.agent.context import ModelUsage, TurnContext
+from junior.audit import audit
 from junior.costs import BudgetExceeded
 from junior.models import ModelRouter
 
@@ -52,9 +53,10 @@ def _get(obj: Any, key: str) -> Any:
     return obj.get(key) if isinstance(obj, dict) else getattr(obj, key, None)
 
 
-class CostHooks(RunHooks[TurnContext]):
-    """Records the cost of every model call, notices web searches, and stops the
-    run before a model call once the budget for this turn is used up."""
+class TurnHooks(RunHooks[TurnContext]):
+    """Records the cost of every model call, notices web searches, logs tool calls
+    to the audit log, and stops the run before a model call once the budget for
+    this turn is used up."""
 
     def __init__(
         self, router: ModelRouter, model_names: dict[str, str], budget: float | None = None
@@ -73,10 +75,20 @@ class CostHooks(RunHooks[TurnContext]):
     async def on_llm_end(
         self, context: RunContextWrapper[TurnContext], agent: Agent[Any], response: ModelResponse
     ) -> None:
-        searches = sum(1 for item in response.output if _get(item, "type") == "web_search_call")
+        searches = [item for item in response.output if _get(item, "type") == "web_search_call"]
         if searches:
             # Web results are outside text: no memory saving for the rest of this turn.
             context.context.mark_outside()
+        for item in searches:
+            action = _get(item, "action")
+            audit(
+                "web_search",
+                "web_search",
+                detail={"query": _get(action, "query") if action is not None else None},
+                cost_usd=self.router.tool_prices.get("web_search", 0.0),
+                conversation_id=context.context.conversation_id,
+            )
+        searches = len(searches)
         u = response.usage
         cached = getattr(u.input_tokens_details, "cached_tokens", 0) or 0
         model = self.model_names.get(agent.name, "unknown")
@@ -93,6 +105,25 @@ class CostHooks(RunHooks[TurnContext]):
                 cost_usd=cost,
             )
         )
+
+    async def on_tool_end(
+        self, context: RunContextWrapper[TurnContext], agent: Agent[Any], tool: Any, result: object
+    ) -> None:
+        text = str(result)
+        audit(
+            "tool_call",
+            getattr(tool, "name", type(tool).__name__),
+            result="refused" if text.startswith("NOT ") else "ok",
+            detail={"agent": agent.name, **_tool_log_detail(context, result)},
+            conversation_id=context.context.conversation_id,
+        )
+
+
+def _tool_log_detail(context: Any, result: object) -> dict[str, Any]:
+    return {
+        "arguments": getattr(context, "tool_arguments", None),
+        "result": str(result),
+    }
 
 
 def _web_search_step(item: Any) -> dict[str, Any] | None:
@@ -125,7 +156,7 @@ async def stream_turn(
     context: TurnContext,
     budget: float | None = None,
 ) -> AsyncIterator[dict[str, Any]]:
-    hooks = CostHooks(router, {agent.name: model_name}, budget)
+    hooks = TurnHooks(router, {agent.name: model_name}, budget)
     result = Runner.run_streamed(
         agent, input_items, context=context, hooks=hooks, max_turns=MAX_TURNS
     )
@@ -176,7 +207,7 @@ async def run_once(
     budget: float | None = None,
 ) -> TurnResult:
     """Run an agent without streaming (for background helpers like the summarizer)."""
-    hooks = CostHooks(router, {agent.name: model_name}, budget)
+    hooks = TurnHooks(router, {agent.name: model_name}, budget)
     result = await Runner.run(
         agent, input_items, context=context, hooks=hooks, max_turns=MAX_TURNS
     )

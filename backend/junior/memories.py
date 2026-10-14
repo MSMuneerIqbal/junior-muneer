@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
+from junior.audit import audit
 from junior.db import Memory, session_scope
 
 # How many memories go into Junior Muneer's instructions each turn.
@@ -62,7 +63,9 @@ def add_memory(body: MemoryIn) -> MemoryOut:
         memory = Memory(content=" ".join(body.content.split()))
         s.add(memory)
         s.flush()
-        return _out(memory)
+        out = _out(memory)
+    audit("memory", "added on Memory page", detail={"id": out.id, "content": out.content})
+    return out
 
 
 @router.patch("/api/memories/{memory_id}", response_model=MemoryOut)
@@ -71,9 +74,12 @@ def edit_memory(memory_id: int, body: MemoryIn) -> MemoryOut:
         memory = s.get(Memory, memory_id)
         if memory is None:
             raise HTTPException(404, f"Memory {memory_id} not found")
+        before = memory.content
         memory.content = " ".join(body.content.split())
         s.flush()
-        return _out(memory)
+        out = _out(memory)
+    audit("memory", "edited", detail={"id": memory_id, "before": before, "after": out.content})
+    return out
 
 
 @router.delete("/api/memories/{memory_id}", status_code=204)
@@ -82,4 +88,6 @@ def delete_memory(memory_id: int) -> None:
         memory = s.get(Memory, memory_id)
         if memory is None:
             raise HTTPException(404, f"Memory {memory_id} not found")
+        content = memory.content
         s.delete(memory)
+    audit("memory", "deleted", detail={"id": memory_id, "content": content})
