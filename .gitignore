@@ -8,9 +8,6 @@ __pycache__/
 data/
 backups/
 
-# The agent's Chrome profile (holds your logins)
-chrome-profile/
-
 # Node / Next.js
 node_modules/
 .next/

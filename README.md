@@ -4,6 +4,9 @@ A personal AI assistant and friend that helps manage freelance work (Upwork, Fiv
 (LinkedIn, Facebook, Instagram, X) and email. You decide what goes out: every outgoing action follows
 Ask / Auto / Deny permission rules.
 
+No browser bots: data comes from official APIs, email alerts or text you paste in. Approved items go out
+through an official API, or you copy and paste them yourself.
+
 ## Status
 
 **Plan complete.** The full design is in [PLAN.md](PLAN.md), and the working checklist is in [TASK.md](TASK.md).
