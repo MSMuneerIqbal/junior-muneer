@@ -19,6 +19,12 @@ Built from [PLAN.md](PLAN.md) v7 (safe workflow, no browser bots). This is the w
 - [ ] **You:** create an OpenAI API key and paste it into `backend/.env` yourself (task P0-02 creates the file)
 - [ ] **You:** set a monthly spending limit in your OpenAI account settings
 
+## Live checks waiting for your OpenAI key
+
+Built and tested with a fake AI; these need one real run once your key is in `backend/.env`:
+
+- [ ] **P0-06:** `python -m junior.agent "How are you?"`, the same in Urdu, and `python -m junior.agent "What's new in Pakistan today?"` (web search)
+
 ## Folder layout (created in P0-01)
 
 ```
@@ -61,7 +67,7 @@ junior-muneer/
 - [x] **P0-05 Agent registry**
   - Loads every file in `agents/`: a header (name, description, model, tools, action types) plus the instructions as text.
   - *Done when:* the registry lists Junior Muneer, and a broken agent file shows a clear error. Tests included.
-- [ ] **P0-06 Junior Muneer, the agent**
+- [x] **P0-06 Junior Muneer, the agent**
   - `agents/junior_muneer.md`: a friendly, warm, honest personality with a bit of humour; always clear he's an AI; calls you by your name.
   - **Language:** understands English, Urdu script and Roman Urdu, and replies in the language you use.
   - Built with the OpenAI Agents SDK. Tools: **web search** and **read-only database questions** (chats, usage). Memory tools are added in P0-09.

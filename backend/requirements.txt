@@ -8,6 +8,7 @@ openai==3.31.0
 openai-agents==0.23.1
 python-multipart==0.0.32
 PyYAML==6.0.3
+tzdata==2026.5
 
 # Tests
 pytest==9.1.1
