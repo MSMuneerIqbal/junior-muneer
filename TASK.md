@@ -137,7 +137,7 @@ junior-muneer/
 - [x] **P0-22 One-click start + README**
   - `start.bat` starts the backend and the dashboard together and opens the browser. README: setup steps for a new PC.
   - *Done when:* after a restart, double-clicking `start.bat` gets you chatting.
-- [ ] **P0-23 Your acceptance test + push**
+- [x] **P0-23 Your acceptance test + push**
   - You chat in English and Urdu, check history, memory, web search, spend and Pause. Then we push to GitHub.
 
 ---
