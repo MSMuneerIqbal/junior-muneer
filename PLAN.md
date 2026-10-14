@@ -59,7 +59,7 @@ Upwork and Fiverr are your income, and a ban is not worth the time saved. Copy a
 | Agent framework | **OpenAI Agents SDK** | Agents, agents-as-tools, guardrails, tracing, MCP, voice and realtime support |
 | AI models | **OpenAI only** for now: a **strong** model for Junior Muneer and the writers, a **small** model for routine steps | Picked 2026-10-14: **gpt-6.1-sol** (strong) and **gpt-6-luna** (small), in `agents/models.toml` |
 | Voice | OpenAI **speech-to-text**, **text-to-speech** and **Realtime** (live voice) models, in **English and Urdu** | Section 7.2 |
-| Web search | OpenAI's built-in web search tool, read-only | So Junior Muneer can answer questions about current events |
+| Web search | OpenAI's built-in web search tool, read-only, on a small **web researcher** helper | Junior Muneer calls it through a light `web_search` tool: the built-in tool adds ~4,400 tokens to every request it's attached to, so keeping it off his own requests makes normal messages ~5× cheaper |
 | Model router | One settings file: which model each agent uses | Claude or others can be added later without rewrites |
 | Backend | **FastAPI** | REST API + **WebSocket** for live streaming chat and voice |
 | Frontend | **Next.js (React)** | Chat, voice and live updates need a real app UI. You already know Next.js |
@@ -433,6 +433,7 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 
 ## 18. Change log
 
+- **v7.1 (2026-10-14):** web search moved to a small web-researcher helper after live testing showed the built-in tool adds ~4,400 tokens to every message (a hello cost $0.011; now $0.0023).
 - **v7:** safe workflow (section 2): all browser automation removed (Browser Reader, Browser Executor, agent Chrome profile, Playwright). Added the Paste box and copy-and-paste items.
   API senders are plain code. Terminal locked to Ask. Memory only from your own words. "Always allow" hidden on outside-content items. LinkedIn comments come in by paste (no API).
   Noted that Upwork's job RSS is gone. Safety tests written with each task. The browser phase was removed; later phases were renumbered (0–8).

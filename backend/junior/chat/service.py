@@ -6,6 +6,7 @@ from typing import Any
 
 from junior.agent.builder import ModelProvider, NoApiKeyError, build_agent
 from junior.agent.context import TurnContext
+from junior.agent.helpers import HelperRunner
 from junior.agent.runner import TurnResult, stream_turn
 from junior.audit import audit
 from junior.chat.history import build_input, save_usage, summarize_if_long
@@ -121,6 +122,7 @@ class ChatService:
             provider = self.model_provider()
             router = get_router()
             agent, model_name = build_agent(self.registry.get(MAIN_AGENT), router, provider)
+            context.helpers = HelperRunner(self.registry, provider)
             items, context.user_message_ids = build_input(conversation_id, settings["user_name"])
             result: TurnResult | None = None
             async for event in stream_turn(agent, model_name, router, items, context, budget):

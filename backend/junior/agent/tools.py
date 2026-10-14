@@ -102,13 +102,35 @@ def spending(ctx: Ctx, period: Literal["today", "week", "month"] = "today") -> s
 DATABASE_TOOLS: list[FunctionTool] = [recent_chats, search_chats, spending]
 
 
-def _web_search() -> list[Tool]:
+# ---- web search ----------------------------------------------------------------
+# OpenAI's hosted web search adds ~4,400 tokens to EVERY request it is attached to,
+# even when no search happens. So Junior Muneer gets this light tool instead, and
+# the hosted search lives on the small, cheap web_researcher agent.
+
+
+@function_tool
+async def web_search(ctx: Ctx, query: str) -> str:
+    """Search the web for current information (news, prices, events, anything that changes).
+    Returns findings with sources.
+
+    Args:
+        query: What to search for, as a clear search query.
+    """
+    # Web results are outside text: no memory saving for the rest of this turn.
+    ctx.context.mark_outside()
+    if ctx.context.helpers is None:
+        return "Web search is not available right now."
+    return await ctx.context.helpers.run("web_researcher", query, ctx.context)
+
+
+def _hosted_web_search() -> list[Tool]:
     return [WebSearchTool(search_context_size="medium")]
 
 
 # Name in the agent file -> the tools it gives.
 TOOL_FACTORIES: dict[str, Callable[[], list[Tool]]] = {
-    "web_search": _web_search,
+    "web_search": lambda: [web_search],
+    "hosted_web_search": _hosted_web_search,
     "database": lambda: list(DATABASE_TOOLS),
 }
 

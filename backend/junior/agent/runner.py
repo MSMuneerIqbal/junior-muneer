@@ -7,6 +7,7 @@ Events (plain dicts, sent to the dashboard as they happen):
 Tools may add their own events through TurnContext.pending_events.
 """
 
+import json
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any
@@ -139,11 +140,17 @@ def _function_step(raw: Any) -> dict[str, Any] | None:
     if _get(raw, "type") != "function_call":
         return None
     name = _get(raw, "name")
+    label = STEP_LABELS.get(name, f"Using {name}")
+    if name == "web_search":
+        try:
+            label = f"Searching the web: {json.loads(_get(raw, 'arguments') or '{}')['query']}"
+        except (ValueError, KeyError, TypeError):
+            label = STEP_LABELS["web_search_call"]
     return {
         "id": _get(raw, "call_id"),
-        "kind": "tool",
+        "kind": "web_search" if name == "web_search" else "tool",
         "name": name,
-        "label": STEP_LABELS.get(name, f"Using {name}"),
+        "label": label,
         "status": "running",
     }
 

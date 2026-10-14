@@ -8,6 +8,7 @@ import sys
 
 from junior.agent.builder import NoApiKeyError, build_agent, openai_model_provider
 from junior.agent.context import TurnContext
+from junior.agent.helpers import HelperRunner
 from junior.agent.runner import stream_turn
 from junior.db import init_db
 from junior.models import get_router
@@ -18,8 +19,11 @@ from junior.settings_store import all_settings
 async def main(question: str) -> None:
     init_db()
     router = get_router()
-    agent, model = build_agent(load_registry().get("junior_muneer"), router, openai_model_provider())
-    context = TurnContext(conversation_id=None, settings=all_settings())
+    registry, provider = load_registry(), openai_model_provider()
+    agent, model = build_agent(registry.get("junior_muneer"), router, provider)
+    context = TurnContext(
+        conversation_id=None, settings=all_settings(), helpers=HelperRunner(registry, provider)
+    )
     print(f"[{model}]")
     async for event in stream_turn(
         agent, model, router, [{"role": "user", "content": question}], context
@@ -29,7 +33,9 @@ async def main(question: str) -> None:
         elif event["type"] == "step":
             print(f"\n  · {event['label']} ({event['status']})", flush=True)
         elif event["type"] == "final":
-            print(f"\n\n[cost ${event['result'].cost_usd:.5f}]")
+            result = event["result"]
+            calls = ", ".join(f"{u.agent} {u.input_tokens} in" for u in result.usage)
+            print(f"\n\n[cost ${result.cost_usd:.5f} · {calls}]")
 
 
 if __name__ == "__main__":

@@ -113,3 +113,57 @@ def test_database_tool_answers_spending_question(db):
 def test_without_a_key_there_is_a_clear_message():
     with pytest.raises(NoApiKeyError, match="backend/.env"):
         openai_model_provider()
+
+
+def test_web_search_is_delegated_to_the_cheap_researcher(db, monkeypatch):
+    """The hosted search adds ~4,400 tokens to every request it's attached to, so only
+    the small web_researcher has it; Junior Muneer calls it through a light tool."""
+    from agents import WebSearchTool
+
+    from junior.agent.helpers import HelperRunner
+
+    names_used = []
+    model = ScriptedModel(
+        [
+            [function_call("web_search", {"query": "Lahore weather"}, call_id="w1")],
+            answer_after_web_search("Lahore weather", "- Sunny, 31°C (source: example.com)"),
+            chunked_answer("It's sunny in Lahore, about 31°C."),
+        ]
+    )
+
+    def provider(name):
+        names_used.append(name)
+        return model
+
+    registry = load_registry()
+    agent, model_name = build_agent(registry.get("junior_muneer"), TEST_ROUTER, provider)
+    context = TurnContext(
+        conversation_id=None, settings=all_settings(), helpers=HelperRunner(registry, provider)
+    )
+
+    async def collect():
+        return [
+            e
+            async for e in stream_turn(
+                agent, model_name, TEST_ROUTER, [{"role": "user", "content": "Weather?"}], context
+            )
+        ]
+
+    import junior.agent.helpers as helpers_mod
+
+    monkeypatch.setattr(helpers_mod, "get_router", lambda *a: TEST_ROUTER)  # test prices
+    events = asyncio.run(collect())
+
+    main_call, researcher_call, final_call = model.calls
+    assert not any(isinstance(t, WebSearchTool) for t in main_call.tools)
+    assert any(isinstance(t, WebSearchTool) for t in researcher_call.tools)
+    assert researcher_call.input[0]["content"] == "Lahore weather"
+    assert "Sunny, 31°C" in final_call.input[-1]["output"]
+    assert names_used == ["fake-strong", "fake-small"]  # researcher on the small model
+
+    steps = [e for e in events if e["type"] == "step"]
+    assert steps[0]["label"] == "Searching the web: Lahore weather"
+    result = events[-1]["result"]
+    assert [u.agent for u in result.usage] == ["junior_muneer", "web_researcher", "junior_muneer"]
+    assert result.usage[1].web_searches == 1
+    assert context.outside_content_seen  # memory saving blocked for this turn

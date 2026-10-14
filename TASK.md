@@ -19,12 +19,12 @@ Built from [PLAN.md](PLAN.md) v7 (safe workflow, no browser bots). This is the w
 - [ ] **You:** create an OpenAI API key and paste it into `backend/.env` yourself (task P0-02 creates the file)
 - [ ] **You:** set a monthly spending limit in your OpenAI account settings
 
-## Live checks waiting for your OpenAI key
+## Live checks with the real OpenAI key
 
-Built and tested with a fake AI; these need one real run once your key is in `backend/.env`:
+Built and tested with a fake AI, then checked with the real key on 2026-10-14 (all passed):
 
-- [ ] **P0-06:** `python -m junior.agent "How are you?"`, the same in Urdu, and `python -m junior.agent "What's new in Pakistan today?"` (web search)
-- [ ] **P0-09:** tell him a fact in one chat ("my rate is $25/hr"), then ask about it in a new chat; press undo on a memory note
+- [x] **P0-06:** `python -m junior.agent "How are you?"`, the same in Urdu, and `python -m junior.agent "What's new in Pakistan today?"` (web search)
+- [x] **P0-09:** tell him a fact in one chat ("my rate is $25/hr"), then ask about it in a new chat; press undo on a memory note
 
 ## Folder layout (created in P0-01)
 

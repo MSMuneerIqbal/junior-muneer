@@ -31,6 +31,8 @@ class TurnContext:
     pending_events: list[dict[str, Any]] = field(default_factory=list)
     # Every model call so far, kept here so the cost is saved even if the turn fails.
     usage: list[ModelUsage] = field(default_factory=list)
+    # Runs helper agents for tools (a junior.agent.helpers.HelperRunner).
+    helpers: Any = None
 
     def mark_outside(self) -> None:
         self.outside_content_seen = True

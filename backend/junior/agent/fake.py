@@ -1,7 +1,8 @@
 """Fake AI for trying the dashboard without an API key (FAKE_AI=true). No network, no cost.
 
 It echoes your message, streamed in small pieces. Two tricks to see the UI work:
-  - a message containing "search" shows a (pretend) web search step;
+  - a message containing "search" calls the web_search tool, and the web
+    researcher does a (pretend) hosted search;
   - a message starting with "remember " saves the rest as a memory, through the
     real save_memory tool and its safety checks.
 """
@@ -12,7 +13,7 @@ import json
 from collections.abc import AsyncIterator
 from typing import Any
 
-from agents import Model, ModelResponse, Usage
+from agents import Model, ModelResponse, Usage, WebSearchTool
 from agents.testing import ModelStep, assistant_message, function_call
 from agents.testing.model import _stream_events_for_step
 from openai.types.responses import (
@@ -51,12 +52,19 @@ def _last_user_text(items: Any) -> str:
 
 
 class FakeModel(Model):
-    def _plan(self, input: Any) -> tuple[list[Any], bool]:
-        """What to answer: (output items, include a web search)."""
+    def _plan(self, input: Any, tools: list[Any]) -> tuple[list[Any], bool]:
+        """What to answer: (output items, include a hosted web search)."""
+        hosted_search = any(isinstance(t, WebSearchTool) for t in tools)
+        tool_names = {getattr(t, "name", "") for t in tools if not isinstance(t, WebSearchTool)}
+        text = _last_user_text(input)
+        if hosted_search:
+            # The web researcher: pretend to search, then report.
+            return [assistant_message(f"- (fake search result for: {text})")], True
         last = input[-1] if isinstance(input, list) and input else None
         if isinstance(last, dict) and last.get("type") == "function_call_output":
             return [assistant_message(f"(fake AI) Tool said: {last.get('output')}")], False
-        text = _last_user_text(input)
+        if "search" in text.lower() and "web_search" in tool_names:
+            return [function_call("web_search", {"query": text}, call_id="fake-search")], False
         if text.lower().startswith("remember "):
             words = text[len("remember ") :].strip()
             return [
@@ -69,14 +77,14 @@ class FakeModel(Model):
             f"> {text}\n\n"
             "Add your OpenAI key to `backend/.env` and turn `FAKE_AI` off for real answers."
         )
-        return [assistant_message(reply)], "search" in text.lower()
+        return [assistant_message(reply)], False
 
     async def get_response(self, system_instructions, input, model_settings, tools, output_schema, handoffs, tracing, **kwargs) -> ModelResponse:  # noqa: E501
-        output, _ = self._plan(input)
+        output, _ = self._plan(input, tools)
         return ModelResponse(output=output, usage=_usage(str(input), str(output)), response_id="fake")
 
     async def stream_response(self, system_instructions, input, model_settings, tools, output_schema, handoffs, tracing, **kwargs) -> AsyncIterator[Any]:  # noqa: E501
-        output, with_search = self._plan(input)
+        output, with_search = self._plan(input, tools)
         step = ModelStep(output=output, usage=_usage(str(input), str(output)))
         events = _stream_events_for_step(step, preserve_raw_usage=False)
         if with_search:
