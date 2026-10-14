@@ -25,8 +25,10 @@ class FakeConnection:
 
     async def _iter(self):
         for event in self.events:
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.02)  # like a real call: tools get time to run
             yield event
+        if self.events:
+            await asyncio.sleep(0.5)  # the line stays open a moment before hanging up
 
     async def send(self, event):
         self.sent.append(event)
@@ -118,7 +120,13 @@ def test_session_has_his_personality_voice_tools_and_urdu_transcription():
     assert session["audio"]["input"]["transcription"]["model"] == "gpt-4o-transcribe"
     assert "Urdu script" in session["audio"]["input"]["transcription"]["prompt"]
     assert session["audio"]["input"]["turn_detection"]["interrupt_response"] is True
-    assert {t["name"] for t in session["tools"]} == {"ask_junior", "save_memory", "forget_memory"}
+    assert {t["name"] for t in session["tools"]} == {
+        "web_search",
+        "ask_junior",
+        "save_memory",
+        "forget_memory",
+    }
+    assert session["include"] == ["item.input_audio_transcription.logprobs"]
 
 
 def test_both_sides_are_saved_as_a_call_chat_with_cost_and_minutes():
@@ -167,10 +175,14 @@ def test_ask_junior_answers_and_then_blocks_memory_for_that_turn():
         ],
         model,
     )
-    outputs = [e["item"]["output"] for e in gw.conn.sent if e["type"] == "conversation.item.create"]
-    assert outputs[0] == "It's sunny in Lahore, 31 degrees."
-    assert outputs[1].startswith("NOT saved: this turn includes outside text")
-    assert outputs[2].startswith("Saved")
+    outputs = {
+        e["item"]["call_id"]: e["item"]["output"]
+        for e in gw.conn.sent
+        if e["type"] == "conversation.item.create"
+    }
+    assert outputs["a1"] == "It's sunny in Lahore, 31 degrees."
+    assert outputs["m1"].startswith("NOT saved: this turn includes outside text")
+    assert outputs["m2"].startswith("Saved")
     with session_scope() as s:
         assert s.scalars(select(Memory.content)).all() == ["Rate $40"]
         # The full Junior Muneer's cost is part of the call's cost.
@@ -331,3 +343,66 @@ def test_spoken_language_detection():
     assert spoken_language("आप कैसे हैं") == "urdu"  # Urdu heard as Hindi script
     assert spoken_language("I used Next.js for the shop") == "english"
     assert spoken_language("...") == "english"
+
+
+def noisy(text, logprob):
+    return {
+        "type": "conversation.item.input_audio_transcription.completed",
+        "transcript": text,
+        "logprobs": [{"token": "x", "logprob": logprob}],
+    }
+
+
+def test_breathing_and_noise_are_ignored():
+    call, _, gw = run_call(
+        [
+            noisy("السلام علیکم", -2.3),  # made up from breathing
+            noisy("ٹھیک ہے", -0.83),
+            noisy("", -0.01),
+            noisy("آپ کیسے ہیں؟", -0.07),  # real speech
+        ]
+    )
+    with session_scope() as s:
+        said_by_you = s.scalars(
+            select(Message.content).where(Message.conversation_id == call.conversation_id)
+        ).all()
+    assert said_by_you == ["آپ کیسے ہیں؟"]
+    assert len([e for e in gw.conn.sent if e["type"] == "response.create"]) == 1  # one reply
+
+
+def test_quick_web_search_goes_straight_to_the_researcher():
+    model = ScriptedModel([chunked_answer("- PSL final tonight (dawn.com)")])
+    call, _, gw = run_call(
+        [heard("Any cricket news?"), tool("web_search", '{"query": "Pakistan cricket news today"}', "w1")],
+        model,
+    )
+    assert len(model.calls) == 1  # one model call (the researcher), not three
+    assert model.calls[0].input[0]["content"] == "Pakistan cricket news today"
+    output = next(e for e in gw.conn.sent if e["type"] == "conversation.item.create")
+    assert output["item"]["output"] == "- PSL final tonight (dawn.com)"
+    with session_scope() as s:
+        assert s.scalars(select(Usage.agent).where(Usage.mode == "call")).all().count("web_researcher") == 1
+
+
+def test_he_says_still_looking_while_a_slow_search_runs(monkeypatch):
+    import junior.calls as calls_mod
+
+    monkeypatch.setattr(calls_mod, "FILLER_FIRST_SECONDS", 0.05)
+    monkeypatch.setattr(calls_mod, "FILLER_EVERY_SECONDS", 0.1)
+
+    async def slow_search(self, call, query):
+        await asyncio.sleep(0.35)
+        return "Found it."
+
+    monkeypatch.setattr(CallManager, "_quick_search", slow_search)
+    call, _, gw = run_call([heard("What's the news?"), tool("web_search", '{"query": "news"}', "w1")])
+    fillers = [
+        e for e in gw.conn.sent
+        if e["type"] == "response.create" and e["response"].get("metadata") == {"kind": "filler"}
+    ]
+    assert fillers, "no filler was said during the search"
+    assert fillers[0]["response"]["conversation"] == "none"  # not saved as part of the chat
+    assert "still looking something up" in fillers[0]["response"]["instructions"]
+    # The real answer still comes after the search.
+    last = [e["type"] for e in gw.conn.sent][-2:]
+    assert last == ["conversation.item.create", "response.create"]

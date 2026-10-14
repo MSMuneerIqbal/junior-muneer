@@ -165,6 +165,32 @@ def test_urdu_language_setting_forces_urdu(client):
 
 def test_prompt_asks_for_urdu_script(client):
     upload(client)
-    assert "Never translate" in RecordingVoice.prompts[-1]
-    assert "Urdu is written in Urdu script" in RecordingVoice.prompts[-1]
-    assert "السلام علیکم" in RecordingVoice.prompts[-1]
+    assert "never translate" in RecordingVoice.prompts[-1]
+    assert "Write Urdu in Urdu script" in RecordingVoice.prompts[-1]
+    # No example sentences: on noise the model would write them out as fake messages.
+    assert not any("؀" <= ch <= "ۿ" for ch in RecordingVoice.prompts[-1])
+
+
+class NoiseVoice(FakeVoice):
+    async def transcribe(self, path, model, prompt, language=None):
+        return TranscriptResult(
+            text="السلام علیکم", languages=["ur"], seconds=2.0,
+            logprobs=[{"token": "x", "logprob": -2.4}],
+        )
+
+
+def test_a_recording_of_just_breathing_sends_nothing(model):
+    app = create_app(model_provider=lambda: (lambda _n: model), voice=NoiseVoice)
+    with TestClient(app) as client:
+        body = upload(client).json()
+    assert body["text"] == ""  # the dashboard says "I didn't catch that"
+
+
+def test_noise_detection():
+    from junior.voice import is_noise
+
+    assert is_noise("", None)
+    assert is_noise(" . ", None)
+    assert is_noise("ہاں", [{"logprob": -2.2}])
+    assert not is_noise("آپ کیسے ہیں؟", [{"logprob": -0.05}, {"logprob": -0.2}])
+    assert not is_noise("Hello", None)  # no scores (older models): keep it

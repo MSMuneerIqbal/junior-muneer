@@ -42,7 +42,7 @@ from junior.db.models import utcnow
 from junior.models import get_router
 from junior.settings_store import ACCENTS, all_settings
 from junior.timeutil import start_of_today_utc, zone
-from junior.voice import TRANSCRIBE_PROMPT
+from junior.voice import TRANSCRIBE_PROMPT, is_noise
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -54,17 +54,31 @@ CALL_ADDENDUM = """
 - {{accent}}
 - Your spoken words are also shown as text. When you speak Urdu, write it in Urdu script (اردو), not Roman Urdu or Hindi script.
 - Always answer in the language {{user_name}} just used. Each reply comes with a note saying which language that is; follow it.
-- For anything current (news, weather, prices) or anything that needs your full tools, call `ask_junior` with a clear question, say a short "let me check" first, then tell them the answer in your own words.
+- For anything current (news, weather, prices, scores), call `web_search` right away; it takes a few seconds. Say a very short "let me check" first, then tell them the answer in your own words, briefly.
+- For questions about their past chats or spending, call `ask_junior`.
 - `save_memory` only for facts {{user_name}} says in this call, quoting their exact words. If saving is refused, say why in one line.
 - Approvals never happen by voice: anything that needs an OK shows on their screen.
 """
 
+WEB_SEARCH_TOOL = {
+    "type": "function",
+    "name": "web_search",
+    "description": (
+        "Search the web for anything current: news, weather, prices, scores, events. "
+        "Quick (a few seconds). Returns findings with sources for you to say briefly."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {"query": {"type": "string", "description": "A clear search query."}},
+        "required": ["query"],
+    },
+}
 ASK_JUNIOR_TOOL = {
     "type": "function",
     "name": "ask_junior",
     "description": (
-        "Ask the full Junior Muneer (with web search and the database) a question, "
-        "e.g. today's news, the weather, prices, or something from past chats. "
+        "Ask the full Junior Muneer a question about the user's past chats, spending or "
+        "anything that needs the database. Slower than web_search; not for news. "
         "Returns the answer as text for you to say."
     ),
     "parameters": {
@@ -196,6 +210,10 @@ class LiveCall:
     task: asyncio.Task | None = None
     instructions: str = ""
     language: str = "english"  # the language of what you said last
+    tools_running: int = 0
+    filler_ids: set = field(default_factory=set)  # short "still looking" responses
+    filler_done: asyncio.Event = field(default_factory=asyncio.Event)
+    tool_tasks: set = field(default_factory=set)
     # For Show work on each spoken answer: tools used and cost not yet shown.
     pending_steps: list[dict] = field(default_factory=list)
     pending_cost: float = 0.0
@@ -244,8 +262,10 @@ class CallManager:
                 },
                 "output": {"voice": settings["tts_voice"], "speed": float(settings["tts_speed"])},
             },
-            "tools": [ASK_JUNIOR_TOOL, SAVE_MEMORY_TOOL, FORGET_MEMORY_TOOL],
+            "tools": [WEB_SEARCH_TOOL, ASK_JUNIOR_TOOL, SAVE_MEMORY_TOOL, FORGET_MEMORY_TOOL],
             "tool_choice": "auto",
+            # How sure the transcription is of each word: used to ignore breathing and noise.
+            "include": ["item.input_audio_transcription.logprobs"],
         }
 
     async def start(self, sdp: str) -> tuple[LiveCall, str]:
@@ -305,6 +325,11 @@ class CallManager:
                 call.end_reason = call.end_reason or f"connection lost: {type(e).__name__}"
         finally:
             watchdog.cancel()
+            call.ended = True
+            if call.tool_tasks:  # let running tools finish so their cost is recorded
+                await asyncio.wait(list(call.tool_tasks), timeout=TOOL_FINISH_SECONDS)
+                for task in list(call.tool_tasks):
+                    task.cancel()
             self._finish(call)
 
     async def _watchdog(self, call: LiveCall, gateway: RealtimeGateway, seconds_left: float):
@@ -316,32 +341,42 @@ class CallManager:
         kind = _get(event, "type", default="")
         if kind == "conversation.item.input_audio_transcription.completed":
             text = (_get(event, "transcript", default="") or "").strip()
-            if text:
+            if is_noise(text, _get(event, "logprobs")):
+                # Breathing, a cough or background noise: no message, no reply.
+                log.info("Call %s: ignored noise %r", call.call_id, text[:40])
+            else:
                 message_id = self._save(call, "user", text)
                 call.context.user_message_ids.append(message_id)
                 call.context.outside_content_seen = False  # a new turn of yours
                 call.language = spoken_language(text)
                 await conn.send(self.reply_request(call))
+        elif kind == "response.created":
+            if _get(event, "response", "metadata", "kind") == "filler":
+                call.filler_ids.add(_get(event, "response", "id"))
         elif kind == "response.output_audio_transcript.done":
             text = (_get(event, "transcript", default="") or "").strip()
-            if text:
+            if _get(event, "response_id") in call.filler_ids:
+                pass  # "still looking…" isn't part of the conversation
+            elif text:
                 call.answer_in_response = self._save(
                     call, "assistant", text, steps=call.pending_steps, cost=call.pending_cost
                 )
                 call.pending_steps, call.pending_cost = [], 0.0
         elif kind == "response.function_call_arguments.done":
-            output = await self.run_tool(call, _get(event, "name"), _get(event, "arguments", default="{}"))
-            await conn.send(
-                {
-                    "type": "conversation.item.create",
-                    "item": {
-                        "type": "function_call_output",
-                        "call_id": _get(event, "call_id"),
-                        "output": output,
-                    },
-                }
-            )
-            await conn.send(self.reply_request(call))
+            # Run the tool in the background, so the call keeps going (and he can
+            # say "still looking…") while it works.
+            task = asyncio.create_task(self._tool_then_reply(call, conn, event))
+            call.tool_tasks.add(task)
+            task.add_done_callback(call.tool_tasks.discard)
+        elif kind == "response.done" and _get(event, "response", "id") in call.filler_ids:
+            call.filler_ids.discard(_get(event, "response", "id"))
+            call.filler_done.set()
+            usage = _get(event, "response", "usage")
+            if usage is not None:
+                cost = call_cost(usage, get_router().audio_price(call.model))
+                call.cost_usd += cost
+                call.pending_cost += cost
+                self._record_call_usage(call, usage, cost)
         elif kind == "response.done":
             usage = _get(event, "response", "usage")
             if usage is not None:
@@ -349,27 +384,77 @@ class CallManager:
                 call.responses += 1
                 call.cost_usd += cost
                 self._add_cost(call, cost)
-                with session_scope() as s:
-                    s.add(
-                        Usage(
-                            agent="junior_muneer_live",
-                            model=call.model,
-                            mode="call",
-                            conversation_id=call.conversation_id,
-                            input_tokens=_get(usage, "input_tokens", default=0),
-                            cached_input_tokens=_get(
-                                usage, "input_token_details", "cached_tokens", default=0
-                            ),
-                            output_tokens=_get(usage, "output_tokens", default=0),
-                            cost_usd=cost,
-                        )
-                    )
+                self._record_call_usage(call, usage, cost)
                 try:
                     budget_left(call.context.settings)
                 except BudgetExceeded:
                     await self.end(call.call_id, "daily cost cap reached", gateway)
         elif kind == "error":
             log.warning("Realtime error on call %s: %s", call.call_id, _get(event, "error"))
+
+    def _record_call_usage(self, call: LiveCall, usage: Any, cost: float) -> None:
+        with session_scope() as s:
+            s.add(
+                Usage(
+                    agent="junior_muneer_live",
+                    model=call.model,
+                    mode="call",
+                    conversation_id=call.conversation_id,
+                    input_tokens=_get(usage, "input_tokens", default=0),
+                    cached_input_tokens=_get(usage, "input_token_details", "cached_tokens", default=0),
+                    output_tokens=_get(usage, "output_tokens", default=0),
+                    cost_usd=cost,
+                )
+            )
+
+    async def _tool_then_reply(self, call: LiveCall, conn, event: Any) -> None:
+        call.tools_running += 1
+        filler = asyncio.create_task(self._fillers(call, conn))
+        try:
+            output = await self.run_tool(
+                call, _get(event, "name"), _get(event, "arguments", default="{}")
+            )
+        finally:
+            call.tools_running -= 1
+            filler.cancel()
+        if call.ended:
+            return
+        if call.filler_ids:  # let a "still looking…" finish before the real answer
+            call.filler_done.clear()
+            try:
+                await asyncio.wait_for(call.filler_done.wait(), FILLER_WAIT_SECONDS)
+            except TimeoutError:
+                pass
+        await conn.send(
+            {
+                "type": "conversation.item.create",
+                "item": {
+                    "type": "function_call_output",
+                    "call_id": _get(event, "call_id"),
+                    "output": output,
+                },
+            }
+        )
+        await conn.send(self.reply_request(call))
+
+    async def _fillers(self, call: LiveCall, conn) -> None:
+        """While a tool runs, say a short "still looking…" now and then."""
+        await asyncio.sleep(FILLER_FIRST_SECONDS)
+        while call.tools_running and not call.ended:
+            if not call.filler_ids:
+                await conn.send(
+                    {
+                        "type": "response.create",
+                        "response": {
+                            "conversation": "none",  # not part of the conversation
+                            "metadata": {"kind": "filler"},
+                            "instructions": call.instructions
+                            + LANGUAGE_NOTES[call.language]
+                            + FILLER_NOTE,
+                        },
+                    }
+                )
+            await asyncio.sleep(FILLER_EVERY_SECONDS)
 
     def reply_request(self, call: LiveCall) -> dict:
         """Start his reply, in the language you just spoke."""
@@ -384,7 +469,9 @@ class CallManager:
         except ValueError:
             return "Invalid arguments."
         context = call.context
-        if name == "save_memory":
+        if name == "web_search":
+            result = await self._quick_search(call, str(args.get("query", "")))
+        elif name == "save_memory":
             result = save_memory_for(context, str(args.get("fact", "")), str(args.get("your_words", "")))
         elif name == "forget_memory":
             result = forget_memory_for(context, int(args.get("memory_id", 0)))
@@ -394,6 +481,7 @@ class CallManager:
             result = f"Unknown tool {name!r}."
         context.pending_events.clear()
         label = {
+            "web_search": f"Searching the web: {args.get('query', '')}",
             "ask_junior": f"Checking: {args.get('question', '')}",
             "save_memory": "Saving a memory",
             "forget_memory": "Forgetting a memory",
@@ -401,7 +489,7 @@ class CallManager:
         call.pending_steps.append(
             {
                 "id": f"call-tool-{len(call.pending_steps)}-{name}",
-                "kind": "web_search" if name == "ask_junior" else "tool",
+                "kind": "web_search" if name in ("web_search", "ask_junior") else "tool",
                 "name": name,
                 "label": label,
                 "status": "done",
@@ -416,6 +504,26 @@ class CallManager:
         )
         return result
 
+    async def _quick_search(self, call: LiveCall, query: str) -> str:
+        """Straight to the web researcher (small model, one quick search): ~4 seconds."""
+        if not query.strip():
+            return "No search query given."
+        context = call.context
+        context.mark_outside()  # web results: no memory saving this turn
+        spent_before = len(context.usage)
+        try:
+            text = await context.helpers.run("web_researcher", query, context)
+        except BudgetExceeded as e:
+            return f"Can't search: {e}"
+        new_usage = context.usage[spent_before:]
+        call.pending_cost += sum(u.cost_usd for u in new_usage)
+        call.cost_usd += sum(u.cost_usd for u in new_usage)
+        with session_scope() as s:
+            from junior.chat.history import save_usage
+
+            save_usage(s, new_usage, call.conversation_id, None, mode="call")
+        return text or "Nothing reliable found."
+
     async def _ask_junior(self, call: LiveCall, question: str) -> str:
         """The full Junior Muneer (web search, database) answers a question for the call."""
         from junior.agent.builder import build_agent
@@ -424,6 +532,7 @@ class CallManager:
         if not question.strip():
             return "No question given."
         context = call.context
+        context.mark_outside()  # the answer may include web results
         spent_before = len(context.usage)
         router_ = get_router()
         agent, model_name = build_agent(
@@ -447,8 +556,6 @@ class CallManager:
             from junior.chat.history import save_usage
 
             save_usage(s, new_usage, call.conversation_id, None, mode="call")
-        # Whatever came back may include web results: treat it as outside text.
-        context.mark_outside()
         return result.text or "I couldn't find an answer."
 
     # -- end -------------------------------------------------------------------
@@ -543,6 +650,17 @@ class CallManager:
         )
         self.calls.pop(call.call_id, None)
 
+
+TOOL_FINISH_SECONDS = 30
+FILLER_FIRST_SECONDS = 2.5
+FILLER_EVERY_SECONDS = 7.0
+FILLER_WAIT_SECONDS = 6.0
+FILLER_NOTE = (
+    "\n\n## Right now\nYou are still looking something up for them. Say ONE very short, "
+    "natural filler of 3 to 8 words so they know you're on it, for example \"Ek second, "
+    "dekh raha hoon…\" or \"Still checking, one moment…\". Vary it. Don't answer yet "
+    "and don't ask a question."
+)
 
 URDU_LETTERS = re.compile(r"[\u0600-\u06FF\u0750-\u077F\u0900-\u097F]")
 LANGUAGE_NOTES = {

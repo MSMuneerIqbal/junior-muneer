@@ -44,16 +44,34 @@ AUDIO_NAME = re.compile(r"^[0-9a-f]{32}\.(webm|ogg|m4a|mp3|wav)$")
 MEDIA_TYPES = {"webm": "audio/webm", "ogg": "audio/ogg", "m4a": "audio/mp4", "mp3": "audio/mpeg", "wav": "audio/wav"}
 
 # Helps the speech-to-text with names and mixed languages.
-# Spoken Urdu and Hindi sound alike, so the hint (partly written in Urdu) asks for
-# Urdu script. If Hindi (Devanagari) script still comes back, we transcribe again
-# with the language set to Urdu.
+# Spoken Urdu and Hindi sound alike, so the hint asks for Urdu script. If Hindi
+# (Devanagari) script still comes back, we transcribe again with the language set
+# to Urdu. The hint has no example sentences: on breathing or background noise the
+# model tends to write out its hint, so example words came back as fake messages.
 TRANSCRIBE_PROMPT = (
     "The speaker is {name}, from Pakistan, talking to their AI assistant Junior Muneer. "
-    "Write down exactly what they say, in the language they say it. Never translate: "
-    "English stays in English, like this: Hello Junior, what's the news today? "
-    "Urdu is written in Urdu script, like this: السلام علیکم، آپ کیسے ہیں؟ "
-    "Never use Hindi (Devanagari) script."
+    "Write down exactly what they say, in the language they say it; never translate. "
+    "Write Urdu in Urdu script (not Hindi/Devanagari, not Roman Urdu) and English in English. "
+    "If there is no speech (only breathing, coughs or background noise), write nothing."
 )
+# Average log-probability of the transcript's words. Real speech scores about -0.15
+# or better; text made up from breathing or noise scores -0.8 or worse.
+NOISE_LOGPROB = -0.5
+
+
+def average_logprob(logprobs) -> float | None:
+    values = [lp.get("logprob") if isinstance(lp, dict) else getattr(lp, "logprob", None)
+              for lp in (logprobs or [])]
+    values = [v for v in values if v is not None]
+    return sum(values) / len(values) if values else None
+
+
+def is_noise(text: str, logprobs) -> bool:
+    """True for an empty transcript, or one the model itself wasn't sure about."""
+    if not text.strip(" .،۔?!؟"):
+        return True
+    avg = average_logprob(logprobs)
+    return avg is not None and avg < NOISE_LOGPROB
 DEVANAGARI = re.compile(r"[\u0900-\u097F]")
 
 
@@ -76,6 +94,7 @@ class TranscriptResult:
     text: str
     languages: list[str]
     seconds: float | None  # from the API when it reports it
+    logprobs: list | None = None
 
 
 class VoiceClient(Protocol):
@@ -99,6 +118,8 @@ class OpenAIVoice:
         self, path: Path, model: str, prompt: str, language: str | None = None
     ) -> TranscriptResult:
         extra = {"language": language} if language else {}
+        if "gpt-4o" in model:  # these report how sure they are of each word
+            extra.update(response_format="json", include=["logprobs"])
         with path.open("rb") as f:
             result = await self.client.audio.transcriptions.create(
                 model=model, file=f, prompt=prompt, **extra
@@ -109,7 +130,12 @@ class OpenAIVoice:
             getattr(lang, "code", None) or str(lang)
             for lang in (getattr(result, "languages", None) or [])
         ]
-        return TranscriptResult(text=result.text.strip(), languages=languages, seconds=seconds)
+        return TranscriptResult(
+            text=result.text.strip(),
+            languages=languages,
+            seconds=seconds,
+            logprobs=getattr(result, "logprobs", None),
+        )
 
     async def speak(
         self, text: str, model: str, voice: str, speed: float, instructions: str
@@ -192,7 +218,7 @@ async def transcribe(
         language = "ur" if get_setting("language") == "urdu" else None
         result = await voice.transcribe(path, model, prompt, language)
         retried = False
-        if DEVANAGARI.search(result.text):
+        if not is_noise(result.text, result.logprobs) and DEVANAGARI.search(result.text):
             # Urdu heard as Hindi: transcribe again, as Urdu.
             retried = True
             first_seconds = result.seconds
@@ -220,9 +246,11 @@ async def transcribe(
         },
         cost_usd=cost,
     )
+    noise = is_noise(result.text, result.logprobs)
     return {
         "audio_id": audio_id,
-        "text": result.text,
+        # Breathing or background noise: nothing to send ("I didn't catch that").
+        "text": "" if noise else result.text,
         "languages": result.languages,
         "seconds": round(duration, 1),
         "cost_usd": cost,

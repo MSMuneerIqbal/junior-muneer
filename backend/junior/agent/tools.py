@@ -124,7 +124,8 @@ async def web_search(ctx: Ctx, query: str) -> str:
 
 
 def _hosted_web_search() -> list[Tool]:
-    return [WebSearchTool(search_context_size="medium")]
+    # "low" is quicker and cheaper; one good search is usually enough.
+    return [WebSearchTool(search_context_size="low")]
 
 
 # Name in the agent file -> the tools it gives.

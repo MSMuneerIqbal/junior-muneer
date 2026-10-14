@@ -22,10 +22,14 @@ export function useLiveCall() {
   const [error, setError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [micStream, setMicStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const pc = useRef<RTCPeerConnection | null>(null);
   const mic = useRef<MediaStream | null>(null);
   const speaker = useRef<HTMLAudioElement | null>(null);
   const callId = useRef<string | null>(null);
+  // True from a tool call until his real answer starts (fillers don't count).
+  const searching = useRef(false);
 
   const upsert = useCallback((id: string, who: CallLine["who"], text: string, final: boolean, append: boolean) => {
     setLines((all) => {
@@ -53,19 +57,28 @@ export function useLiveCall() {
         case "conversation.item.input_audio_transcription.completed":
           upsert(`u-${itemId}`, "you", String(e.transcript ?? ""), true, false);
           break;
+        case "response.created": {
+          const filler =
+            (e.response as { metadata?: { kind?: string } } | undefined)?.metadata?.kind ===
+            "filler";
+          if (!filler) searching.current = false;
+          break;
+        }
         case "response.output_audio_transcript.delta":
-          setActivity("speaking");
+          setActivity(searching.current ? "checking" : "speaking");
           upsert(`j-${itemId}`, "junior", String(e.delta ?? ""), false, true);
           break;
         case "response.output_audio_transcript.done":
           upsert(`j-${itemId}`, "junior", String(e.transcript ?? ""), true, false);
           break;
         case "response.function_call_arguments.done":
+          searching.current = true;
           setActivity("checking");
           break;
         case "output_audio_buffer.stopped":
         case "response.done":
-          setActivity((a) => (a === "checking" ? a : "listening"));
+          // While a search runs (and "still looking…" fillers play), keep showing it.
+          setActivity(searching.current ? "checking" : "listening");
           break;
       }
     },
@@ -96,6 +109,7 @@ export function useLiveCall() {
           throw new Error("Microphone access was blocked. Allow it in the browser's address bar.");
         });
       mic.current = stream;
+      setMicStream(stream);
 
       const peer = new RTCPeerConnection();
       pc.current = peer;
@@ -107,6 +121,7 @@ export function useLiveCall() {
       const audio = speaker.current;
       peer.ontrack = (e) => {
         audio.srcObject = e.streams[0];
+        setRemoteStream(e.streams[0]);
       };
       peer.addTrack(stream.getAudioTracks()[0], stream);
       const channel = peer.createDataChannel("oai-events");
@@ -179,5 +194,18 @@ export function useLiveCall() {
     };
   }, [cleanup]);
 
-  return { status, activity, lines, muted, error, conversationId, startedAt, start, end, toggleMute };
+  return {
+    status,
+    activity,
+    lines,
+    muted,
+    error,
+    conversationId,
+    startedAt,
+    micStream,
+    remoteStream,
+    start,
+    end,
+    toggleMute,
+  };
 }
