@@ -5,6 +5,19 @@ from typing import Any
 
 
 @dataclass
+class ModelUsage:
+    """One call to the model, with its tokens and cost."""
+
+    agent: str
+    model: str
+    input_tokens: int
+    cached_input_tokens: int
+    output_tokens: int
+    web_searches: int
+    cost_usd: float
+
+
+@dataclass
 class TurnContext:
     conversation_id: int | None
     settings: dict[str, Any]
@@ -16,6 +29,8 @@ class TurnContext:
     outside_content_seen: bool = False
     # Events from tools (e.g. "memory updated") for the chat to show.
     pending_events: list[dict[str, Any]] = field(default_factory=list)
+    # Every model call so far, kept here so the cost is saved even if the turn fails.
+    usage: list[ModelUsage] = field(default_factory=list)
 
     def mark_outside(self) -> None:
         self.outside_content_seen = True

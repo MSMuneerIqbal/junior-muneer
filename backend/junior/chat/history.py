@@ -11,8 +11,9 @@ from agents.items import TResponseInputItem
 from sqlalchemy import select
 
 from junior.agent.builder import ModelProvider, build_agent
-from junior.agent.context import TurnContext
-from junior.agent.runner import ModelUsage, TurnResult, run_once
+from junior.agent.context import ModelUsage, TurnContext
+from junior.agent.runner import TurnResult, run_once
+from junior.costs import budget_left
 from junior.db import Conversation, Message, Usage, session_scope
 from junior.models import get_router
 from junior.registry import Registry
@@ -108,16 +109,20 @@ async def summarize_if_long(
             for m in old
         )
 
+    budget = budget_left(settings)  # raises BudgetExceeded when the cap is reached
     router = get_router()
     agent, model_name = build_agent(registry.get("summarizer"), router, model_provider)
     prompt = f"Summary so far:\n{previous or '(none yet)'}\n\nNext part of the chat:\n{transcript}"
-    result = await run_once(
-        agent,
-        model_name,
-        router,
-        [{"role": "user", "content": prompt}],
-        TurnContext(conversation_id=conversation_id, settings=settings),
-    )
+    context = TurnContext(conversation_id=conversation_id, settings=settings)
+    try:
+        result = await run_once(
+            agent, model_name, router, [{"role": "user", "content": prompt}], context, budget
+        )
+    except Exception:
+        if context.usage:  # a failed run still cost money
+            with session_scope() as s:
+                save_usage(s, context.usage, conversation_id, None)
+        raise
     with session_scope() as s:
         if result.text.strip():
             convo = s.get(Conversation, conversation_id)

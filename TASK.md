@@ -89,7 +89,7 @@ junior-muneer/
 
 ### Safety and housekeeping
 
-- [ ] **P0-10 Cost tracking + daily cap**
+- [x] **P0-10 Cost tracking + daily cap**
   - Tokens and cost recorded per call, per agent and per chat. A price table in settings.
   - **$5/day cap** (editable): when it's reached, new AI work stops with a clear message.
   - *Done when:* the dashboard can show today's spend, and a test cap of $0.01 blocks the next message. Tests included.

@@ -8,6 +8,7 @@ from junior.agent.builder import ModelProvider, NoApiKeyError, build_agent
 from junior.agent.context import TurnContext
 from junior.agent.runner import TurnResult, stream_turn
 from junior.chat.history import build_input, save_usage, summarize_if_long
+from junior.costs import BudgetExceeded, budget_left
 from junior.db import Conversation, Message, session_scope
 from junior.db.models import utcnow
 from junior.models import get_router
@@ -72,6 +73,12 @@ class ChatService:
             s.get(Conversation, conversation_id).updated_at = utcnow()
             return message.id
 
+    def _save_partial_usage(self, conversation_id: int, context: TurnContext) -> None:
+        """A failed or stopped turn still cost money: record it."""
+        if context.usage:
+            with session_scope() as s:
+                save_usage(s, context.usage, conversation_id, None)
+
     # ---- the turn -------------------------------------------------------------
 
     async def reply(self, conversation_id: int | None, text: str) -> AsyncIterator[dict[str, Any]]:
@@ -90,26 +97,27 @@ class ChatService:
             yield {"type": "conversation", "id": conversation_id, "title": title}
         yield {"type": "user_message", "id": user_message_id, "conversation_id": conversation_id}
 
+        settings = all_settings()
+        context = TurnContext(conversation_id=conversation_id, settings=settings)
         try:
+            budget = budget_left(settings)
             provider = self.model_provider()
             router = get_router()
-            settings = all_settings()
             agent, model_name = build_agent(self.registry.get(MAIN_AGENT), router, provider)
-            items, user_ids = build_input(conversation_id, settings["user_name"])
-            context = TurnContext(
-                conversation_id=conversation_id, settings=settings, user_message_ids=user_ids
-            )
+            items, context.user_message_ids = build_input(conversation_id, settings["user_name"])
             result: TurnResult | None = None
-            async for event in stream_turn(agent, model_name, router, items, context):
+            async for event in stream_turn(agent, model_name, router, items, context, budget):
                 if event["type"] == "final":
                     result = event["result"]
                 else:
                     yield event
-        except NoApiKeyError as e:
+        except (NoApiKeyError, BudgetExceeded) as e:
+            self._save_partial_usage(conversation_id, context)
             yield {"type": "error", "message": str(e)}
             return
         except Exception as e:  # shown in the chat; details in the log
             log.exception("Chat turn failed")
+            self._save_partial_usage(conversation_id, context)
             yield {"type": "error", "message": f"Something went wrong: {type(e).__name__}: {e}"}
             return
 
@@ -127,5 +135,7 @@ class ChatService:
         # After the answer is out, so it never slows the reply down.
         try:
             await summarize_if_long(conversation_id, self.registry, provider)
+        except BudgetExceeded:
+            log.info("Chat %s: summary skipped, daily cap reached", conversation_id)
         except Exception:
             log.exception("Summarizing chat %s failed; will retry next turn", conversation_id)

@@ -21,7 +21,8 @@ from agents import (
 )
 from agents.items import ModelResponse, TResponseInputItem
 
-from junior.agent.context import TurnContext
+from junior.agent.context import ModelUsage, TurnContext
+from junior.costs import BudgetExceeded
 from junior.models import ModelRouter
 
 MAX_TURNS = 8
@@ -34,19 +35,6 @@ STEP_LABELS = {
     "save_memory": "Saving a memory",
     "forget_memory": "Forgetting a memory",
 }
-
-
-@dataclass
-class ModelUsage:
-    """One call to the model, with its tokens and cost."""
-
-    agent: str
-    model: str
-    input_tokens: int
-    cached_input_tokens: int
-    output_tokens: int
-    web_searches: int
-    cost_usd: float
 
 
 @dataclass
@@ -65,12 +53,22 @@ def _get(obj: Any, key: str) -> Any:
 
 
 class CostHooks(RunHooks[TurnContext]):
-    """Records the cost of every model call, and notices web searches."""
+    """Records the cost of every model call, notices web searches, and stops the
+    run before a model call once the budget for this turn is used up."""
 
-    def __init__(self, router: ModelRouter, model_names: dict[str, str]) -> None:
+    def __init__(
+        self, router: ModelRouter, model_names: dict[str, str], budget: float | None = None
+    ) -> None:
         self.router = router
         self.model_names = model_names
-        self.usage: list[ModelUsage] = []
+        self.budget = budget
+
+    async def on_llm_start(self, context, agent, system_prompt, input_items) -> None:
+        spent = sum(u.cost_usd for u in context.context.usage)
+        if self.budget is not None and spent >= self.budget:
+            raise BudgetExceeded(
+                f"Stopped: this answer used up what was left of today's cap (${spent:.2f})."
+            )
 
     async def on_llm_end(
         self, context: RunContextWrapper[TurnContext], agent: Agent[Any], response: ModelResponse
@@ -84,7 +82,7 @@ class CostHooks(RunHooks[TurnContext]):
         model = self.model_names.get(agent.name, "unknown")
         cost = self.router.price(model).cost(u.input_tokens, u.output_tokens, cached)
         cost += searches * self.router.tool_prices.get("web_search", 0.0)
-        self.usage.append(
+        context.context.usage.append(
             ModelUsage(
                 agent=agent.name,
                 model=model,
@@ -125,8 +123,9 @@ async def stream_turn(
     router: ModelRouter,
     input_items: list[TResponseInputItem],
     context: TurnContext,
+    budget: float | None = None,
 ) -> AsyncIterator[dict[str, Any]]:
-    hooks = CostHooks(router, {agent.name: model_name})
+    hooks = CostHooks(router, {agent.name: model_name}, budget)
     result = Runner.run_streamed(
         agent, input_items, context=context, hooks=hooks, max_turns=MAX_TURNS
     )
@@ -164,7 +163,7 @@ async def stream_turn(
     text = final if isinstance(final, str) and final else "".join(text_parts)
     yield {
         "type": "final",
-        "result": TurnResult(text=text, usage=hooks.usage, steps=list(steps.values())),
+        "result": TurnResult(text=text, usage=context.usage, steps=list(steps.values())),
     }
 
 
@@ -174,11 +173,12 @@ async def run_once(
     router: ModelRouter,
     input_items: list[TResponseInputItem],
     context: TurnContext,
+    budget: float | None = None,
 ) -> TurnResult:
     """Run an agent without streaming (for background helpers like the summarizer)."""
-    hooks = CostHooks(router, {agent.name: model_name})
+    hooks = CostHooks(router, {agent.name: model_name}, budget)
     result = await Runner.run(
         agent, input_items, context=context, hooks=hooks, max_turns=MAX_TURNS
     )
     text = result.final_output if isinstance(result.final_output, str) else ""
-    return TurnResult(text=text, usage=hooks.usage)
+    return TurnResult(text=text, usage=context.usage)

@@ -12,6 +12,7 @@ from junior.agent.builder import ModelProvider, openai_model_provider
 from junior.chat.api import router as chat_router
 from junior.chat.service import ChatService
 from junior.config import get_settings
+from junior.costs import router as costs_router
 from junior.db import init_db
 from junior.logging_setup import setup_logging
 from junior.memories import router as memories_router
@@ -50,6 +51,7 @@ def create_app(model_provider: Callable[[], ModelProvider] = openai_model_provid
 
     app.include_router(chat_router)
     app.include_router(memories_router)
+    app.include_router(costs_router)
     return app
 
 
