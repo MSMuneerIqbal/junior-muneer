@@ -18,10 +18,24 @@ class RecordingVoice(FakeVoice):
     """Fake that reports a duration and remembers the prompt it got."""
 
     prompts: list[str] = []
+    languages: list = []
 
-    async def transcribe(self, path, model, prompt):
+    async def transcribe(self, path, model, prompt, language=None):
         self.prompts.append(prompt)
+        self.languages.append(language)
         return TranscriptResult(text="Assalam o alaikum, kaise ho?", languages=["ur"], seconds=6.0)
+
+
+class HindiFirstVoice(FakeVoice):
+    """Hears Urdu as Hindi unless told the language is Urdu."""
+
+    languages: list = []
+
+    async def transcribe(self, path, model, prompt, language=None):
+        self.languages.append(language)
+        if language == "ur":
+            return TranscriptResult(text="آپ کیسے ہیں؟", languages=["ur"], seconds=3.0)
+        return TranscriptResult(text="आप कैसे हैं?", languages=["hi"], seconds=3.0)
 
 
 @pytest.fixture
@@ -61,8 +75,8 @@ def test_transcribe_saves_the_recording_and_costs_per_minute(client):
     assert body["text"] == "Assalam o alaikum, kaise ho?"
     assert body["languages"] == ["ur"]
     assert body["seconds"] == 6.0  # the API's duration wins over the browser's guess
-    # gpt-transcribe: $0.0045 per minute
-    assert body["cost_usd"] == pytest.approx(6 / 60 * 0.0045)
+    # gpt-4o-transcribe: $0.006 per minute
+    assert body["cost_usd"] == pytest.approx(6 / 60 * 0.006)
 
     # Saved and playable.
     played = client.get(f"/api/audio/{body['audio_id']}")
@@ -71,7 +85,7 @@ def test_transcribe_saves_the_recording_and_costs_per_minute(client):
 
     with session_scope() as s:
         row = s.scalars(select(Usage)).one()
-        assert (row.agent, row.mode, row.model) == ("transcriber", "voice", "gpt-transcribe")
+        assert (row.agent, row.mode, row.model) == ("transcriber", "voice", "gpt-4o-transcribe")
     assert client.get("/api/usage/today").json()["by_mode"]["voice"] > 0
 
 
@@ -128,3 +142,28 @@ def test_cap_blocks_transcription(client):
 @pytest.mark.parametrize("bad", ["../junior.db", "x.webm", "a" * 32 + ".exe"])
 def test_audio_path_cannot_escape_the_folder(client, bad):
     assert client.get(f"/api/audio/{bad}").status_code == 404
+
+
+def test_urdu_heard_as_hindi_is_transcribed_again_as_urdu(model):
+    HindiFirstVoice.languages = []
+    app = create_app(model_provider=lambda: (lambda _n: model), voice=HindiFirstVoice)
+    with TestClient(app) as client:
+        body = upload(client).json()
+        assert body["text"] == "آپ کیسے ہیں؟"
+        assert HindiFirstVoice.languages == [None, "ur"]
+        assert body["seconds"] == 6.0  # both runs are billed
+        row = client.get("/api/activity?kind=tool_call").json()[0]
+        assert row["detail"]["retried_as_urdu"] is True
+
+
+def test_urdu_language_setting_forces_urdu(client):
+    RecordingVoice.languages = []
+    set_setting("language", "urdu")
+    upload(client)
+    assert RecordingVoice.languages == ["ur"]
+
+
+def test_prompt_asks_for_urdu_script(client):
+    upload(client)
+    assert "Write Urdu in Urdu script" in RecordingVoice.prompts[-1]
+    assert "السلام علیکم" in RecordingVoice.prompts[-1]

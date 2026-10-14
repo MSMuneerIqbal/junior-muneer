@@ -9,7 +9,7 @@ test("chat page loads, sends a message and streams the answer", async ({ page })
   await page.goto("/");
   await expect(page.getByText("What's on your mind?")).toBeVisible();
 
-  const box = page.getByLabel("Message");
+  const box = page.getByRole("textbox", { name: "Message" });
   await box.fill("Hello from the smoke test");
   await box.press("Enter");
 
@@ -27,7 +27,7 @@ test("chat page loads, sends a message and streams the answer", async ({ page })
 
 test("Urdu reads right to left", async ({ page }) => {
   await page.goto("/");
-  const box = page.getByLabel("Message");
+  const box = page.getByRole("textbox", { name: "Message" });
   await box.fill("آپ کیسے ہیں؟");
   await box.press("Enter");
   await expect(page.getByText("Show work")).toBeVisible();
@@ -37,7 +37,7 @@ test("Urdu reads right to left", async ({ page }) => {
 
 test("memory note can be undone", async ({ page }) => {
   await page.goto("/");
-  const box = page.getByLabel("Message");
+  const box = page.getByRole("textbox", { name: "Message" });
   await box.fill("remember I drink green tea");
   await box.press("Enter");
   await expect(page.getByText("Memory updated: I drink green tea")).toBeVisible();

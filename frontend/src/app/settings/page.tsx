@@ -47,6 +47,7 @@ const input =
 
 function SettingsForm({ initial }: { initial: Settings }) {
   const { mutate } = useSWRConfig();
+  const { data: voices } = useSWR<string[]>("/api/voices", fetcher);
   const [form, setForm] = useState(initial);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -61,6 +62,9 @@ function SettingsForm({ initial }: { initial: Settings }) {
         language: form.language,
         timezone: form.timezone,
         daily_cap_usd: Number(form.daily_cap_usd),
+        tts_voice: form.tts_voice,
+        tts_speed: Number(form.tts_speed),
+        voice_autoplay: form.voice_autoplay,
       });
       await mutate(SETTINGS_KEY, saved, { revalidate: false });
       await mutate(USAGE_KEY);
@@ -123,6 +127,41 @@ function SettingsForm({ initial }: { initial: Settings }) {
           aria-label="Daily safety cap in US dollars"
         />
       </Field>
+      <fieldset className="flex flex-col gap-4 border-t border-line pt-4">
+        <legend className="pr-2 text-sm font-semibold">Voice</legend>
+        <Field label="His voice" hint="Used when he reads answers aloud.">
+          <select
+            value={form.tts_voice}
+            onChange={(e) => setForm({ ...form, tts_voice: e.target.value })}
+            className={input}
+          >
+            {(voices ?? [form.tts_voice]).map((v) => (
+              <option key={v} value={v}>
+                {v[0].toUpperCase() + v.slice(1)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={`Speaking speed: ${Number(form.tts_speed).toFixed(2)}×`}>
+          <input
+            type="range"
+            min={0.75}
+            max={1.5}
+            step={0.05}
+            value={form.tts_speed}
+            onChange={(e) => setForm({ ...form, tts_speed: Number(e.target.value) })}
+            aria-label="Speaking speed"
+          />
+        </Field>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.voice_autoplay}
+            onChange={(e) => setForm({ ...form, voice_autoplay: e.target.checked })}
+          />
+          Read answers aloud automatically when I send a voice message
+        </label>
+      </fieldset>
       <div className="flex items-center gap-3">
         <button
           onClick={save}

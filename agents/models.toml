@@ -37,7 +37,7 @@ output = 0.50
 
 # Voice (phase 1). Prices from OpenAI's pricing page (checked 2026-10-15).
 [audio]
-transcribe = "gpt-transcribe"         # your voice messages -> text
+transcribe = "gpt-4o-transcribe"      # your voice messages -> text (best for Urdu, see PLAN.md)
 speech = "gpt-4o-mini-tts"            # his answers read aloud
 realtime = "gpt-realtime-2.1-mini"    # live calls
 

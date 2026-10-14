@@ -7,9 +7,11 @@ import { Composer } from "@/components/chat/Composer";
 import type { VoiceMessage } from "@/components/chat/MicButton";
 import { AssistantMessage, ErrorNotice, UserMessage } from "@/components/chat/MessageView";
 import { fetcher } from "@/lib/api";
-import { isChatsKey, PAUSE_KEY, USAGE_KEY } from "@/lib/keys";
+import { isChatsKey, PAUSE_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
 import type { ChatEvent, MemoryNote, Message, Step } from "@/lib/types";
 import { useChatSocket } from "@/lib/useChatSocket";
+import { speakMessage } from "@/lib/player";
+import type { Settings } from "@/lib/types";
 
 /** The answer being written right now. */
 type Turn = {
@@ -38,7 +40,16 @@ export function ChatView() {
   const { mutate: mutateGlobal } = useSWRConfig();
 
   const { data: pause } = useSWR<{ paused: boolean }>(PAUSE_KEY, fetcher);
-  const [turn, setTurn] = useState<Turn | null>(null);
+  const { data: settings } = useSWR<Settings>(SETTINGS_KEY, fetcher);
+  const autoplay = settings?.voice_autoplay ?? true;
+  const [turn, setTurnState] = useState<Turn | null>(null);
+  // The latest turn, kept in step with every update, for event handlers.
+  const turnRef = useRef<Turn | null>(null);
+  const setTurn = useCallback((next: Turn | null | ((t: Turn | null) => Turn | null)) => {
+    const value = typeof next === "function" ? next(turnRef.current) : next;
+    turnRef.current = value;
+    setTurnState(value);
+  }, []);
   // Memory notes stay under the answer they came with (this session only).
   const [notesByMessage, setNotesByMessage] = useState<Record<number, MemoryNote[]>>({});
 
@@ -68,17 +79,20 @@ export function ChatView() {
           setTurn((t) => t && { ...t, notes: [...t.notes, note] });
           break;
         }
-        case "done":
-          setTurn((t) => {
-            if (t?.notes.length) {
-              setNotesByMessage((n) => ({ ...n, [event.message_id]: t.notes }));
-            }
-            return t && { ...t, status: "done", messageId: event.message_id, text: event.text };
-          });
+        case "done": {
+          const t = turnRef.current;
+          if (t?.notes.length) {
+            const notes = t.notes;
+            setNotesByMessage((n) => ({ ...n, [event.message_id]: notes }));
+          }
+          // You spoke, so he answers aloud too (if auto-play is on).
+          if (t?.userAudioId && autoplay && event.text) void speakMessage(event.message_id);
+          setTurn((t) => t && { ...t, status: "done", messageId: event.message_id, text: event.text });
           mutateGlobal(`/api/conversations/${event.conversation_id}/messages`);
           mutateGlobal(isChatsKey);
           mutateGlobal(USAGE_KEY);
           break;
+        }
         case "error":
           setTurn((t) => t && { ...t, status: "error", error: event.message });
           mutateGlobal(isChatsKey);
@@ -86,7 +100,7 @@ export function ChatView() {
           break;
       }
     },
-    [mutate, mutateGlobal, messagesKey],
+    [mutate, mutateGlobal, messagesKey, autoplay, setTurn],
   );
 
   const { send, connected } = useChatSocket(onEvent);
@@ -154,6 +168,7 @@ export function ChatView() {
               ) : (
                 <AssistantMessage
                   key={m.id}
+                  messageId={m.id}
                   text={m.content}
                   steps={m.steps}
                   cost={m.cost_usd}

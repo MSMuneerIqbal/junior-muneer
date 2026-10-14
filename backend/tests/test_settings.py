@@ -33,6 +33,9 @@ def test_defaults(client):
         "timezone": "Asia/Karachi",
         "daily_cap_usd": 5.0,
         "paused": False,
+        "tts_voice": "marin",
+        "tts_speed": 1.0,
+        "voice_autoplay": True,
     }
 
 

@@ -387,6 +387,19 @@ The HTML pages get replaced by the Next.js dashboard, and the AI part switches f
 - **Phase 6:** a GitHub fine-grained token for the repos you choose (I'll guide you)
 - **Phase 8:** the official WhatsApp Business API needs **a separate phone number** (your personal WhatsApp number can't be used for both)
 
+## 14b. Voice test results (P1-03, 2026-10-15)
+
+Round trip: 6 everyday Urdu sentences, spoken by 3 OpenAI voices, transcribed back.
+
+| Speech-to-text | Accuracy | Written in Hindi script instead of Urdu |
+|---|---|---|
+| gpt-transcribe ($0.0045/min) | 27.6% | 13 of 18 |
+| **gpt-4o-transcribe** ($0.006/min) | **99.0%** | **0 of 18** |
+
+- **Chosen: gpt-4o-transcribe.** Spoken Urdu and Hindi sound the same; gpt-transcribe mostly writes Hindi script, even when asked for Urdu. As a safety net, any transcript in Hindi script is transcribed again with the language set to Urdu.
+- **Voices** (gpt-4o-mini-tts): Cedar 99.6%, Marin 99.5%, Ash 97.8% understood. All are clear; the final pick is by ear (Settings → Voice).
+- Junior Muneer is told never to write Urdu in Hindi script.
+
 ## 15. Using it on another PC
 
 1. Get the code from your private Git repo.
@@ -433,6 +446,7 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 
 ## 18. Change log
 
+- **v7.2 (2026-10-15):** voice: gpt-4o-transcribe for speech-to-text after the Urdu test (section 14b); spoken replies stream.
 - **v7.1 (2026-10-14):** web search moved to a small web-researcher helper after live testing showed the built-in tool adds ~4,400 tokens to every message (a hello cost $0.011; now $0.0023).
 - **v7:** safe workflow (section 2): all browser automation removed (Browser Reader, Browser Executor, agent Chrome profile, Playwright). Added the Paste box and copy-and-paste items.
   API senders are plain code. Terminal locked to Ask. Memory only from your own words. "Always allow" hidden on outside-content items. LinkedIn comments come in by paste (no API).

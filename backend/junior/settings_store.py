@@ -11,7 +11,16 @@ DEFAULTS: dict[str, Any] = {
     "timezone": "Asia/Karachi",
     "daily_cap_usd": 5.0,
     "paused": False,
+    # Voice (phase 1)
+    "tts_voice": "marin",
+    "tts_speed": 1.0,
+    # Read answers to voice messages aloud automatically.
+    "voice_autoplay": True,
 }
+TTS_VOICES = (
+    "marin", "cedar", "alloy", "ash", "ballad", "coral", "echo",
+    "fable", "nova", "onyx", "sage", "shimmer", "verse",
+)
 LANGUAGES = {"match", "english", "urdu"}
 
 

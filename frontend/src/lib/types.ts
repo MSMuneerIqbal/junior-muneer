@@ -88,4 +88,7 @@ export type Settings = {
   timezone: string;
   daily_cap_usd: number;
   paused: boolean;
+  tts_voice: string;
+  tts_speed: number;
+  voice_autoplay: boolean;
 };

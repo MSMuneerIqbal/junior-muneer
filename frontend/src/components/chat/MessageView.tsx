@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Markdown } from "@/components/chat/Markdown";
 import { BACKEND_URL, send } from "@/lib/api";
+import { speakMessage, stopSpeaking, usePlayer } from "@/lib/player";
 import type { MemoryNote, Step } from "@/lib/types";
 
 export function UserMessage({ text, audioId }: { text: string; audioId?: string | null }) {
@@ -102,13 +103,33 @@ function MemoryNoteLine({ note }: { note: MemoryNote }) {
   );
 }
 
+function ListenButton({ messageId }: { messageId: number }) {
+  const player = usePlayer();
+  const mine = player.messageId === messageId;
+  const label = mine && player.status === "playing" ? "■ Stop" : mine && player.status === "loading" ? "Loading…" : "🔊 Listen";
+  return (
+    <span className="flex items-center gap-2">
+      <button
+        onClick={() => (mine && player.status !== "idle" ? stopSpeaking() : speakMessage(messageId))}
+        className="text-muted hover:text-ink"
+        aria-label={mine && player.status === "playing" ? "Stop reading aloud" : "Read aloud"}
+      >
+        {label}
+      </button>
+      {mine && player.error && <span className="text-xs text-warn">{player.error}</span>}
+    </span>
+  );
+}
+
 export function AssistantMessage({
+  messageId,
   text,
   steps,
   cost,
   notes = [],
   streaming = false,
 }: {
+  messageId?: number;
   text: string;
   steps: Step[];
   cost?: number;
@@ -131,7 +152,16 @@ export function AssistantMessage({
       {notes.map((n) => (
         <MemoryNoteLine key={`${n.action}-${n.id}`} note={n} />
       ))}
-      {!streaming && cost !== undefined && <ShowWork steps={steps} cost={cost} />}
+      {!streaming && cost !== undefined && (
+        <div className="flex flex-wrap items-start gap-x-4">
+          <ShowWork steps={steps} cost={cost} />
+          {messageId !== undefined && text && (
+            <div className="mt-2 text-sm">
+              <ListenButton messageId={messageId} />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
