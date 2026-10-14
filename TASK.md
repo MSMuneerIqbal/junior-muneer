@@ -77,7 +77,7 @@ junior-muneer/
   - REST API for chats: list, create, rename, pin, delete, search, read messages.
   - Every message is saved, along with its steps and cost.
   - *Done when:* a test client sees the answer arrive in pieces, and the chat is in the database. Fake-AI test included.
-- [ ] **P0-08 Conversation memory**
+- [x] **P0-08 Conversation memory**
   - Recent messages go to the model with each new message; older parts of long chats are summarized to keep cost down.
   - *Done when:* in a long chat he still remembers what you said at the start.
 - [ ] **P0-09 Long-term memory**

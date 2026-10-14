@@ -62,7 +62,7 @@ def _get(obj: Any, key: str) -> Any:
     return obj.get(key) if isinstance(obj, dict) else getattr(obj, key, None)
 
 
-class _CostHooks(RunHooks[TurnContext]):
+class CostHooks(RunHooks[TurnContext]):
     """Records the cost of every model call, and notices web searches."""
 
     def __init__(self, router: ModelRouter, model_names: dict[str, str]) -> None:
@@ -124,7 +124,7 @@ async def stream_turn(
     input_items: list[TResponseInputItem],
     context: TurnContext,
 ) -> AsyncIterator[dict[str, Any]]:
-    hooks = _CostHooks(router, {agent.name: model_name})
+    hooks = CostHooks(router, {agent.name: model_name})
     result = Runner.run_streamed(
         agent, input_items, context=context, hooks=hooks, max_turns=MAX_TURNS
     )
@@ -164,3 +164,19 @@ async def stream_turn(
         "type": "final",
         "result": TurnResult(text=text, usage=hooks.usage, steps=list(steps.values())),
     }
+
+
+async def run_once(
+    agent: Agent[TurnContext],
+    model_name: str,
+    router: ModelRouter,
+    input_items: list[TResponseInputItem],
+    context: TurnContext,
+) -> TurnResult:
+    """Run an agent without streaming (for background helpers like the summarizer)."""
+    hooks = CostHooks(router, {agent.name: model_name})
+    result = await Runner.run(
+        agent, input_items, context=context, hooks=hooks, max_turns=MAX_TURNS
+    )
+    text = result.final_output if isinstance(result.final_output, str) else ""
+    return TurnResult(text=text, usage=hooks.usage)

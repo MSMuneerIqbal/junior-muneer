@@ -4,13 +4,11 @@ import logging
 from collections.abc import AsyncIterator, Callable
 from typing import Any
 
-from agents.items import TResponseInputItem
-from sqlalchemy import select
-
 from junior.agent.builder import ModelProvider, NoApiKeyError, build_agent
 from junior.agent.context import TurnContext
 from junior.agent.runner import TurnResult, stream_turn
-from junior.db import Conversation, Message, Usage, session_scope
+from junior.chat.history import build_input, save_usage, summarize_if_long
+from junior.db import Conversation, Message, session_scope
 from junior.db.models import utcnow
 from junior.models import get_router
 from junior.registry import Registry
@@ -58,25 +56,6 @@ class ChatService:
             s.flush()
             return convo.id, message.id, is_new
 
-    def history(self, conversation_id: int) -> tuple[list[TResponseInputItem], list[int]]:
-        """Model input for this chat, and the ids of your own messages."""
-        with session_scope() as s:
-            messages = s.scalars(
-                select(Message)
-                .where(Message.conversation_id == conversation_id)
-                .order_by(Message.id)
-            ).all()
-        items: list[TResponseInputItem] = []
-        user_ids: list[int] = []
-        for m in messages:
-            if m.role == "user":
-                items.append({"role": "user", "content": m.content})
-                if m.source == "user":
-                    user_ids.append(m.id)
-            elif m.content:
-                items.append({"role": "assistant", "content": m.content})
-        return items, user_ids
-
     def _finish(self, conversation_id: int, result: TurnResult) -> int:
         with session_scope() as s:
             message = Message(
@@ -89,21 +68,7 @@ class ChatService:
             )
             s.add(message)
             s.flush()
-            for u in result.usage:
-                s.add(
-                    Usage(
-                        agent=u.agent,
-                        model=u.model,
-                        mode="text",
-                        conversation_id=conversation_id,
-                        message_id=message.id,
-                        input_tokens=u.input_tokens,
-                        cached_input_tokens=u.cached_input_tokens,
-                        output_tokens=u.output_tokens,
-                        extra={"web_searches": u.web_searches} if u.web_searches else {},
-                        cost_usd=u.cost_usd,
-                    )
-                )
+            save_usage(s, result.usage, conversation_id, message.id)
             s.get(Conversation, conversation_id).updated_at = utcnow()
             return message.id
 
@@ -126,13 +91,13 @@ class ChatService:
         yield {"type": "user_message", "id": user_message_id, "conversation_id": conversation_id}
 
         try:
+            provider = self.model_provider()
             router = get_router()
-            agent, model_name = build_agent(
-                self.registry.get(MAIN_AGENT), router, self.model_provider()
-            )
-            items, user_ids = self.history(conversation_id)
+            settings = all_settings()
+            agent, model_name = build_agent(self.registry.get(MAIN_AGENT), router, provider)
+            items, user_ids = build_input(conversation_id, settings["user_name"])
             context = TurnContext(
-                conversation_id=conversation_id, settings=all_settings(), user_message_ids=user_ids
+                conversation_id=conversation_id, settings=settings, user_message_ids=user_ids
             )
             result: TurnResult | None = None
             async for event in stream_turn(agent, model_name, router, items, context):
@@ -158,3 +123,9 @@ class ChatService:
             "steps": result.steps,
             "cost_usd": result.cost_usd,
         }
+
+        # After the answer is out, so it never slows the reply down.
+        try:
+            await summarize_if_long(conversation_id, self.registry, provider)
+        except Exception:
+            log.exception("Summarizing chat %s failed; will retry next turn", conversation_id)
