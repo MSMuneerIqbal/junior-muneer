@@ -12,5 +12,13 @@ through an official API, or you copy and paste them yourself.
 **Plan complete.** The full design is in [PLAN.md](PLAN.md), and the working checklist is in [TASK.md](TASK.md).
 Development starts with Phase 0.
 
-`junior/` holds an early, untested prototype of the social media writing team, built with the Claude SDK.
-It will be reworked onto the OpenAI Agents SDK during phases 0 to 2.
+## Folders
+
+| Folder | What's in it |
+|---|---|
+| `backend/` | Python: FastAPI, OpenAI Agents SDK, database, tests |
+| `frontend/` | Next.js dashboard |
+| `agents/` | One file per agent (personality, instructions, model, tools) |
+| `playbooks/` | One expert file per platform |
+| `prototype/` | The early Claude SDK prototype, kept for reference only |
+| `data/` | Database, backups, uploads (never in Git) |

@@ -41,7 +41,7 @@ junior-muneer/
 
 ### Setup
 
-- [ ] **P0-01 Reorganize the repo**
+- [x] **P0-01 Reorganize the repo**
   - Create `backend/`, `frontend/`, `agents/`, `playbooks/`; move `junior/` to `prototype/`; update `.gitignore`.
   - *Done when:* the new folders exist and Git ignores `data/`, `.env`, `node_modules/` and `.venv/`.
 - [ ] **P0-02 Backend skeleton**
