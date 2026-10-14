@@ -1,14 +1,17 @@
 "use client";
 
 import { useRef, useState, type KeyboardEvent } from "react";
+import { MicButton, type VoiceMessage } from "@/components/chat/MicButton";
 
 /** The message box. Enter sends; Shift+Enter makes a new line. */
 export function Composer({
   onSend,
+  onVoice,
   busy,
   notice,
 }: {
   onSend: (text: string) => boolean;
+  onVoice: (voice: VoiceMessage) => void;
   busy: boolean;
   notice?: string;
 }) {
@@ -40,7 +43,7 @@ export function Composer({
 
   return (
     <div className="border-t border-line bg-bg px-3 pt-3 pb-4 sm:px-6">
-      <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-line bg-panel px-3 py-2 focus-within:border-accent">
+      <div className="relative mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-line bg-panel px-3 py-2 focus-within:border-accent">
         <textarea
           ref={box}
           rows={1}
@@ -55,6 +58,7 @@ export function Composer({
           aria-label="Message"
           className="max-h-[200px] min-h-[28px] flex-1 resize-none bg-transparent py-1 outline-none placeholder:text-muted"
         />
+        <MicButton onVoice={onVoice} disabled={busy} />
         <button
           onClick={submit}
           disabled={!text.trim() || busy}

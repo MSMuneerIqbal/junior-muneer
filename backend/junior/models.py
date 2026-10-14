@@ -40,6 +40,26 @@ class ModelRouter:
     agents: dict[str, str] = field(default_factory=dict)
     prices: dict[str, Price] = field(default_factory=dict)
     tool_prices: dict[str, float] = field(default_factory=dict)
+    # Voice: which model does what (transcribe, speech, realtime), and their prices.
+    audio: dict[str, str] = field(default_factory=dict)
+    audio_prices: dict[str, dict[str, float]] = field(default_factory=dict)
+
+    def audio_model(self, job: str) -> str:
+        try:
+            return self.audio[job]
+        except KeyError:
+            raise ModelConfigError(
+                f'{MODELS_FILE.name}: [audio] needs {job} = "<model name>".'
+            ) from None
+
+    def audio_price(self, model: str) -> dict[str, float]:
+        try:
+            return self.audio_prices[model]
+        except KeyError:
+            raise ModelConfigError(
+                f'No price for audio model "{model}" in {MODELS_FILE.name}. '
+                f'Add an [audio_prices."{model}"] section.'
+            ) from None
 
     def model_for(self, agent: str, default_tier: str = "strong") -> str:
         """The model for an agent: its override in [agents], else its own tier."""
@@ -94,8 +114,25 @@ def parse_router(text: str, source: str = MODELS_FILE.name) -> ModelRouter:
             raise fail(f'[prices."{model}"] needs numbers for input and output.') from None
 
     tool_prices = {k: float(v) for k, v in data.get("tool_prices", {}).items()}
+    audio = data.get("audio", {})
+    if not isinstance(audio, dict) or not all(isinstance(v, str) and v for v in audio.values()):
+        raise fail('[audio] entries must be  job = "<model name>".')
+    try:
+        audio_prices = {
+            m: {k: float(v) for k, v in p.items()} for m, p in data.get("audio_prices", {}).items()
+        }
+    except (AttributeError, TypeError, ValueError):
+        raise fail("[audio_prices] values must be numbers.") from None
+    missing_audio = sorted(m for m in audio.values() if m not in audio_prices)
+    if missing_audio:
+        raise fail(f'no price for audio model(s) {missing_audio}. Add [audio_prices."<model>"].')
     router = ModelRouter(
-        tiers=dict(tiers), agents=dict(agents), prices=prices, tool_prices=tool_prices
+        tiers=dict(tiers),
+        agents=dict(agents),
+        prices=prices,
+        tool_prices=tool_prices,
+        audio=dict(audio),
+        audio_prices=audio_prices,
     )
 
     used = set(tiers.values()) | {router.model_for(a) for a in agents}

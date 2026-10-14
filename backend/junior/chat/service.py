@@ -16,6 +16,7 @@ from junior.db.models import utcnow
 from junior.models import get_router
 from junior.registry import Registry
 from junior.settings_store import all_settings
+from junior.voice import audio_path
 
 log = logging.getLogger(__name__)
 
@@ -42,19 +43,33 @@ class ChatService:
 
     # ---- storage ------------------------------------------------------------
 
-    def _start(self, conversation_id: int | None, text: str) -> tuple[int, int, bool]:
+    def _start(
+        self,
+        conversation_id: int | None,
+        text: str,
+        audio_id: str | None = None,
+        audio_seconds: float | None = None,
+    ) -> tuple[int, int, bool]:
         """Save your message (creating the chat if needed). Returns ids and 'is new'."""
+        if audio_id is not None and audio_path(audio_id) is None:
+            raise ChatError("That voice recording wasn't found. Please record it again.")
         with session_scope() as s:
             convo = s.get(Conversation, conversation_id) if conversation_id else None
             if conversation_id and convo is None:
                 raise ChatError(f"Chat {conversation_id} doesn't exist (was it deleted?).")
             is_new = convo is None
             if convo is None:
-                convo = Conversation(title=title_from(text))
+                convo = Conversation(title=title_from(text), kind="voice" if audio_id else "text")
                 s.add(convo)
             else:
                 convo.updated_at = utcnow()
-            message = Message(role="user", source="user", content=text)
+            message = Message(
+                role="user",
+                source="user",
+                content=text,
+                audio_file=audio_id,
+                audio_seconds=audio_seconds,
+            )
             convo.messages.append(message)
             s.flush()
             return convo.id, message.id, is_new
@@ -99,13 +114,21 @@ class ChatService:
 
     # ---- the turn -------------------------------------------------------------
 
-    async def reply(self, conversation_id: int | None, text: str) -> AsyncIterator[dict[str, Any]]:
+    async def reply(
+        self,
+        conversation_id: int | None,
+        text: str,
+        audio_id: str | None = None,
+        audio_seconds: float | None = None,
+    ) -> AsyncIterator[dict[str, Any]]:
         text = text.strip()
         if not text:
             yield {"type": "error", "message": "Empty message."}
             return
         try:
-            conversation_id, user_message_id, is_new = self._start(conversation_id, text)
+            conversation_id, user_message_id, is_new = self._start(
+                conversation_id, text, audio_id, audio_seconds
+            )
         except ChatError as e:
             yield {"type": "error", "message": str(e)}
             return

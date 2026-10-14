@@ -25,6 +25,8 @@ export type Message = {
   content: string;
   steps: Step[];
   cost_usd: number;
+  audio_file: string | null;
+  audio_seconds: number | null;
   created_at: string;
 };
 

@@ -72,6 +72,10 @@ class Message(Base):
     # Steps behind an answer (tool calls, subagents) for "Show work".
     steps: Mapped[list[Any]] = mapped_column(default=list)
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
+    # Voice (phase 1): the recording of a voice message, or the spoken reply,
+    # as a file name in data/uploads/audio, and its length.
+    audio_file: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    audio_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
     conversation: Mapped[Conversation] = relationship(back_populates="messages")

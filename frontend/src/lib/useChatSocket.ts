@@ -53,13 +53,25 @@ export function useChatSocket(onEvent: (event: ChatEvent) => void) {
     };
   }, []);
 
-  const send = useCallback((conversationId: number | null, text: string) => {
-    const payload = JSON.stringify({ type: "message", conversation_id: conversationId, text });
-    const ws = socket.current;
-    if (ws && ws.readyState === WebSocket.OPEN) ws.send(payload);
-    else queue.current.push(payload);
-    return true;
-  }, []);
+  const send = useCallback(
+    (
+      conversationId: number | null,
+      text: string,
+      voice?: { audio_id: string; audio_seconds: number },
+    ) => {
+      const payload = JSON.stringify({
+        type: "message",
+        conversation_id: conversationId,
+        text,
+        ...voice,
+      });
+      const ws = socket.current;
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(payload);
+      else queue.current.push(payload);
+      return true;
+    },
+    [],
+  );
 
   return { send, connected };
 }

@@ -146,7 +146,7 @@ junior-muneer/
 
 **Phase done when:** you hold a 5-minute live call in English and one in Urdu, and both show in the chat history with full transcripts.
 
-- [ ] **P1-01 Voice messages: recording**
+- [x] **P1-01 Voice messages: recording**
   - Hold the 🎙 button to record in the browser → upload → speech-to-text → it goes through the normal chat flow. The audio file is saved.
   - *Done when:* a spoken English and a spoken Urdu message both appear as correct text in the chat.
 - [ ] **P1-02 Spoken replies**

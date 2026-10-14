@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { Composer } from "@/components/chat/Composer";
+import type { VoiceMessage } from "@/components/chat/MicButton";
 import { AssistantMessage, ErrorNotice, UserMessage } from "@/components/chat/MessageView";
 import { fetcher } from "@/lib/api";
 import { isChatsKey, PAUSE_KEY, USAGE_KEY } from "@/lib/keys";
@@ -14,6 +15,7 @@ import { useChatSocket } from "@/lib/useChatSocket";
 type Turn = {
   conversationId: number | null;
   userText: string;
+  userAudioId?: string;
   userMessageId?: number;
   text: string;
   steps: Step[];
@@ -96,6 +98,19 @@ export function ChatView() {
     return true;
   }
 
+  function onVoice(voice: VoiceMessage) {
+    send(conversationId, voice.text, { audio_id: voice.audioId, audio_seconds: voice.seconds });
+    setTurn({
+      conversationId,
+      userText: voice.text,
+      userAudioId: voice.audioId,
+      text: "",
+      steps: [],
+      notes: [],
+      status: "streaming",
+    });
+  }
+
   // Only show the live turn in the chat it belongs to.
   const liveTurn = turn && turn.conversationId === conversationId ? turn : null;
   const messages = saved ?? [];
@@ -135,7 +150,7 @@ export function ChatView() {
             {loadError && <ErrorNotice message={`Couldn't load this chat: ${loadError.message}`} />}
             {messages.map((m) =>
               m.role === "user" ? (
-                <UserMessage key={m.id} text={m.content} />
+                <UserMessage key={m.id} text={m.content} audioId={m.audio_file} />
               ) : (
                 <AssistantMessage
                   key={m.id}
@@ -146,7 +161,7 @@ export function ChatView() {
                 />
               ),
             )}
-            {showUser && <UserMessage text={liveTurn.userText} />}
+            {showUser && <UserMessage text={liveTurn.userText} audioId={liveTurn.userAudioId} />}
             {showAnswer && (
               <AssistantMessage
                 text={liveTurn.text}
@@ -166,6 +181,7 @@ export function ChatView() {
       )}
       <Composer
         onSend={onSend}
+        onVoice={onVoice}
         busy={busy}
         notice={
           connected ? undefined : "Connecting to the backend… messages are sent once it's up."

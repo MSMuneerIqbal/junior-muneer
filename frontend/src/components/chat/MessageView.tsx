@@ -2,17 +2,26 @@
 
 import { useState } from "react";
 import { Markdown } from "@/components/chat/Markdown";
-import { send } from "@/lib/api";
+import { BACKEND_URL, send } from "@/lib/api";
 import type { MemoryNote, Step } from "@/lib/types";
 
-export function UserMessage({ text }: { text: string }) {
+export function UserMessage({ text, audioId }: { text: string; audioId?: string | null }) {
   return (
     <div className="flex justify-end">
-      <div
-        dir="auto"
-        className="max-w-[85%] rounded-2xl rounded-br-md bg-user px-4 py-2.5 whitespace-pre-wrap"
-      >
-        {text}
+      <div className="flex max-w-[85%] flex-col items-end gap-1.5 rounded-2xl rounded-br-md bg-user px-4 py-2.5">
+        {audioId && (
+          <audio
+            controls
+            preload="none"
+            src={`${BACKEND_URL}/api/audio/${audioId}`}
+            className="h-8 max-w-full"
+            aria-label="Your voice message"
+          />
+        )}
+        <div dir="auto" className="whitespace-pre-wrap">
+          {audioId && <span aria-label="voice message">🎙 </span>}
+          {text}
+        </div>
       </div>
     </div>
   );

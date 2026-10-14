@@ -35,6 +35,46 @@ input = 0.10
 cached_input = 0.01
 output = 0.50
 
+# Voice (phase 1). Prices from OpenAI's pricing page (checked 2026-10-15).
+[audio]
+transcribe = "gpt-transcribe"         # your voice messages -> text
+speech = "gpt-4o-mini-tts"            # his answers read aloud
+realtime = "gpt-realtime-2.1-mini"    # live calls
+
+# Per minute of audio (speech-to-text).
+[audio_prices."gpt-transcribe"]
+per_minute = 0.0045
+
+[audio_prices."gpt-4o-transcribe"]
+per_minute = 0.006
+
+[audio_prices."gpt-4o-mini-transcribe"]
+per_minute = 0.003
+
+# Text-to-speech: about $0.015 per minute of speech ($12 per 1M audio tokens).
+[audio_prices."gpt-4o-mini-tts"]
+per_minute = 0.015
+
+[audio_prices."tts-1"]
+per_minute = 0.0135   # $15 per 1M characters, ~900 characters per minute
+
+# Live calls, per 1M tokens.
+[audio_prices."gpt-realtime-2.1-mini"]
+audio_input = 10.00
+audio_cached_input = 0.30
+audio_output = 20.00
+text_input = 0.60
+text_cached_input = 0.06
+text_output = 2.40
+
+[audio_prices."gpt-realtime-2.1"]
+audio_input = 32.00
+audio_cached_input = 0.40
+audio_output = 64.00
+text_input = 4.00
+text_cached_input = 0.40
+text_output = 24.00
+
 # Tools, in US dollars per call.
 [tool_prices]
 web_search = 0.010

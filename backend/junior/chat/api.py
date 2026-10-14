@@ -8,7 +8,8 @@ REST (chats):
     GET    /api/conversations/{id}/messages  read messages
 
 WebSocket /ws/chat:
-    you send   {"type": "message", "conversation_id": 12 | null, "text": "..."}
+    you send   {"type": "message", "conversation_id": 12 | null, "text": "...",
+                "audio_id": "<from /api/voice/transcribe>", "audio_seconds": 4.2}  (audio: voice only)
     you get    conversation · user_message · delta · step · memory · done · error events
 """
 
@@ -43,6 +44,8 @@ class MessageOut(BaseModel):
     content: str
     steps: list[Any]
     cost_usd: float
+    audio_file: str | None = None
+    audio_seconds: float | None = None
     created_at: datetime
 
 
@@ -137,6 +140,8 @@ def read_messages(conversation_id: int) -> list[MessageOut]:
                 content=m.content,
                 steps=m.steps,
                 cost_usd=m.cost_usd,
+                audio_file=m.audio_file,
+                audio_seconds=m.audio_seconds,
                 created_at=m.created_at,
             )
             for m in rows
@@ -157,7 +162,16 @@ async def chat_socket(websocket: WebSocket) -> None:
             if conversation_id is not None and not isinstance(conversation_id, int):
                 await websocket.send_json({"type": "error", "message": "Bad conversation_id."})
                 continue
-            async for event in chat.reply(conversation_id, str(data.get("text", ""))):
+            audio_id = data.get("audio_id")
+            audio_seconds = data.get("audio_seconds")
+            async for event in chat.reply(
+                conversation_id,
+                str(data.get("text", "")),
+                audio_id=audio_id if isinstance(audio_id, str) else None,
+                audio_seconds=float(audio_seconds)
+                if isinstance(audio_seconds, (int, float))
+                else None,
+            ):
                 await websocket.send_json(event)
     except WebSocketDisconnect:
         log.debug("Chat socket closed")

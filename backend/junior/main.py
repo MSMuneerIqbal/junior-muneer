@@ -26,18 +26,25 @@ from junior.pause import router as pause_router
 from junior.registry import load_registry
 from junior.scheduler import scheduler_loop
 from junior.settings_api import router as settings_router
+from junior.voice import FakeVoice, OpenAIVoice, VoiceClient
+from junior.voice import router as voice_router
 
 log = logging.getLogger(__name__)
 
 
-def create_app(model_provider: Callable[[], ModelProvider] | None = None) -> FastAPI:
-    """The app. Tests pass a fake model_provider so no real AI is called."""
+def create_app(
+    model_provider: Callable[[], ModelProvider] | None = None,
+    voice: Callable[[], VoiceClient] | None = None,
+) -> FastAPI:
+    """The app. Tests pass a fake model_provider and voice so no real AI is called."""
     settings = get_settings()
     setup_logging(settings.log_level)
     if model_provider is None:
         model_provider = fake_model_provider if settings.fake_ai else openai_model_provider
         if settings.fake_ai:
             log.warning("FAKE_AI is on: answers are fake echoes, not real AI.")
+    if voice is None:
+        voice = FakeVoice if settings.fake_ai else OpenAIVoice
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -46,6 +53,7 @@ def create_app(model_provider: Callable[[], ModelProvider] | None = None) -> Fas
         get_router()
         app.state.registry = load_registry()
         app.state.chat = ChatService(app.state.registry, model_provider)
+        app.state.voice = voice
         scheduler = (
             asyncio.create_task(scheduler_loop()) if get_settings().scheduler_enabled else None
         )
@@ -78,6 +86,7 @@ def create_app(model_provider: Callable[[], ModelProvider] | None = None) -> Fas
     app.include_router(pause_router)
     app.include_router(backup_router)
     app.include_router(settings_router)
+    app.include_router(voice_router)
     return app
 
 
