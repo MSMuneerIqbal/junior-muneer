@@ -1,0 +1,41 @@
+# Model router: which OpenAI model each agent uses.
+# Edit this file to change a model. No code changes needed; the backend
+# picks up changes on the next message. A mistake here shows a clear error.
+
+# Tiers. Agent files say "strong" or "small"; this decides what that means.
+[tiers]
+strong = "gpt-6.1-sol"   # Junior Muneer and the writers
+small = "gpt-6-luna"     # routine steps: titles, summaries, sorting
+
+# Per-agent overrides (optional). The value is a tier name or an exact model.
+# Example:  checker = "small"   or   writer = "gpt-6-astra"
+[agents]
+chat_title = "small"
+summarizer = "small"
+
+# Prices in US dollars per 1 million tokens, from OpenAI's pricing page
+# (checked 2026-10-14). Every model used above needs a price, so the daily
+# cost cap can't be skipped by mistake.
+[prices."gpt-6-astra"]
+input = 10.00
+cached_input = 1.00
+output = 50.00
+
+[prices."gpt-6.1-sol"]
+input = 2.00
+cached_input = 0.10
+output = 10.00
+
+[prices."gpt-6-sol"]
+input = 2.00
+cached_input = 0.20
+output = 10.00
+
+[prices."gpt-6-luna"]
+input = 0.10
+cached_input = 0.01
+output = 0.50
+
+# Tools, in US dollars per call.
+[tool_prices]
+web_search = 0.010

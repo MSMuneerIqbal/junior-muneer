@@ -55,7 +55,7 @@ junior-muneer/
 
 ### Agent core
 
-- [ ] **P0-04 Model router**
+- [x] **P0-04 Model router**
   - A settings file that says which model each agent uses ("strong" or "small"), checked at startup, with a clear error if it's wrong.
   - *Done when:* changing a model in the file changes it for that agent without code changes. Tests included.
 - [ ] **P0-05 Agent registry**

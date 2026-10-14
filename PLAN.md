@@ -57,7 +57,7 @@ Upwork and Fiverr are your income, and a ban is not worth the time saved. Copy a
 |---|---|---|
 | Language (backend) | Python 3.13 | Installed |
 | Agent framework | **OpenAI Agents SDK** | Agents, agents-as-tools, guardrails, tracing, MCP, voice and realtime support |
-| AI models | **OpenAI only** for now: a **strong** model for Junior Muneer and the writers, a **small** model for routine steps | Exact models picked from OpenAI's current list at build time |
+| AI models | **OpenAI only** for now: a **strong** model for Junior Muneer and the writers, a **small** model for routine steps | Picked 2026-10-14: **gpt-6.1-sol** (strong) and **gpt-6-luna** (small), in `agents/models.toml` |
 | Voice | OpenAI **speech-to-text**, **text-to-speech** and **Realtime** (live voice) models, in **English and Urdu** | Section 7.2 |
 | Web search | OpenAI's built-in web search tool, read-only | So Junior Muneer can answer questions about current events |
 | Model router | One settings file: which model each agent uses | Claude or others can be added later without rewrites |
