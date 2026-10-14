@@ -12,14 +12,17 @@ from junior.config import get_settings
 from junior.db import init_db
 from junior.logging_setup import setup_logging
 from junior.models import get_router
+from junior.registry import load_registry
 
 log = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     init_db()
-    get_router()  # a broken agents/models.toml stops startup with a clear error
+    # A broken agents/models.toml or agent file stops startup with a clear error.
+    get_router()
+    app.state.registry = load_registry()
     yield
 
 

@@ -58,7 +58,7 @@ junior-muneer/
 - [x] **P0-04 Model router**
   - A settings file that says which model each agent uses ("strong" or "small"), checked at startup, with a clear error if it's wrong.
   - *Done when:* changing a model in the file changes it for that agent without code changes. Tests included.
-- [ ] **P0-05 Agent registry**
+- [x] **P0-05 Agent registry**
   - Loads every file in `agents/`: a header (name, description, model, tools, action types) plus the instructions as text.
   - *Done when:* the registry lists Junior Muneer, and a broken agent file shows a clear error. Tests included.
 - [ ] **P0-06 Junior Muneer, the agent**
