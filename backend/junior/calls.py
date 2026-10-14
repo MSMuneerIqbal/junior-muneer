@@ -18,6 +18,7 @@ How a call works (OpenAI's Realtime API over WebRTC, "unified" set-up):
 import asyncio
 import json
 import logging
+import re
 import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
@@ -39,7 +40,7 @@ from junior.costs import BudgetExceeded, budget_left
 from junior.db import Conversation, Message, Usage, session_scope
 from junior.db.models import utcnow
 from junior.models import get_router
-from junior.settings_store import all_settings
+from junior.settings_store import ACCENTS, all_settings
 from junior.timeutil import start_of_today_utc, zone
 from junior.voice import TRANSCRIBE_PROMPT
 
@@ -50,7 +51,9 @@ CALL_ADDENDUM = """
 ## You are on a live voice call
 - {{user_name}} is talking to you live; your words are spoken aloud. Keep answers short and natural, like a phone call: one to three sentences unless asked for more. No lists, tables, links or markdown.
 - They can interrupt you at any time; if they do, stop and listen.
-- Your spoken words are also shown as text. When you speak Urdu, write it in Urdu script (اردو), not Roman Urdu or Hindi script, unless {{user_name}} speaks to you in English.
+- {{accent}}
+- Your spoken words are also shown as text. When you speak Urdu, write it in Urdu script (اردو), not Roman Urdu or Hindi script.
+- Always answer in the language {{user_name}} just used. Each reply comes with a note saying which language that is; follow it.
 - For anything current (news, weather, prices) or anything that needs your full tools, call `ask_junior` with a clear question, say a short "let me check" first, then tell them the answer in your own words.
 - `save_memory` only for facts {{user_name}} says in this call, quoting their exact words. If saving is refused, say why in one line.
 - Approvals never happen by voice: anything that needs an OK shows on their screen.
@@ -191,6 +194,8 @@ class LiveCall:
     responses: int = 0
     cost_usd: float = 0.0
     task: asyncio.Task | None = None
+    instructions: str = ""
+    language: str = "english"  # the language of what you said last
     # For Show work on each spoken answer: tools used and cost not yet shown.
     pending_steps: list[dict] = field(default_factory=list)
     pending_cost: float = 0.0
@@ -208,11 +213,15 @@ class CallManager:
 
     # -- start -----------------------------------------------------------------
 
-    def session_config(self, settings: dict, model: str) -> dict:
+    def call_instructions(self, settings: dict) -> str:
         spec = self.registry.get("junior_muneer")
-        instructions = render_instructions(spec, settings) + CALL_ADDENDUM.replace(
+        accent = ACCENTS.get(settings.get("voice_accent", "pakistani"), ACCENTS["pakistani"])
+        return render_instructions(spec, settings) + CALL_ADDENDUM.replace(
             "{{user_name}}", settings["user_name"]
-        )
+        ).replace("{{accent}}", accent)
+
+    def session_config(self, settings: dict, model: str) -> dict:
+        instructions = self.call_instructions(settings)
         model_router = get_router()
         return {
             "type": "realtime",
@@ -228,7 +237,8 @@ class CallManager:
                         "type": "semantic_vad",
                         "eagerness": "auto",
                         "interrupt_response": True,
-                        "create_response": True,
+                        # We start each reply ourselves, once we know your language.
+                        "create_response": False,
                     },
                     "noise_reduction": {"type": "near_field"},
                 },
@@ -263,7 +273,13 @@ class CallManager:
             settings=settings,
             helpers=HelperRunner(self.registry, self.model_provider()),
         )
-        call = LiveCall(call_id=call_id, conversation_id=conversation_id, model=model, context=context)
+        call = LiveCall(
+            call_id=call_id,
+            conversation_id=conversation_id,
+            model=model,
+            context=context,
+            instructions=session["instructions"],
+        )
         self.calls[call_id] = call
         call.task = asyncio.create_task(self._run(call, gateway, limit))
         audit("agent_run", "live_call", result="ok", detail={"event": "started", "model": model},
@@ -304,6 +320,8 @@ class CallManager:
                 message_id = self._save(call, "user", text)
                 call.context.user_message_ids.append(message_id)
                 call.context.outside_content_seen = False  # a new turn of yours
+                call.language = spoken_language(text)
+                await conn.send(self.reply_request(call))
         elif kind == "response.output_audio_transcript.done":
             text = (_get(event, "transcript", default="") or "").strip()
             if text:
@@ -323,7 +341,7 @@ class CallManager:
                     },
                 }
             )
-            await conn.send({"type": "response.create"})
+            await conn.send(self.reply_request(call))
         elif kind == "response.done":
             usage = _get(event, "response", "usage")
             if usage is not None:
@@ -352,6 +370,13 @@ class CallManager:
                     await self.end(call.call_id, "daily cost cap reached", gateway)
         elif kind == "error":
             log.warning("Realtime error on call %s: %s", call.call_id, _get(event, "error"))
+
+    def reply_request(self, call: LiveCall) -> dict:
+        """Start his reply, in the language you just spoke."""
+        return {
+            "type": "response.create",
+            "response": {"instructions": call.instructions + LANGUAGE_NOTES[call.language]},
+        }
 
     async def run_tool(self, call: LiveCall, name: str | None, arguments: str) -> str:
         try:
@@ -517,6 +542,28 @@ class CallManager:
             conversation_id=None if empty else call.conversation_id,
         )
         self.calls.pop(call.call_id, None)
+
+
+URDU_LETTERS = re.compile(r"[\u0600-\u06FF\u0750-\u077F\u0900-\u097F]")
+LANGUAGE_NOTES = {
+    "urdu": (
+        "\n\n## This reply\nThe user just spoke URDU. Reply in Urdu only (Urdu script in the "
+        "transcript), with the accent above. Do not reply in English."
+    ),
+    "english": (
+        "\n\n## This reply\nThe user just spoke ENGLISH. Reply in English only, with the "
+        "accent above."
+    ),
+}
+
+
+def spoken_language(text: str) -> str:
+    """Urdu if the words are mostly in Urdu (or Hindi) script, else English."""
+    letters = [ch for ch in text if ch.isalpha()]
+    if not letters:
+        return "english"
+    urdu = sum(1 for ch in letters if URDU_LETTERS.match(ch))
+    return "urdu" if urdu / len(letters) >= 0.3 else "english"
 
 
 class CallLimitReached(Exception):

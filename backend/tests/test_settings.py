@@ -34,6 +34,7 @@ def test_defaults(client):
         "daily_cap_usd": 5.0,
         "paused": False,
         "tts_voice": "marin",
+        "voice_accent": "pakistani",
         "tts_speed": 1.0,
         "voice_autoplay": True,
         "call_minutes_per_day": 30,

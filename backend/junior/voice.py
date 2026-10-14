@@ -26,7 +26,7 @@ from junior.config import get_settings
 from junior.costs import BudgetExceeded, budget_left
 from junior.db import Message, Usage, session_scope
 from junior.models import get_router
-from junior.settings_store import all_settings, get_setting
+from junior.settings_store import ACCENTS, TTS_VOICES, all_settings, get_setting
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -49,8 +49,10 @@ MEDIA_TYPES = {"webm": "audio/webm", "ogg": "audio/ogg", "m4a": "audio/mp4", "mp
 # with the language set to Urdu.
 TRANSCRIBE_PROMPT = (
     "The speaker is {name}, from Pakistan, talking to their AI assistant Junior Muneer. "
-    "They speak English or Urdu, or mix both. Write Urdu in Urdu script, like this: "
-    "السلام علیکم، آپ کیسے ہیں؟ آج کا کیا پلان ہے؟ Never use Hindi (Devanagari) script."
+    "Write down exactly what they say, in the language they say it. Never translate: "
+    "English stays in English, like this: Hello Junior, what's the news today? "
+    "Urdu is written in Urdu script, like this: السلام علیکم، آپ کیسے ہیں؟ "
+    "Never use Hindi (Devanagari) script."
 )
 DEVANAGARI = re.compile(r"[\u0900-\u097F]")
 
@@ -241,9 +243,17 @@ TTS_MAX_CHARS = 4000  # the API takes 4096 characters per request
 CHARS_PER_MINUTE = 900  # rough speaking rate, for the cost estimate
 SPEAK_INSTRUCTIONS = (
     "You are Junior Muneer, a warm and friendly AI assistant. Speak naturally and clearly, "
-    "like a friend, with a relaxed pace. If the text is in Urdu, use natural Pakistani Urdu "
-    "pronunciation; English words inside Urdu sentences should sound natural too."
+    "like a friend, with a relaxed pace. {accent} English words inside Urdu sentences "
+    "should sound natural too."
 )
+PREVIEW_TEXT = (
+    "السلام علیکم! میں جونیئر منیر ہوں، آپ کا دوست۔ "
+    "Hello! I'm Junior Muneer, your friendly assistant."
+)
+
+
+def speak_instructions(settings: dict) -> str:
+    return SPEAK_INSTRUCTIONS.format(accent=ACCENTS.get(settings["voice_accent"], ACCENTS["pakistani"]))
 
 
 def speakable(markdown: str) -> str:
@@ -339,7 +349,7 @@ async def speak(request: Request, message_id: int):
             async with asyncio.timeout(SPEAK_TIMEOUT_SECONDS):
                 for piece in chunks(text):  # MP3 pieces join cleanly
                     async for chunk in voice.speak(
-                        piece, model, settings["tts_voice"], speed, SPEAK_INSTRUCTIONS
+                        piece, model, settings["tts_voice"], speed, speak_instructions(settings)
                     ):
                         audio.extend(chunk)
                         yield chunk
@@ -373,3 +383,34 @@ async def speak(request: Request, message_id: int):
             message.audio_seconds = round(seconds, 1)
 
     return StreamingResponse(generate(), media_type="audio/mpeg")
+
+
+@router.get("/api/voice/preview/{voice}/{accent}.mp3")
+async def preview(request: Request, voice: str, accent: str):
+    """A short Urdu + English sample of a voice and accent, made once and kept."""
+    if voice not in TTS_VOICES or accent not in ACCENTS:
+        raise HTTPException(404, "Unknown voice or accent")
+    path = audio_dir() / f"preview-{voice}-{accent}.mp3"
+    if path.exists():
+        return FileResponse(path, media_type="audio/mpeg")
+    try:
+        budget_left()
+    except BudgetExceeded as e:
+        raise HTTPException(429, str(e)) from None
+    model = get_router().audio_model("speech")
+    try:
+        client: VoiceClient = request.app.state.voice()
+        audio = bytearray()
+        async for chunk in client.speak(
+            PREVIEW_TEXT, model, voice, 1.0, speak_instructions({"voice_accent": accent})
+        ):
+            audio.extend(chunk)
+    except NoApiKeyError as e:
+        raise HTTPException(503, str(e)) from None
+    except Exception as e:
+        log.exception("Voice preview failed")
+        raise HTTPException(502, f"Couldn't make the preview: {e}") from None
+    path.write_bytes(audio)
+    cost = len(PREVIEW_TEXT) / CHARS_PER_MINUTE * get_router().audio_price(model).get("per_minute", 0)
+    record_audio_usage("speaker", model, "voice", len(PREVIEW_TEXT) / CHARS_PER_MINUTE * 60, cost)
+    return FileResponse(path, media_type="audio/mpeg")

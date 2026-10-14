@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import useSWR, { useSWRConfig } from "swr";
-import { fetcher, send } from "@/lib/api";
+import { BACKEND_URL, fetcher, send } from "@/lib/api";
 import { SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
 import type { Settings } from "@/lib/types";
 
@@ -22,6 +22,46 @@ const LANGUAGES: { value: Settings["language"]; label: string }[] = [
   { value: "english", label: "Always English" },
   { value: "urdu", label: "Always Urdu (اردو)" },
 ];
+
+const ACCENTS: { value: Settings["voice_accent"]; label: string }[] = [
+  { value: "pakistani", label: "Pakistani (Urdu)" },
+  { value: "indian", label: "Indian (Hindi-Urdu)" },
+  { value: "neutral", label: "Neutral / international" },
+];
+
+/** Plays a short Urdu + English sample of the chosen voice and accent. */
+function VoicePreview({ voice, accent }: { voice: string; accent: string }) {
+  const [state, setState] = useState<"idle" | "loading" | "playing" | "error">("idle");
+  const audio = useRef<HTMLAudioElement | null>(null);
+
+  function play() {
+    audio.current?.pause();
+    const el = new Audio(`${BACKEND_URL}/api/voice/preview/${voice}/${accent}.mp3`);
+    audio.current = el;
+    setState("loading");
+    el.onplaying = () => setState("playing");
+    el.onended = () => setState("idle");
+    el.onerror = () => setState("error");
+    el.play().catch(() => setState("error"));
+  }
+
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <button
+        type="button"
+        onClick={play}
+        className="rounded-lg border border-line px-3 py-1.5 hover:bg-panel-2"
+      >
+        {state === "loading" ? "Loading…" : state === "playing" ? "Playing…" : "▶ Preview this voice"}
+      </button>
+      <span className="text-xs text-muted">
+        {state === "error"
+          ? "Couldn't play the preview."
+          : "A short sample in Urdu and English (the first time takes a few seconds)."}
+      </span>
+    </div>
+  );
+}
 
 function timezones(current: string): string[] {
   try {
@@ -63,6 +103,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
         timezone: form.timezone,
         daily_cap_usd: Number(form.daily_cap_usd),
         tts_voice: form.tts_voice,
+        voice_accent: form.voice_accent,
         tts_speed: Number(form.tts_speed),
         voice_autoplay: form.voice_autoplay,
         call_minutes_per_day: Number(form.call_minutes_per_day),
@@ -130,7 +171,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
       </Field>
       <fieldset className="flex flex-col gap-4 border-t border-line pt-4">
         <legend className="pr-2 text-sm font-semibold">Voice</legend>
-        <Field label="His voice" hint="Used when he reads answers aloud.">
+        <Field label="His voice" hint="Used for spoken answers and live calls.">
           <select
             value={form.tts_voice}
             onChange={(e) => setForm({ ...form, tts_voice: e.target.value })}
@@ -143,6 +184,22 @@ function SettingsForm({ initial }: { initial: Settings }) {
             ))}
           </select>
         </Field>
+        <Field label="Accent" hint="How he sounds in Urdu and in English.">
+          <select
+            value={form.voice_accent}
+            onChange={(e) =>
+              setForm({ ...form, voice_accent: e.target.value as Settings["voice_accent"] })
+            }
+            className={input}
+          >
+            {ACCENTS.map((a) => (
+              <option key={a.value} value={a.value}>
+                {a.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <VoicePreview voice={form.tts_voice} accent={form.voice_accent} />
         <Field label={`Speaking speed: ${Number(form.tts_speed).toFixed(2)}×`}>
           <input
             type="range"

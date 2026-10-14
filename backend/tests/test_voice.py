@@ -165,5 +165,6 @@ def test_urdu_language_setting_forces_urdu(client):
 
 def test_prompt_asks_for_urdu_script(client):
     upload(client)
-    assert "Write Urdu in Urdu script" in RecordingVoice.prompts[-1]
+    assert "Never translate" in RecordingVoice.prompts[-1]
+    assert "Urdu is written in Urdu script" in RecordingVoice.prompts[-1]
     assert "السلام علیکم" in RecordingVoice.prompts[-1]

@@ -13,16 +13,33 @@ DEFAULTS: dict[str, Any] = {
     "paused": False,
     # Voice (phase 1)
     "tts_voice": "marin",
+    # pakistani · indian · neutral
+    "voice_accent": "pakistani",
     "tts_speed": 1.0,
     # Read answers to voice messages aloud automatically.
     "voice_autoplay": True,
     # Live calls cost the most, so they have a daily limit.
     "call_minutes_per_day": 30,
 }
+# Voices that work both for spoken replies and in live calls.
 TTS_VOICES = (
-    "marin", "cedar", "alloy", "ash", "ballad", "coral", "echo",
-    "fable", "nova", "onyx", "sage", "shimmer", "verse",
+    "marin", "cedar", "alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse",
 )
+# How he sounds. Used for spoken replies and live calls.
+ACCENTS = {
+    "pakistani": (
+        "Speak with a natural Pakistani accent. Speak Urdu like a native speaker from Lahore "
+        "or Karachi, and English the way an educated Pakistani speaks it."
+    ),
+    "indian": (
+        "Speak with a natural North Indian accent. Speak Hindustani (Hindi-Urdu) like a "
+        "native speaker from Delhi, and English the way an educated Indian speaks it."
+    ),
+    "neutral": (
+        "Speak English with a clear, neutral international accent. Pronounce Urdu correctly, "
+        "like a native speaker."
+    ),
+}
 LANGUAGES = {"match", "english", "urdu"}
 
 

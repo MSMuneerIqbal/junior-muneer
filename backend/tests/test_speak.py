@@ -111,8 +111,13 @@ def test_cap_blocks_speaking(client, model):
 def test_voice_settings_are_checked(client):
     assert client.patch("/api/settings", json={"tts_voice": "robot"}).status_code == 422
     assert client.patch("/api/settings", json={"tts_speed": 5}).status_code == 422
-    ok = client.patch("/api/settings", json={"tts_voice": "nova", "voice_autoplay": False}).json()
-    assert ok["tts_voice"] == "nova" and ok["voice_autoplay"] is False
+    assert client.patch("/api/settings", json={"tts_voice": "nova"}).status_code == 422  # no calls
+    assert client.patch("/api/settings", json={"voice_accent": "french"}).status_code == 422
+    ok = client.patch(
+        "/api/settings", json={"tts_voice": "sage", "voice_autoplay": False, "voice_accent": "indian"}
+    ).json()
+    assert ok["tts_voice"] == "sage" and ok["voice_autoplay"] is False
+    assert ok["voice_accent"] == "indian"
     assert "marin" in client.get("/api/voices").json()
 
 
@@ -125,3 +130,28 @@ def test_long_answers_are_split_under_the_limit():
     parts = chunks("Hello there. " * 700)
     assert len(parts) == 3 and all(len(p) <= 4000 for p in parts)
     assert chunks("آج کیا ہے؟ کل کیا ہوگا؟", limit=12) == ["آج کیا ہے؟", "کل کیا ہوگا؟"]
+
+
+def test_spoken_replies_use_your_accent(client, model, monkeypatch):
+    seen = []
+
+    async def spy(self, text, model_name, voice, speed, instructions):
+        seen.append(instructions)
+        yield b"x"
+
+    monkeypatch.setattr(RecordingVoice, "speak", spy)
+    set_setting("voice_accent", "pakistani")
+    done = answer(client, model, "Hi")
+    speak(client, done["message_id"])
+    assert "Pakistani accent" in seen[0]
+
+
+def test_voice_preview_is_made_once(client):
+    first = client.get("/api/voice/preview/cedar/pakistani.mp3")
+    assert first.status_code == 200 and first.headers["content-type"] == "audio/mpeg"
+    assert "السلام علیکم" in RecordingVoice.calls[0]["text"] and "Hello" in RecordingVoice.calls[0]["text"]
+    assert RecordingVoice.calls[0]["voice"] == "cedar"
+    client.get("/api/voice/preview/cedar/pakistani.mp3")
+    assert len(RecordingVoice.calls) == 1  # kept, not made again
+    assert client.get("/api/voice/preview/nova/pakistani.mp3").status_code == 404
+    assert client.get("/api/voice/preview/cedar/martian.mp3").status_code == 404

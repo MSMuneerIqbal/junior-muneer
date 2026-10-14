@@ -24,6 +24,7 @@ class SettingsUpdate(BaseModel):
     timezone: str | None = None
     daily_cap_usd: float | None = Field(default=None, ge=0, le=1000)
     tts_voice: Literal[TTS_VOICES] | None = None  # type: ignore[valid-type]
+    voice_accent: Literal["pakistani", "indian", "neutral"] | None = None
     tts_speed: float | None = Field(default=None, ge=0.5, le=2.0)
     voice_autoplay: bool | None = None
     call_minutes_per_day: int | None = Field(default=None, ge=0, le=600)

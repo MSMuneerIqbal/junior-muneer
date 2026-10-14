@@ -89,6 +89,7 @@ export type Settings = {
   daily_cap_usd: number;
   paused: boolean;
   tts_voice: string;
+  voice_accent: "pakistani" | "indian" | "neutral";
   tts_speed: number;
   voice_autoplay: boolean;
   call_minutes_per_day: number;

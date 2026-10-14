@@ -149,10 +149,10 @@ def test_memory_from_your_spoken_words_is_saved():
     )
     with session_scope() as s:
         assert s.scalars(select(Memory.content)).all() == ["Rate is $25/hr"]
-    output = gw.conn.sent[0]
-    assert output["type"] == "conversation.item.create"
+    i = next(i for i, e in enumerate(gw.conn.sent) if e["type"] == "conversation.item.create")
+    output = gw.conn.sent[i]
     assert output["item"]["call_id"] == "fc1" and output["item"]["output"].startswith("Saved")
-    assert gw.conn.sent[1] == {"type": "response.create"}
+    assert gw.conn.sent[i + 1]["type"] == "response.create"  # he carries on talking
 
 
 def test_ask_junior_answers_and_then_blocks_memory_for_that_turn():
@@ -297,3 +297,37 @@ def test_a_lookup_cut_off_by_hanging_up_still_shows_in_show_work():
         last = s.scalars(select(Message).where(Message.role == "assistant")).all()[-1]
         assert [st["label"] for st in last.steps] == ["Checking: Top news in Pakistan?"]
         assert last.cost_usd == pytest.approx(call.cost_usd)
+
+
+
+def test_he_replies_in_the_language_you_just_spoke():
+    _, _, gw = run_call(
+        [heard("السلام علیکم، آپ کیسے ہیں؟"), heard("Okay, now in English please."), heard("ٹھیک ہے")]
+    )
+    replies = [e for e in gw.conn.sent if e["type"] == "response.create"]
+    notes = [r["response"]["instructions"].rsplit("## This reply", 1)[1] for r in replies]
+    assert "spoke URDU" in notes[0]
+    assert "spoke ENGLISH" in notes[1]
+    assert "spoke URDU" in notes[2]
+    # Each reply keeps his whole personality, not just the language note.
+    assert all("You are **Junior Muneer**" in r["response"]["instructions"] for r in replies)
+    # The server waits for us instead of answering on its own.
+    turn = gw.sessions[0]["audio"]["input"]["turn_detection"]
+    assert turn["create_response"] is False and turn["interrupt_response"] is True
+
+
+def test_accent_goes_into_the_call():
+    set_setting("voice_accent", "indian")
+    _, _, gw = run_call([])
+    assert "North Indian accent" in gw.sessions[0]["instructions"]
+
+
+def test_spoken_language_detection():
+    from junior.calls import spoken_language
+
+    assert spoken_language("کیسے ہو?") == "urdu"
+    assert spoken_language("Hello, how are you?") == "english"
+    assert spoken_language("OK, Next.js والا کام") == "urdu"
+    assert spoken_language("आप कैसे हैं") == "urdu"  # Urdu heard as Hindi script
+    assert spoken_language("I used Next.js for the shop") == "english"
+    assert spoken_language("...") == "english"
