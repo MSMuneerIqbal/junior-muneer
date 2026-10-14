@@ -31,6 +31,8 @@ STEP_LABELS = {
     "recent_chats": "Looking at your recent chats",
     "search_chats": "Searching your past chats",
     "spending": "Checking your spending",
+    "save_memory": "Saving a memory",
+    "forget_memory": "Forgetting a memory",
 }
 
 

@@ -24,6 +24,7 @@ Built from [PLAN.md](PLAN.md) v7 (safe workflow, no browser bots). This is the w
 Built and tested with a fake AI; these need one real run once your key is in `backend/.env`:
 
 - [ ] **P0-06:** `python -m junior.agent "How are you?"`, the same in Urdu, and `python -m junior.agent "What's new in Pakistan today?"` (web search)
+- [ ] **P0-09:** tell him a fact in one chat ("my rate is $25/hr"), then ask about it in a new chat; press undo on a memory note
 
 ## Folder layout (created in P0-01)
 
@@ -80,7 +81,7 @@ junior-muneer/
 - [x] **P0-08 Conversation memory**
   - Recent messages go to the model with each new message; older parts of long chats are summarized to keep cost down.
   - *Done when:* in a long chat he still remembers what you said at the start.
-- [ ] **P0-09 Long-term memory**
+- [x] **P0-09 Long-term memory**
   - He saves facts and preferences you share ("my rate is $25/hr") on his own, sends a "Memory updated" event that you can undo, and uses relevant memories in later chats.
   - **Safety rule:** a memory may be saved only from your own messages (`source = user`). The save tool refuses during turns that include outside content (web results, later: pasted text, emails, subagent reports), and says why.
   - REST API to view, edit and delete memories.

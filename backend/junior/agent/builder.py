@@ -8,6 +8,7 @@ from openai import AsyncOpenAI
 from junior.agent.context import TurnContext
 from junior.agent.tools import build_tools
 from junior.config import get_settings
+from junior.memories import memories_for_prompt
 from junior.models import ModelRouter
 from junior.registry import AgentSpec
 from junior.timeutil import local_now_text
@@ -50,6 +51,7 @@ def build_agent(
             language=LANGUAGE_RULES.get(s["language"], LANGUAGE_RULES["match"]),
             timezone=s["timezone"],
             now=local_now_text(s["timezone"]),
+            memories=memories_for_prompt() if "memory" in spec.tools else "",
         )
 
     agent = Agent[TurnContext](

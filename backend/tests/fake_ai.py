@@ -65,15 +65,16 @@ def chunked_answer(text: str, size: int = 4, u: Usage | None = None) -> ModelSte
     return ModelStep.stream(events, output=step.output, usage=step.usage)
 
 
-def answer_after_web_search(query: str, text: str, u: Usage | None = None) -> ModelStep:
-    """A response where the model searched the web, then answered."""
+def with_web_search(query: str, output: list, u: Usage | None = None) -> ModelStep:
+    """A response where the model searched the web, then produced `output`
+    (an answer and/or tool calls)."""
     search = ResponseFunctionWebSearch(
         id="ws_1",
         status="completed",
         type="web_search_call",
         action=ActionSearch(type="search", query=query),
     )
-    step = ModelStep(output=[assistant_message(text)], usage=u or usage())
+    step = ModelStep(output=output, usage=u or usage())
     events = _stream_events_for_step(step, preserve_raw_usage=False)
     running = search.model_copy(update={"status": "in_progress"})
     web = [
@@ -88,3 +89,7 @@ def answer_after_web_search(query: str, text: str, u: Usage | None = None) -> Mo
     completed.response.output = [search, *completed.response.output]
     events = events[:2] + web + events[2:]
     return ModelStep.stream(events, output=[search, *step.output], usage=step.usage)
+
+
+def answer_after_web_search(query: str, text: str, u: Usage | None = None) -> ModelStep:
+    return with_web_search(query, [assistant_message(text)], u)

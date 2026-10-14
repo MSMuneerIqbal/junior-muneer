@@ -14,6 +14,7 @@ from junior.chat.service import ChatService
 from junior.config import get_settings
 from junior.db import init_db
 from junior.logging_setup import setup_logging
+from junior.memories import router as memories_router
 from junior.models import get_router
 from junior.registry import load_registry
 
@@ -48,6 +49,7 @@ def create_app(model_provider: Callable[[], ModelProvider] = openai_model_provid
         return {"status": "ok", "version": __version__}
 
     app.include_router(chat_router)
+    app.include_router(memories_router)
     return app
 
 
