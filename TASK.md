@@ -96,7 +96,7 @@ junior-muneer/
 - [x] **P0-11 Audit log**
   - Every agent run and tool call is logged: what, when, result, cost.
   - *Done when:* one chat message produces readable log lines.
-- [ ] **P0-12 Pause everything**
+- [x] **P0-12 Pause everything**
   - A global switch. While paused: no background work and no actions. Chat still works, and he tells you he's paused.
   - *Done when:* Pause on/off works from the API and is remembered after a restart. Tests included.
 - [ ] **P0-13 Daily backups**

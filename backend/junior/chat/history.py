@@ -95,6 +95,8 @@ async def summarize_if_long(
 ) -> TurnResult | None:
     """Fold older messages into the summary when the chat has grown long."""
     settings = all_settings()
+    if settings["paused"]:  # background work stops while paused
+        return None
     with session_scope() as s:
         convo = s.get(Conversation, conversation_id)
         if convo is None:

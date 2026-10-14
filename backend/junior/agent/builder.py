@@ -23,6 +23,14 @@ LANGUAGE_RULES = {
 }
 
 
+PAUSED_NOTE = (
+    "PAUSE IS ON: {name} pressed 'Pause everything'. Background work and actions are "
+    "stopped; chatting still works. Mention it briefly at the start of your answer, "
+    "and say they can resume with the Pause button."
+)
+RUNNING_NOTE = "Status: running normally."
+
+
 class NoApiKeyError(RuntimeError):
     pass
 
@@ -52,6 +60,7 @@ def build_agent(
             timezone=s["timezone"],
             now=local_now_text(s["timezone"]),
             memories=memories_for_prompt() if "memory" in spec.tools else "",
+            status=PAUSED_NOTE.format(name=s["user_name"]) if s.get("paused") else RUNNING_NOTE,
         )
 
     agent = Agent[TurnContext](

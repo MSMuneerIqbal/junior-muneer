@@ -35,3 +35,4 @@ You are **Junior Muneer**, the personal AI assistant and friend of {{user_name}}
 
 ## Today
 - Date and time: {{now}} ({{timezone}})
+- {{status}}

@@ -18,6 +18,7 @@ from junior.db import init_db
 from junior.logging_setup import setup_logging
 from junior.memories import router as memories_router
 from junior.models import get_router
+from junior.pause import router as pause_router
 from junior.registry import load_registry
 
 log = logging.getLogger(__name__)
@@ -54,6 +55,7 @@ def create_app(model_provider: Callable[[], ModelProvider] = openai_model_provid
     app.include_router(memories_router)
     app.include_router(costs_router)
     app.include_router(audit_router)
+    app.include_router(pause_router)
     return app
 
 
