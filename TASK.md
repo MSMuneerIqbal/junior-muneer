@@ -105,7 +105,7 @@ junior-muneer/
 
 ### Dashboard (Next.js)
 
-- [ ] **P0-14 Frontend setup**
+- [x] **P0-14 Frontend setup**
   - Next.js + TypeScript + Tailwind CSS. A 3-column layout (sidebar · chat · today panel), light and dark mode, and a phone layout where the side panels fold away.
   - *Done when:* `http://localhost:3000` shows the empty layout on PC and phone sizes.
 - [ ] **P0-15 Chat screen**
