@@ -20,6 +20,9 @@ DEFAULTS: dict[str, Any] = {
     "voice_autoplay": True,
     # Live calls cost the most, so they have a daily limit.
     "call_minutes_per_day": 30,
+    # Text models (Settings -> Models). "" = the default from agents/models.toml.
+    "main_model": "",
+    "helper_model": "",
 }
 # Voices that work both for spoken replies and in live calls.
 TTS_VOICES = (

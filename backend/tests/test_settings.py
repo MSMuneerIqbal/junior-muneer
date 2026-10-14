@@ -38,6 +38,8 @@ def test_defaults(client):
         "tts_speed": 1.0,
         "voice_autoplay": True,
         "call_minutes_per_day": 30,
+        "main_model": "",
+        "helper_model": "",
     }
 
 

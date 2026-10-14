@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 
 from junior.audit import audit
+from junior.agent.builder import chosen_model
 from junior.models import get_router
 from junior.settings_store import TTS_VOICES, all_settings, set_setting
 from junior.timeutil import zone
@@ -28,6 +29,15 @@ class SettingsUpdate(BaseModel):
     tts_speed: float | None = Field(default=None, ge=0.5, le=2.0)
     voice_autoplay: bool | None = None
     call_minutes_per_day: int | None = Field(default=None, ge=0, le=600)
+    main_model: str | None = Field(default=None, max_length=100)
+    helper_model: str | None = Field(default=None, max_length=100)
+
+    @field_validator("main_model", "helper_model")
+    @classmethod
+    def _known_model(cls, v: str | None) -> str | None:
+        if v and v not in get_router().prices:
+            raise ValueError(f"Unknown model {v!r}; it needs a price in agents/models.toml")
+        return v
 
     @field_validator("user_name")
     @classmethod
@@ -65,6 +75,52 @@ def voices() -> list[str]:
     return list(TTS_VOICES)
 
 
+MODEL_LABELS = {
+    "gpt-6-astra": "OpenAI GPT-6 Astra (best, most expensive)",
+    "gpt-6.1-sol": "OpenAI GPT-6.1 Sol (strong)",
+    "gpt-6-sol": "OpenAI GPT-6 Sol",
+    "gpt-6-luna": "OpenAI GPT-6 Luna (fast, cheap)",
+    "deepseek:deepseek-flash": "DeepSeek Flash (very cheap)",
+    "deepseek:deepseek-v4-pro": "DeepSeek V4 Pro",
+}
+
+
+@router.get("/api/models/choices")
+def model_choices() -> dict:
+    """Text models you can pick in Settings, and whether each is ready to use."""
+    from junior.config import get_settings
+
+    model_router = get_router()
+    settings = get_settings()
+    choices = []
+    for model in model_router.text_models():
+        provider = model_router.provider_of(model)
+        info = model_router.providers.get(provider, {})
+        ready = bool(
+            settings.openai_api_key
+            if provider == "openai"
+            else getattr(settings, info.get("key_env", "").lower(), "")
+        )
+        price = model_router.price(model)
+        choices.append(
+            {
+                "model": model,
+                "label": MODEL_LABELS.get(model, model),
+                "provider": info.get("label", "OpenAI") if provider != "openai" else "OpenAI",
+                "ready": ready,
+                "key_env": info.get("key_env", "OPENAI_API_KEY"),
+                "price_per_million": {"input": price.input, "output": price.output},
+            }
+        )
+    return {
+        "choices": choices,
+        "defaults": {
+            "main_model": model_router.model_for("junior_muneer", "strong"),
+            "helper_model": model_router.model_for("summarizer", "small"),
+        },
+    }
+
+
 @router.get("/api/models")
 def models(request: Request) -> dict:
     model_router = get_router()
@@ -72,7 +128,7 @@ def models(request: Request) -> dict:
     agents = []
     for name in registry.names():
         spec = registry.get(name)
-        model = model_router.model_for(name, spec.model)
+        model = chosen_model(spec, model_router)
         agents.append(
             {
                 "agent": name,

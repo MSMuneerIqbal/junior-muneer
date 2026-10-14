@@ -75,6 +75,26 @@ text_input = 4.00
 text_cached_input = 0.40
 text_output = 24.00
 
+# Other providers (text only; voice and web search stay on OpenAI).
+# A model from a provider is written "provider:model", e.g. "deepseek:deepseek-flash".
+# Choose them in Settings -> Models, or here in [tiers] / [agents].
+[providers.deepseek]
+label = "DeepSeek"
+base_url = "https://api.deepseek.com"
+key_env = "DEEPSEEK_API_KEY"
+
+# DeepSeek prices (checked 2026-10-15). They are cheaper off-peak; the peak price
+# is used here so the daily cap is never under-counted.
+[prices."deepseek:deepseek-flash"]
+input = 0.30
+cached_input = 0.006
+output = 1.20
+
+[prices."deepseek:deepseek-v4-pro"]
+input = 1.32
+cached_input = 0.044
+output = 3.96
+
 # Tools, in US dollars per call.
 [tool_prices]
 web_search = 0.010

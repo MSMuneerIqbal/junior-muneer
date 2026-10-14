@@ -43,6 +43,20 @@ class ModelRouter:
     # Voice: which model does what (transcribe, speech, realtime), and their prices.
     audio: dict[str, str] = field(default_factory=dict)
     audio_prices: dict[str, dict[str, float]] = field(default_factory=dict)
+    # Other text-model providers: name -> {label, base_url, key_env}.
+    providers: dict[str, dict[str, str]] = field(default_factory=dict)
+
+    @staticmethod
+    def provider_of(model: str) -> str:
+        """'deepseek:deepseek-flash' -> 'deepseek'; plain names are OpenAI."""
+        return model.split(":", 1)[0] if ":" in model else "openai"
+
+    @staticmethod
+    def bare(model: str) -> str:
+        return model.split(":", 1)[1] if ":" in model else model
+
+    def text_models(self) -> list[str]:
+        return list(self.prices)
 
     def audio_model(self, job: str) -> str:
         try:
@@ -126,6 +140,10 @@ def parse_router(text: str, source: str = MODELS_FILE.name) -> ModelRouter:
     missing_audio = sorted(m for m in audio.values() if m not in audio_prices)
     if missing_audio:
         raise fail(f'no price for audio model(s) {missing_audio}. Add [audio_prices."<model>"].')
+    providers = data.get("providers", {})
+    for name, p in providers.items():
+        if not isinstance(p, dict) or not p.get("base_url") or not p.get("key_env"):
+            raise fail(f"[providers.{name}] needs base_url and key_env.")
     router = ModelRouter(
         tiers=dict(tiers),
         agents=dict(agents),
@@ -133,7 +151,13 @@ def parse_router(text: str, source: str = MODELS_FILE.name) -> ModelRouter:
         tool_prices=tool_prices,
         audio=dict(audio),
         audio_prices=audio_prices,
+        providers={n: dict(p) for n, p in providers.items()},
     )
+    unknown_providers = sorted(
+        {router.provider_of(m) for m in prices} - {"openai", *providers}
+    )
+    if unknown_providers:
+        raise fail(f"models use unknown provider(s) {unknown_providers}; add [providers.<name>].")
 
     used = set(tiers.values()) | {router.model_for(a) for a in agents}
     missing = sorted(m for m in used if m not in prices)

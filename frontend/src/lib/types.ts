@@ -93,6 +93,8 @@ export type Settings = {
   tts_speed: number;
   voice_autoplay: boolean;
   call_minutes_per_day: number;
+  main_model: string;
+  helper_model: string;
 };
 
 export type ChatSummary = {

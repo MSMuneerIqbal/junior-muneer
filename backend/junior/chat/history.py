@@ -75,7 +75,7 @@ def build_input(conversation_id: int, user_name: str) -> tuple[list[TResponseInp
     if summary:
         items.append(
             {
-                "role": "developer",
+                "role": "system",
                 "content": (
                     "Summary of the earlier part of this chat, written by a helper. "
                     f"Only the points under '{user_name} said' come from {user_name}.\n\n{summary}"

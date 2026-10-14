@@ -29,6 +29,7 @@ def isolated_settings(tmp_path, monkeypatch, migrated_db):
     shutil.copy(migrated_db, data / "junior.db")
     monkeypatch.setenv("DATA_DIR", str(data))
     monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "")
     monkeypatch.setenv("SCHEDULER_ENABLED", "false")
     get_settings.cache_clear()
     yield get_settings()

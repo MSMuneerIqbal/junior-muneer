@@ -107,9 +107,12 @@ function SettingsForm({ initial }: { initial: Settings }) {
         tts_speed: Number(form.tts_speed),
         voice_autoplay: form.voice_autoplay,
         call_minutes_per_day: Number(form.call_minutes_per_day),
+        main_model: form.main_model,
+        helper_model: form.helper_model,
       });
       await mutate(SETTINGS_KEY, saved, { revalidate: false });
       await mutate(USAGE_KEY);
+      await mutate("/api/models");
       setForm(saved);
       setStatus({ ok: true, text: "Saved. It applies from your next message." });
     } catch (e) {
@@ -237,6 +240,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
           />
         </Field>
       </fieldset>
+      <ModelChoices form={form} setForm={setForm} />
       <div className="flex items-center gap-3">
         <button
           onClick={save}
@@ -252,6 +256,72 @@ function SettingsForm({ initial }: { initial: Settings }) {
         )}
       </div>
     </section>
+  );
+}
+
+type Choices = {
+  choices: {
+    model: string;
+    label: string;
+    provider: string;
+    ready: boolean;
+    key_env: string;
+    price_per_million: { input: number; output: number };
+  }[];
+  defaults: { main_model: string; helper_model: string };
+};
+
+/** Which text models answer you (OpenAI or DeepSeek). Voice always uses OpenAI. */
+function ModelChoices({
+  form,
+  setForm,
+}: {
+  form: Settings;
+  setForm: (s: Settings) => void;
+}) {
+  const { data } = useSWR<Choices>("/api/models/choices", fetcher);
+  if (!data) return null;
+  const pick = (key: "main_model" | "helper_model", hint: string, label: string) => {
+    const current = form[key] || data.defaults[key];
+    const chosen = data.choices.find((c) => c.model === current);
+    return (
+      <Field label={label} hint={hint}>
+        <select
+          value={current}
+          onChange={(e) =>
+            setForm({ ...form, [key]: e.target.value === data.defaults[key] ? "" : e.target.value })
+          }
+          className={input}
+        >
+          {data.choices.map((c) => (
+            <option key={c.model} value={c.model}>
+              {c.label} · ${c.price_per_million.input} / ${c.price_per_million.output} per 1M
+              {c.model === data.defaults[key] ? " (default)" : ""}
+              {c.ready ? "" : " · needs key"}
+            </option>
+          ))}
+        </select>
+        {chosen && !chosen.ready && (
+          <span className="text-xs text-warn">
+            Add {chosen.key_env}=… to backend/.env and restart, or he can&apos;t answer with this
+            model.
+          </span>
+        )}
+        {chosen?.provider === "DeepSeek" && (
+          <span className="text-xs text-muted">
+            DeepSeek is very cheap. Your chats go to DeepSeek (servers in China) instead of
+            OpenAI. Web search and voice still use OpenAI.
+          </span>
+        )}
+      </Field>
+    );
+  };
+  return (
+    <fieldset className="flex flex-col gap-4 border-t border-line pt-4">
+      <legend className="pr-2 text-sm font-semibold">Models</legend>
+      {pick("main_model", "Writes his answers in chat. Prices are $ per 1M tokens in / out.", "Chat model")}
+      {pick("helper_model", "Summarizes long chats in the background.", "Helper model")}
+    </fieldset>
   );
 }
 

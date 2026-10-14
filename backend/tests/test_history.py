@@ -66,7 +66,7 @@ def test_long_chat_is_summarized_and_still_remembers_the_start(small_window):
     model.enqueue(chunked_answer("Your rate is $25/hr."))
     send(service, "What's my rate?", convo)
     sent = model.last_call.input
-    assert sent[0]["role"] == "developer"
+    assert sent[0]["role"] == "system"
     assert "rate $25/hr" in sent[0]["content"]
     assert "Hi, my name is Muneer" not in str(sent[1:])  # old message not resent in full
     assert sent[-1]["content"] == "What's my rate?"
