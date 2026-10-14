@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if refresh %}<meta http-equiv="refresh" content="4">{% endif %}
+  <title>{% block title %}Dashboard{% endblock %} · Junior Muneer</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  {% set path = request.url.path %}
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="/"><span class="brand-mark">JM</span><span>Junior Muneer</span></a>
+      <nav class="nav">
+        <a href="/" {% if path == '/' %}aria-current="page"{% endif %}>Dashboard</a>
+        <a href="/ideas" {% if path.startswith('/ideas') %}aria-current="page"{% endif %}>Ideas</a>
+        <a class="btn btn-primary btn-sm" href="/new">New post</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    {% if not api_ok %}
+      <div class="banner banner-warn">No Claude API key found. Put <code>ANTHROPIC_API_KEY=...</code> in the <code>.env</code> file, then restart the app.</div>
+    {% endif %}
+    {% if profile_error %}
+      <div class="banner banner-error">Profile problem: {{ profile_error }}</div>
+    {% endif %}
+    {% if msg %}
+      <div class="banner banner-ok">{{ msg }}</div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="wrap footer">
+    {% if owner %}Working for {{ owner }} · {% endif %}This month: {{ usage.calls }} Claude call{{ '' if usage.calls == 1 else 's' }}{% if usage.priced and usage.calls %} · about ${{ '%.2f'|format(usage.cost) }}{% endif %}
+  </footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>

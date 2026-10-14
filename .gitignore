@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets and local data (never commit)
+.env
+data/
+backups/
+
+# The agent's Chrome profile (holds your logins)
+chrome-profile/
+
+# Node / Next.js
+node_modules/
+.next/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

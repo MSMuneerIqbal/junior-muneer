@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge %}
+{% block title %}{{ post.topic|truncate(40) }}{% endblock %}
+{% block content %}
+  {% set labels = {
+    "generating": "Writing now", "review": "Needs your review", "approved": "Scheduled",
+    "ready": "Ready to post", "posted": "Posted", "rejected": "Thrown away", "failed": "Problem"
+  } %}
+
+  <a class="back" href="/">← Dashboard</a>
+  <div class="page-head">
+    <div>
+      <div class="row">{{ badge(post.platform, platforms) }}<span class="pill pill-{{ post.status }}">{{ labels[post.status] }}</span></div>
+      <h1>{{ post.topic }}</h1>
+      {% if post.notes %}<p class="muted">{{ post.notes }}</p>{% endif %}
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="main-col">
+
+      {% if post.status == "generating" %}
+        <div class="panel">
+          <h2>The team is working on it</h2>
+          <p class="muted">This takes a minute or two. The page refreshes by itself.</p>
+          <ol class="live-steps">
+            {% for s in post.trace %}<li class="done"><strong>{{ s.agent }}</strong> {{ s.summary }}</li>{% endfor %}
+            <li class="now"><span class="spinner"></span> Working…</li>
+          </ol>
+        </div>
+
+      {% elif post.status == "failed" %}
+        <div class="panel">
+          <h2>Something went wrong</h2>
+          <p class="error-text">{{ post.error }}</p>
+          <form method="post" action="/posts/{{ post.id }}/regenerate">
+            <button class="btn btn-primary" type="submit">Try again</button>
+          </form>
+        </div>
+
+      {% elif post.status == "review" %}
+        <form class="panel form" method="post" action="/posts/{{ post.id }}/approve">
+          <div class="field">
+            <div class="label-row">
+              <label class="label" for="post-text">Your post <span class="muted">(edit anything)</span></label>
+              <span class="counter" id="post-count"></span>
+            </div>
+            <textarea id="post-text" name="text" rows="12" data-limit="{{ platform.max_chars }}" data-counter="#post-count">{{ post.text }}</textarea>
+          </div>
+          {% if post.visual_idea %}<p class="visual"><strong>Image idea:</strong> {{ post.visual_idea }}</p>{% endif %}
+          <div class="approve-row">
+            <label class="field inline">
+              <span class="label small">Post later? <span class="muted">(optional)</span></span>
+              <input type="datetime-local" name="scheduled_at">
+            </label>
+            <div class="actions">
+              <button class="btn btn-ghost" type="submit" formaction="/posts/{{ post.id }}/save">Save edits</button>
+              <button class="btn btn-primary" type="submit">Approve</button>
+            </div>
+          </div>
+        </form>
+
+        <form class="panel form" method="post" action="/posts/{{ post.id }}/regenerate">
+          <label class="field">
+            <span class="label">Not right? Tell the team what to change</span>
+            <textarea name="feedback" rows="2" placeholder="e.g. Shorter. Mention the client was a clothing shop. Less formal."></textarea>
+          </label>
+          <div class="actions">
+            <button class="btn" type="submit">Write a new version</button>
+            <button class="btn btn-danger-ghost" type="submit" formaction="/posts/{{ post.id }}/reject">Throw away</button>
+          </div>
+        </form>
+
+      {% elif post.status == "ready" %}
+        <div class="panel">
+          <div class="label-row">
+            <h2>Ready to post on {{ platform.name }}</h2>
+            <span class="counter">{{ post.text|length }} / {{ platform.max_chars }}</span>
+          </div>
+          <pre class="post-text" id="final-text">{{ post.text }}</pre>
+          {% if post.visual_idea %}<p class="visual"><strong>Image idea:</strong> {{ post.visual_idea }}</p>{% endif %}
+          <div class="actions">
+            <button class="btn btn-primary" type="button" data-copy="#final-text">Copy text</button>
+            {% if platform.share_url %}
+              <a class="btn" href="{{ platform.share_url }}{{ post.text|urlencode }}" target="_blank" rel="noopener">Open {{ platform.name }} with this text</a>
+            {% else %}
+              <a class="btn" href="{{ platform.open_url }}" target="_blank" rel="noopener">Open {{ platform.name }}</a>
+            {% endif %}
+            <form method="post" action="/posts/{{ post.id }}/posted">
+              <button class="btn btn-ghost" type="submit">I posted it</button>
+            </form>
+          </div>
+        </div>
+
+      {% elif post.status == "approved" %}
+        <div class="panel">
+          <h2>Scheduled for {{ post.scheduled_at|when }}</h2>
+          <p class="muted">At that time it moves to 'Ready to post' on the dashboard.</p>
+          <pre class="post-text">{{ post.text }}</pre>
+          <form method="post" action="/posts/{{ post.id }}/unschedule">
+            <button class="btn" type="submit">Unschedule and edit</button>
+          </form>
+        </div>
+
+      {% else %}
+        <div class="panel">
+          {% if post.status == "posted" %}<h2>Posted {{ post.posted_at|when }}</h2>{% else %}<h2>Thrown away</h2>{% endif %}
+          <pre class="post-text">{{ post.text }}</pre>
+          {% if post.status == "rejected" %}
+            <form method="post" action="/posts/{{ post.id }}/unschedule">
+              <button class="btn" type="submit">Move back to review</button>
+            </form>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    <aside class="side-col">
+      {% if post.score %}
+        <div class="panel">
+          <div class="score-big score-{{ 'good' if post.score >= 8 else 'ok' }}">{{ post.score }}<span>/10</span></div>
+          <p class="muted small">Final check by the Quality Checker</p>
+          {% if post.issues %}
+            <ul class="notes">{% for issue in post.issues %}<li>{{ issue }}</li>{% endfor %}</ul>
+          {% else %}
+            <p class="small">No problems found.</p>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {% if post.trace and post.status != "generating" %}
+        <div class="panel">
+          <h3>How the team made this</h3>
+          {% for s in post.trace %}
+            <details class="trace">
+              <summary><strong>{{ s.agent }}</strong> · {{ s.summary }}</summary>
+              {% if s.notes %}<ul class="notes">{% for n in s.notes %}<li>{{ n }}</li>{% endfor %}</ul>{% endif %}
+              {% if s.text %}<pre class="post-text small">{{ s.text }}</pre>{% endif %}
+            </details>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% if post.feedback %}
+        <div class="panel">
+          <h3>Your last feedback</h3>
+          <p class="small">{{ post.feedback }}</p>
+        </div>
+      {% endif %}
+    </aside>
+  </div>
+{% endblock %}

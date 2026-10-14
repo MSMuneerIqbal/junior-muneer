@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "_macros.html" import post_card %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+  {% set sections = [
+    ("ready", "Ready to post", "Approved. Copy, post, then mark as posted."),
+    ("review", "Needs your review", "The team finished these. Edit, approve or ask for changes."),
+    ("generating", "Writing now", "Writer, checker and humanizer at work. This page refreshes by itself."),
+    ("approved", "Scheduled", "These move to 'Ready to post' at their time."),
+    ("failed", "Problems", "Something went wrong. Open one to see why and try again."),
+  ] %}
+
+  <div class="page-head">
+    <div>
+      <h1>Social media</h1>
+      <p class="muted">Your team drafts everything. Nothing goes out without your OK.</p>
+    </div>
+    <div class="head-actions">
+      <a class="btn" href="/ideas">Get ideas</a>
+      <a class="btn btn-primary" href="/new">New post</a>
+    </div>
+  </div>
+
+  {% set ns = namespace(any=false) %}
+  {% for key, title, help in sections %}
+    {% set items = groups[key] %}
+    {% if items %}
+      {% set ns.any = true %}
+      <section class="section section-{{ key }}">
+        <h2>{{ title }} <span class="count">{{ items|length }}</span></h2>
+        <p class="muted small">{{ help }}</p>
+        <div class="grid">
+          {% for post in items %}{{ post_card(post, platforms) }}{% endfor %}
+        </div>
+      </section>
+    {% endif %}
+  {% endfor %}
+
+  {% if posted %}
+    <section class="section">
+      <h2>Recently posted <span class="count">{{ posted|length }}</span></h2>
+      <div class="grid">
+        {% for post in posted %}{{ post_card(post, platforms) }}{% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if not ns.any and not posted %}
+    <div class="empty">
+      <h2>Nothing here yet</h2>
+      <p class="muted">Give the team a topic, or let the social media manager suggest some ideas.</p>
+      <div class="head-actions center">
+        <a class="btn" href="/ideas">Get ideas</a>
+        <a class="btn btn-primary" href="/new">Write my first post</a>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge %}
+{% block title %}Ideas{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1>Post ideas</h1>
+      <p class="muted">Your social media manager plans posts from your profile and avoids topics you've already covered.</p>
+    </div>
+  </div>
+
+  <form class="panel form idea-form" method="post" action="/ideas/suggest">
+    <label class="field grow">
+      <span class="label">Focus <span class="muted">(optional)</span></span>
+      <input type="text" name="focus" placeholder="e.g. AI agents for small shops, this week's project, client stories">
+    </label>
+    <label class="field">
+      <span class="label">How many</span>
+      <select name="count">
+        {% for n in [3, 6, 10] %}<option value="{{ n }}" {% if n == 6 %}selected{% endif %}>{{ n }}</option>{% endfor %}
+      </select>
+    </label>
+    <button class="btn btn-primary" type="submit" {% if planner.running %}disabled{% endif %}>
+      {% if planner.running %}<span class="spinner"></span> Thinking…{% else %}Suggest ideas{% endif %}
+    </button>
+  </form>
+
+  {% if planner.error %}<div class="banner banner-error">{{ planner.error }}</div>{% endif %}
+
+  {% if ideas %}
+    <div class="grid">
+      {% for idea in ideas %}
+        <div class="card idea-card">
+          <div class="card-top">{{ badge(idea.platform, platforms) }}</div>
+          <div class="card-title">{{ idea.title }}</div>
+          <p class="card-snippet">{{ idea.angle }}</p>
+          <p class="muted small">{{ idea.why }}</p>
+          <div class="actions">
+            <form method="post" action="/ideas/{{ idea.id }}/write"><button class="btn btn-primary btn-sm" type="submit">Write this post</button></form>
+            <form method="post" action="/ideas/{{ idea.id }}/dismiss"><button class="btn btn-ghost btn-sm" type="submit">Dismiss</button></form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% elif not planner.running %}
+    <div class="empty">
+      <h2>No ideas yet</h2>
+      <p class="muted">Click "Suggest ideas" and the manager will plan a batch for you.</p>
+    </div>
+  {% endif %}
+{% endblock %}

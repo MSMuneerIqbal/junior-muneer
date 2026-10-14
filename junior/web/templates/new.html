@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}New post{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1>New post</h1>
+      <p class="muted">Tell the team what to write about. You'll get one draft per platform to review.</p>
+    </div>
+  </div>
+
+  <form class="panel form" method="post" action="/new">
+    <label class="field">
+      <span class="label">Topic</span>
+      <textarea name="topic" rows="2" required placeholder="e.g. What I learned building a Next.js store for a client"></textarea>
+    </label>
+
+    <label class="field">
+      <span class="label">Notes <span class="muted">(optional)</span></span>
+      <textarea name="notes" rows="4" placeholder="Key points, a real result, a link, anything the writer must include. The team only uses facts from here and your profile."></textarea>
+    </label>
+
+    <fieldset class="field">
+      <legend class="label">Platforms</legend>
+      <div class="platform-picks">
+        {% for key, p in platforms.items() %}
+          <label class="pick">
+            <input type="checkbox" name="platforms" value="{{ key }}" {% if key in checked %}checked{% endif %}>
+            <span class="badge badge-{{ key }}">{{ p.name }}</span>
+            <span class="muted small">{{ p.length_hint }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <div class="steps-hint">
+      <span>Writer</span><span>→</span><span>Checker</span><span>→</span><span>Humanizer</span><span>→</span><span>Final check</span><span>→</span><strong>You</strong>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" type="submit">Start writing</button>
+      <a class="btn btn-ghost" href="/">Cancel</a>
+    </div>
+  </form>
+{% endblock %}
