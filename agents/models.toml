@@ -10,7 +10,6 @@ small = "gpt-6-luna"     # routine steps: titles, summaries, sorting
 # Per-agent overrides (optional). The value is a tier name or an exact model.
 # Example:  checker = "small"   or   writer = "gpt-6-astra"
 [agents]
-chat_title = "small"
 summarizer = "small"
 
 # Prices in US dollars per 1 million tokens, from OpenAI's pricing page

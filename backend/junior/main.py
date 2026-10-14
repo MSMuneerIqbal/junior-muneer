@@ -25,6 +25,7 @@ from junior.models import get_router
 from junior.pause import router as pause_router
 from junior.registry import load_registry
 from junior.scheduler import scheduler_loop
+from junior.settings_api import router as settings_router
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +77,7 @@ def create_app(model_provider: Callable[[], ModelProvider] | None = None) -> Fas
     app.include_router(audit_router)
     app.include_router(pause_router)
     app.include_router(backup_router)
+    app.include_router(settings_router)
     return app
 
 

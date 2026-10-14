@@ -124,7 +124,7 @@ junior-muneer/
 - [x] **P0-19 Activity page**
   - The audit log, newest first, filtered by type.
   - *Done when:* every chat's steps show up there.
-- [ ] **P0-20 Settings page (basic)**
+- [x] **P0-20 Settings page (basic)**
   - Your name, language preference (English / Urdu / match me), time zone, daily cap, models per agent (view only for now).
   - *Done when:* changing the daily cap or the language takes effect.
 
