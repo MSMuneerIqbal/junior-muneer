@@ -6,7 +6,7 @@ import useSWR, { useSWRConfig } from "swr";
 import { Composer } from "@/components/chat/Composer";
 import { AssistantMessage, ErrorNotice, UserMessage } from "@/components/chat/MessageView";
 import { fetcher } from "@/lib/api";
-import { isChatsKey, USAGE_KEY } from "@/lib/keys";
+import { isChatsKey, PAUSE_KEY, USAGE_KEY } from "@/lib/keys";
 import type { ChatEvent, MemoryNote, Message, Step } from "@/lib/types";
 import { useChatSocket } from "@/lib/useChatSocket";
 
@@ -35,6 +35,7 @@ export function ChatView() {
   const { data: saved, error: loadError, mutate } = useSWR<Message[]>(messagesKey, fetcher);
   const { mutate: mutateGlobal } = useSWRConfig();
 
+  const { data: pause } = useSWR<{ paused: boolean }>(PAUSE_KEY, fetcher);
   const [turn, setTurn] = useState<Turn | null>(null);
   // Memory notes stay under the answer they came with (this session only).
   const [notesByMessage, setNotesByMessage] = useState<Record<number, MemoryNote[]>>({});
@@ -158,6 +159,11 @@ export function ChatView() {
           </div>
         )}
       </div>
+      {pause?.paused && (
+        <div className="bg-warn-soft px-4 py-1.5 text-center text-sm text-warn">
+          ⏸ Everything is paused. Chat still works; background work and actions are stopped.
+        </div>
+      )}
       <Composer
         onSend={onSend}
         busy={busy}
