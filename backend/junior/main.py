@@ -53,7 +53,10 @@ def create_app(model_provider: Callable[[], ModelProvider] = openai_model_provid
     app = FastAPI(title="Junior Muneer", version=__version__, lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[settings.frontend_origin],
+        # The dashboard may be opened as localhost or 127.0.0.1.
+        allow_origins=sorted(
+            {settings.frontend_origin, settings.frontend_origin.replace("localhost", "127.0.0.1")}
+        ),
         allow_methods=["*"],
         allow_headers=["*"],
     )
