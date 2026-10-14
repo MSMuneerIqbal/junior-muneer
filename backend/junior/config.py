@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     backend_host: str = "127.0.0.1"
     backend_port: int = 8000
     frontend_origin: str = "http://localhost:3000"
+    # The background scheduler (daily backups). Tests switch it off.
+    scheduler_enabled: bool = True
 
     @property
     def data_path(self) -> Path:

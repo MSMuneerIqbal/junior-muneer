@@ -4,6 +4,7 @@ import pytest
 
 from junior.config import get_settings
 from junior.db import init_db
+from junior.db.engine import close_all_connections
 
 
 @pytest.fixture(scope="session")
@@ -14,6 +15,7 @@ def migrated_db(tmp_path_factory):
     mp.setenv("DATA_DIR", str(folder))
     get_settings.cache_clear()
     init_db()
+    close_all_connections()
     mp.undo()
     get_settings.cache_clear()
     return folder / "junior.db"
@@ -27,6 +29,8 @@ def isolated_settings(tmp_path, monkeypatch, migrated_db):
     shutil.copy(migrated_db, data / "junior.db")
     monkeypatch.setenv("DATA_DIR", str(data))
     monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("SCHEDULER_ENABLED", "false")
     get_settings.cache_clear()
     yield get_settings()
+    close_all_connections()
     get_settings.cache_clear()

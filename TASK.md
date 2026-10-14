@@ -99,7 +99,7 @@ junior-muneer/
 - [x] **P0-12 Pause everything**
   - A global switch. While paused: no background work and no actions. Chat still works, and he tells you he's paused.
   - *Done when:* Pause on/off works from the API and is remembered after a restart. Tests included.
-- [ ] **P0-13 Daily backups**
+- [x] **P0-13 Daily backups**
   - Copies the database every day and keeps the last 14 copies.
   - *Done when:* a backup file appears, and restoring it brings back the chats.
 

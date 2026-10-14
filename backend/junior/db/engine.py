@@ -3,7 +3,6 @@
 import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
-from functools import lru_cache
 
 from alembic import command
 from alembic.config import Config
@@ -15,8 +14,10 @@ from junior.config import BACKEND_DIR, get_settings
 log = logging.getLogger(__name__)
 
 
-@lru_cache
-def _engine_for(url: str) -> Engine:
+_engines: dict[str, Engine] = {}
+
+
+def _new_engine(url: str) -> Engine:
     engine = create_engine(url, connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
@@ -30,7 +31,16 @@ def _engine_for(url: str) -> Engine:
 
 
 def get_engine() -> Engine:
-    return _engine_for(get_settings().database_url)
+    url = get_settings().database_url
+    if url not in _engines:
+        _engines[url] = _new_engine(url)
+    return _engines[url]
+
+
+def close_all_connections() -> None:
+    """Close every pooled connection (needed before the database file is replaced)."""
+    while _engines:
+        _engines.popitem()[1].dispose()
 
 
 @contextmanager
