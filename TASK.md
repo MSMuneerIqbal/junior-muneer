@@ -156,8 +156,8 @@ junior-muneer/
 - [~] **P1-03 Urdu voice test** (measured: see PLAN.md 14b; your listening check is below)
   - Compare the speech-to-text and voice options for Urdu, and pick the best by quality and cost. Results go into PLAN.md.
   - *Done when:* you're happy with how he sounds and understands you in Urdu.
-- [ ] **P1-04 Live call: backend**
-  - A backend endpoint that creates a **short-lived key** for OpenAI's realtime voice (so your API key never reaches the browser).
+- [x] **P1-04 Live call: backend**
+  - The backend creates the call at OpenAI from the browser's WebRTC offer ("unified" set-up), so **no key ever reaches the browser**, then stays attached to the call.
   - The session is set up with Junior Muneer's personality, a summary of your memories, and tools: memory (same "only your words" rule), plus a bridge to ask the full Junior Muneer (for web search and later subagents).
   - *Done when:* a test call connects and he greets you in character.
 - [ ] **P1-05 Live call: screen**

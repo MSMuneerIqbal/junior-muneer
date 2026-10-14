@@ -16,6 +16,8 @@ DEFAULTS: dict[str, Any] = {
     "tts_speed": 1.0,
     # Read answers to voice messages aloud automatically.
     "voice_autoplay": True,
+    # Live calls cost the most, so they have a daily limit.
+    "call_minutes_per_day": 30,
 }
 TTS_VOICES = (
     "marin", "cedar", "alloy", "ash", "ballad", "coral", "echo",

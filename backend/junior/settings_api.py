@@ -26,6 +26,7 @@ class SettingsUpdate(BaseModel):
     tts_voice: Literal[TTS_VOICES] | None = None  # type: ignore[valid-type]
     tts_speed: float | None = Field(default=None, ge=0.5, le=2.0)
     voice_autoplay: bool | None = None
+    call_minutes_per_day: int | None = Field(default=None, ge=0, le=600)
 
     @field_validator("user_name")
     @classmethod

@@ -46,6 +46,18 @@ def openai_model_provider() -> ModelProvider:
     return lambda name: OpenAIResponsesModel(model=name, openai_client=client)
 
 
+def render_instructions(spec: AgentSpec, s: dict) -> str:
+    """An agent's instructions with your name, language, time, memories and status filled in."""
+    return spec.render(
+        user_name=s["user_name"],
+        language=LANGUAGE_RULES.get(s["language"], LANGUAGE_RULES["match"]),
+        timezone=s["timezone"],
+        now=local_now_text(s["timezone"]),
+        memories=memories_for_prompt() if "memory" in spec.tools else "",
+        status=PAUSED_NOTE.format(name=s["user_name"]) if s.get("paused") else RUNNING_NOTE,
+    )
+
+
 def build_agent(
     spec: AgentSpec, router: ModelRouter, model_provider: ModelProvider
 ) -> tuple[Agent[TurnContext], str]:
@@ -53,15 +65,7 @@ def build_agent(
     model_name = router.model_for(spec.name, spec.model)
 
     def instructions(ctx: RunContextWrapper[TurnContext], _agent: Agent[TurnContext]) -> str:
-        s = ctx.context.settings
-        return spec.render(
-            user_name=s["user_name"],
-            language=LANGUAGE_RULES.get(s["language"], LANGUAGE_RULES["match"]),
-            timezone=s["timezone"],
-            now=local_now_text(s["timezone"]),
-            memories=memories_for_prompt() if "memory" in spec.tools else "",
-            status=PAUSED_NOTE.format(name=s["user_name"]) if s.get("paused") else RUNNING_NOTE,
-        )
+        return render_instructions(spec, ctx.context.settings)
 
     agent = Agent[TurnContext](
         name=spec.name,

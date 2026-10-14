@@ -337,7 +337,7 @@ the Developer Agent reads through the GitHub MCP → drafts → **Ask** → the 
 - **No browser automation:** no agent logs in to, clicks on or scrapes any site. Your site logins stay only in your own browser
 - Daily caps (for example API posts per platform, live-call minutes)
 - **Budget:** no fixed monthly budget, because you'll watch usage yourself. A **safety cap of $5/day** (editable) stops runaway loops caused by bugs. Also set a monthly limit in your OpenAI account settings.
-- API keys and tokens stay in the backend `.env` (never in Git). The browser page never sees them; live voice uses short-lived keys made by the backend
+- API keys and tokens stay in the backend `.env` (never in Git). The browser page never sees them. Live calls use OpenAI's "unified" WebRTC set-up: the backend passes the browser's call offer to OpenAI, so the browser gets no key at all (not even a short-lived one), and the backend stays attached to the call to run tools, save the transcript and track cost
 - The dashboard is local-only on your PC; on the VPS it gets a login and HTTPS
 - **Microphone note:** browsers allow the mic only on `localhost` or HTTPS. On your PC it works; **voice from your phone needs HTTPS**, so it comes with the VPS phase or a secure tunnel
 - **Biggest cost:** live calls (per minute). Capped and shown on the dashboard
