@@ -191,6 +191,10 @@ class LiveCall:
     responses: int = 0
     cost_usd: float = 0.0
     task: asyncio.Task | None = None
+    # For Show work on each spoken answer: tools used and cost not yet shown.
+    pending_steps: list[dict] = field(default_factory=list)
+    pending_cost: float = 0.0
+    answer_in_response: int | None = None  # the answer saved during the current response
 
 
 class CallManager:
@@ -303,7 +307,10 @@ class CallManager:
         elif kind == "response.output_audio_transcript.done":
             text = (_get(event, "transcript", default="") or "").strip()
             if text:
-                self._save(call, "assistant", text)
+                call.answer_in_response = self._save(
+                    call, "assistant", text, steps=call.pending_steps, cost=call.pending_cost
+                )
+                call.pending_steps, call.pending_cost = [], 0.0
         elif kind == "response.function_call_arguments.done":
             output = await self.run_tool(call, _get(event, "name"), _get(event, "arguments", default="{}"))
             await conn.send(
@@ -323,6 +330,7 @@ class CallManager:
                 cost = call_cost(usage, get_router().audio_price(call.model))
                 call.responses += 1
                 call.cost_usd += cost
+                self._add_cost(call, cost)
                 with session_scope() as s:
                     s.add(
                         Usage(
@@ -360,6 +368,20 @@ class CallManager:
         else:
             result = f"Unknown tool {name!r}."
         context.pending_events.clear()
+        label = {
+            "ask_junior": f"Checking: {args.get('question', '')}",
+            "save_memory": "Saving a memory",
+            "forget_memory": "Forgetting a memory",
+        }.get(name or "", f"Using {name}")
+        call.pending_steps.append(
+            {
+                "id": f"call-tool-{len(call.pending_steps)}-{name}",
+                "kind": "web_search" if name == "ask_junior" else "tool",
+                "name": name,
+                "label": label,
+                "status": "done",
+            }
+        )
         audit(
             "tool_call",
             name or "?",
@@ -394,6 +416,8 @@ class CallManager:
         except BudgetExceeded as e:
             return f"Can't look that up: {e}"
         new_usage = context.usage[spent_before:]
+        call.pending_cost += sum(u.cost_usd for u in new_usage)
+        call.cost_usd += sum(u.cost_usd for u in new_usage)
         with session_scope() as s:
             from junior.chat.history import save_usage
 
@@ -416,13 +440,28 @@ class CallManager:
             log.warning("Hang-up of call %s failed (it may already be over)", call_id)
         return True
 
-    def _save(self, call: LiveCall, role: str, text: str) -> int:
+    def _add_cost(self, call: LiveCall, cost: float) -> None:
+        """A response's cost goes on the answer it produced, else on the next answer."""
+        if call.answer_in_response is None:
+            call.pending_cost += cost
+            return
+        with session_scope() as s:
+            message = s.get(Message, call.answer_in_response)
+            if message is not None:
+                message.cost_usd += cost
+        call.answer_in_response = None
+
+    def _save(
+        self, call: LiveCall, role: str, text: str, steps: list | None = None, cost: float = 0.0
+    ) -> int:
         with session_scope() as s:
             message = Message(
                 conversation_id=call.conversation_id,
                 role=role,
                 source="user" if role == "user" else "assistant",
                 content=text,
+                steps=list(steps or []),
+                cost_usd=cost,
             )
             s.add(message)
             convo = s.get(Conversation, call.conversation_id)
@@ -437,20 +476,34 @@ class CallManager:
         call.ended = True
         seconds = time.monotonic() - call.started
         with session_scope() as s:
+            convo = s.get(Conversation, call.conversation_id)
+            empty = convo is not None and not convo.messages
+            if empty:
+                s.delete(convo)  # nothing was said: don't keep an empty chat
+            elif call.pending_steps or call.pending_cost:
+                # The call ended before the next answer (e.g. mid-lookup): show the
+                # leftover tools and cost on his last answer, so nothing goes missing.
+                last = s.scalars(
+                    select(Message)
+                    .where(
+                        Message.conversation_id == call.conversation_id,
+                        Message.role == "assistant",
+                    )
+                    .order_by(Message.id.desc())
+                ).first()
+                if last is not None:
+                    last.steps = [*last.steps, *call.pending_steps]
+                    last.cost_usd += call.pending_cost
             s.add(
                 Usage(
                     agent="live_call",
                     model=call.model,
                     mode="call",
-                    conversation_id=None,  # the chat may be removed below if empty
+                    conversation_id=None if empty else call.conversation_id,
                     extra={"seconds": round(seconds, 1)},
                     cost_usd=0.0,
                 )
             )
-            convo = s.get(Conversation, call.conversation_id)
-            empty = convo is not None and not convo.messages
-            if empty:
-                s.delete(convo)  # nothing was said: don't keep an empty chat
         audit(
             "agent_run",
             "live_call",

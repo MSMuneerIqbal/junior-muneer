@@ -65,6 +65,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
         tts_voice: form.tts_voice,
         tts_speed: Number(form.tts_speed),
         voice_autoplay: form.voice_autoplay,
+        call_minutes_per_day: Number(form.call_minutes_per_day),
       });
       await mutate(SETTINGS_KEY, saved, { revalidate: false });
       await mutate(USAGE_KEY);
@@ -161,6 +162,23 @@ function SettingsForm({ initial }: { initial: Settings }) {
           />
           Read answers aloud automatically when I send a voice message
         </label>
+        <Field
+          label="Live-call minutes per day"
+          hint="Live calls cost the most (about $0.02–0.05 a minute). The call ends when the limit is reached."
+        >
+          <input
+            type="number"
+            min={0}
+            max={600}
+            step={5}
+            value={form.call_minutes_per_day}
+            onChange={(e) =>
+              setForm({ ...form, call_minutes_per_day: e.target.value as unknown as number })
+            }
+            className={`${input} w-40`}
+            aria-label="Live-call minutes per day"
+          />
+        </Field>
       </fieldset>
       <div className="flex items-center gap-3">
         <button

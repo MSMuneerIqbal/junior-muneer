@@ -98,6 +98,23 @@ export function PauseButton() {
   );
 }
 
+function CallMinutes() {
+  const { data } = useSWR<{ minutes_used: number; minutes_allowed: number }>(
+    "/api/call/limits",
+    fetcher,
+    { refreshInterval: 60_000 },
+  );
+  if (!data) return null;
+  return (
+    <div className="flex items-baseline justify-between text-sm">
+      <span className="text-muted">📞 Live calls today</span>
+      <span className="tabular-nums" data-testid="call-minutes">
+        {data.minutes_used.toFixed(1)} of {data.minutes_allowed} min
+      </span>
+    </div>
+  );
+}
+
 /** Today's spend, Pause, and what needs your OK. */
 export function TodayPanel() {
   return (
@@ -105,6 +122,7 @@ export function TodayPanel() {
       <h2 className="font-semibold">Today</h2>
       <PauseButton />
       <Spend />
+      <CallMinutes />
       <section aria-label="Needs your OK">
         <div className="flex items-baseline justify-between">
           <span className="text-sm text-muted">Needs your OK</span>

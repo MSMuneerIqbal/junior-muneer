@@ -163,7 +163,7 @@ junior-muneer/
 - [x] **P1-05 Live call: screen**
   - The 📞 button opens a call view: talk hands-free, interrupt him, mute, end the call, see the live transcript.
   - *Done when:* a natural back-and-forth conversation works, including interruptions.
-- [ ] **P1-06 Calls in history + cost**
+- [x] **P1-06 Calls in history + cost**
   - The full transcript is saved as a chat with a 📞 icon; voice messages get a 🎙 icon with playable audio. Cost per minute is tracked, with a daily live-call minutes limit.
   - *Done when:* the call shows in the sidebar, and its cost shows in Show work and the spend panel.
 - [ ] **P1-07 Tests + your acceptance test + push**

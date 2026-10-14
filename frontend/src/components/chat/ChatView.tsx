@@ -12,7 +12,7 @@ import { isChatsKey, PAUSE_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
 import type { ChatEvent, MemoryNote, Message, Step } from "@/lib/types";
 import { useChatSocket } from "@/lib/useChatSocket";
 import { speakMessage } from "@/lib/player";
-import type { Settings } from "@/lib/types";
+import type { ChatSummary, Settings } from "@/lib/types";
 
 /** The answer being written right now. */
 type Turn = {
@@ -41,6 +41,10 @@ export function ChatView() {
   const { mutate: mutateGlobal } = useSWRConfig();
 
   const { data: pause } = useSWR<{ paused: boolean }>(PAUSE_KEY, fetcher);
+  const { data: summary } = useSWR<ChatSummary>(
+    conversationId ? `/api/conversations/${conversationId}/summary` : null,
+    fetcher,
+  );
   const { data: settings } = useSWR<Settings>(SETTINGS_KEY, fetcher);
   const autoplay = settings?.voice_autoplay ?? true;
   const [turn, setTurnState] = useState<Turn | null>(null);
@@ -90,6 +94,7 @@ export function ChatView() {
           if (t?.userAudioId && autoplay && event.text) void speakMessage(event.message_id);
           setTurn((t) => t && { ...t, status: "done", messageId: event.message_id, text: event.text });
           mutateGlobal(`/api/conversations/${event.conversation_id}/messages`);
+          mutateGlobal(`/api/conversations/${event.conversation_id}/summary`);
           mutateGlobal(isChatsKey);
           mutateGlobal(USAGE_KEY);
           break;
@@ -147,7 +152,16 @@ export function ChatView() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-end border-b border-line px-3 py-1.5 sm:px-6">
+      <div className="flex items-center justify-between gap-3 border-b border-line px-3 py-1.5 sm:px-6">
+        <span className="truncate text-xs text-muted" data-testid="chat-summary">
+          {summary?.kind === "call" && summary.call_seconds !== null
+            ? `📞 Live call · ${Math.floor(summary.call_seconds / 60)}:${String(
+                Math.round(summary.call_seconds % 60),
+              ).padStart(2, "0")} · $${summary.cost_usd.toFixed(4)}`
+            : summary && summary.cost_usd > 0
+              ? `This chat: $${summary.cost_usd.toFixed(4)}`
+              : ""}
+        </span>
         <button
           onClick={() => setInCall(true)}
           className="rounded-full border border-line px-3 py-1 text-sm hover:bg-panel-2"

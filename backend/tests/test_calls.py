@@ -250,3 +250,50 @@ def test_an_empty_call_is_still_logged_and_counted():
         ended = s.scalars(select(AuditLog).where(AuditLog.name == "live_call")).all()[-1]
         assert ended.detail["event"] == "ended" and ended.conversation_id is None
         assert s.scalars(select(Usage).where(Usage.agent == "live_call")).one().extra["seconds"] >= 0
+
+
+def test_show_work_on_spoken_answers_and_call_summary():
+    model = ScriptedModel([chunked_answer("Sunny, 31 degrees.")])
+    call, _, _ = run_call(
+        [
+            heard("What's the weather?"),
+            tool("ask_junior", '{"question": "Weather in Lahore?"}', "a1"),
+            usage_event(),  # the response that called the tool (no words)
+            said("It's sunny, 31 degrees."),
+            usage_event(),  # the response that spoke
+        ],
+        model,
+    )
+    with session_scope() as s:
+        answer = s.scalars(
+            select(Message).where(Message.conversation_id == call.conversation_id, Message.role == "assistant")
+        ).one()
+        assert [st["label"] for st in answer.steps] == ["Checking: Weather in Lahore?"]
+        # Both realtime responses plus the full Junior Muneer's lookup.
+        assert answer.cost_usd == pytest.approx(call.cost_usd)
+        assert answer.cost_usd > 2 * call_cost(usage_event()["response"]["usage"], {"audio_output": 20})
+
+    app = create_app(model_provider=lambda: (lambda _n: model), realtime=FakeGateway)
+    with TestClient(app) as client:
+        summary = client.get(f"/api/conversations/{call.conversation_id}/summary").json()
+    assert summary["kind"] == "call"
+    assert summary["cost_usd"] == pytest.approx(call.cost_usd, rel=1e-3)
+    assert summary["call_seconds"] is not None
+
+
+def test_a_lookup_cut_off_by_hanging_up_still_shows_in_show_work():
+    model = ScriptedModel([chunked_answer("Headline: ...")])
+    call, _, _ = run_call(
+        [
+            heard("What's the news?"),
+            said("Let me check."),
+            usage_event(),
+            tool("ask_junior", '{"question": "Top news in Pakistan?"}', "a1"),
+            # call ends here, before he says the headline
+        ],
+        model,
+    )
+    with session_scope() as s:
+        last = s.scalars(select(Message).where(Message.role == "assistant")).all()[-1]
+        assert [st["label"] for st in last.steps] == ["Checking: Top news in Pakistan?"]
+        assert last.cost_usd == pytest.approx(call.cost_usd)

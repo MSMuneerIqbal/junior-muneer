@@ -91,4 +91,11 @@ export type Settings = {
   tts_voice: string;
   tts_speed: number;
   voice_autoplay: boolean;
+  call_minutes_per_day: number;
+};
+
+export type ChatSummary = {
+  kind: Conversation["kind"];
+  cost_usd: number;
+  call_seconds: number | null;
 };

@@ -21,7 +21,7 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 
-from junior.db import Conversation, Message, session_scope
+from junior.db import Conversation, Message, Usage, session_scope
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -123,6 +123,25 @@ def update_conversation(conversation_id: int, body: ConversationUpdate) -> Conve
 def delete_conversation(conversation_id: int) -> None:
     with session_scope() as s:
         s.delete(_get_or_404(s, conversation_id))
+
+
+@router.get("/api/conversations/{conversation_id}/summary")
+def conversation_summary(conversation_id: int) -> dict:
+    """Total cost of a chat, and for a live call how long it lasted."""
+    with session_scope() as s:
+        convo = _get_or_404(s, conversation_id)
+        rows = s.execute(
+            select(Usage.agent, Usage.cost_usd, Usage.extra).where(
+                Usage.conversation_id == conversation_id
+            )
+        ).all()
+        kind = convo.kind
+    seconds = sum(float(e.get("seconds", 0)) for a, _, e in rows if a == "live_call")
+    return {
+        "kind": kind,
+        "cost_usd": round(sum(c for _, c, _ in rows), 6),
+        "call_seconds": round(seconds, 1) if kind == "call" else None,
+    }
 
 
 @router.get("/api/conversations/{conversation_id}/messages", response_model=list[MessageOut])
