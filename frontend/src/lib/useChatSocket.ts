@@ -6,11 +6,12 @@ import type { ChatEvent } from "@/lib/types";
 
 /**
  * One WebSocket to the backend, reconnecting by itself.
- * `send` returns false when the socket isn't open (the caller shows an error).
+ * Messages sent while it's (re)connecting wait in a queue and go out once it opens.
  */
 export function useChatSocket(onEvent: (event: ChatEvent) => void) {
   const socket = useRef<WebSocket | null>(null);
   const handler = useRef(onEvent);
+  const queue = useRef<string[]>([]);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export function useChatSocket(onEvent: (event: ChatEvent) => void) {
       ws.onopen = () => {
         delay = 500;
         setConnected(true);
+        while (queue.current.length) ws.send(queue.current.shift()!);
       };
       ws.onmessage = (e) => {
         try {
@@ -52,9 +54,10 @@ export function useChatSocket(onEvent: (event: ChatEvent) => void) {
   }, []);
 
   const send = useCallback((conversationId: number | null, text: string) => {
+    const payload = JSON.stringify({ type: "message", conversation_id: conversationId, text });
     const ws = socket.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
-    ws.send(JSON.stringify({ type: "message", conversation_id: conversationId, text }));
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(payload);
+    else queue.current.push(payload);
     return true;
   }, []);
 

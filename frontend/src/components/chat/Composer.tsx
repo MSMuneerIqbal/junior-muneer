@@ -6,11 +6,11 @@ import { useRef, useState, type KeyboardEvent } from "react";
 export function Composer({
   onSend,
   busy,
-  disabledReason,
+  notice,
 }: {
   onSend: (text: string) => boolean;
   busy: boolean;
-  disabledReason?: string;
+  notice?: string;
 }) {
   const [text, setText] = useState("");
   const box = useRef<HTMLTextAreaElement>(null);
@@ -24,7 +24,7 @@ export function Composer({
 
   function submit() {
     const value = text.trim();
-    if (!value || busy || disabledReason) return;
+    if (!value || busy) return;
     if (onSend(value)) {
       setText("");
       requestAnimationFrame(grow);
@@ -57,16 +57,14 @@ export function Composer({
         />
         <button
           onClick={submit}
-          disabled={!text.trim() || busy || !!disabledReason}
+          disabled={!text.trim() || busy}
           aria-label="Send"
           className="rounded-full bg-accent px-3.5 py-1.5 text-sm font-medium text-accent-fg disabled:opacity-40"
         >
           {busy ? "…" : "Send"}
         </button>
       </div>
-      {disabledReason && (
-        <p className="mx-auto mt-1.5 max-w-3xl text-xs text-warn">{disabledReason}</p>
-      )}
+      {notice && <p className="mx-auto mt-1.5 max-w-3xl text-xs text-warn">{notice}</p>}
     </div>
   );
 }

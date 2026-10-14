@@ -31,3 +31,4 @@ Thumbs.db
 # Playwright
 test-results/
 playwright-report/
+.next-e2e/

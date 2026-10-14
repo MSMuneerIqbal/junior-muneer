@@ -130,7 +130,7 @@ junior-muneer/
 
 ### Finish
 
-- [ ] **P0-21 Full test run**
+- [x] **P0-21 Full test run**
   - All backend tests from P0-02 to P0-20 pass with one command, plus a full chat flow with a **fake AI** (no cost).
   - Frontend: smoke test that the chat page loads and sends a message.
   - *Done when:* all tests pass with one command.

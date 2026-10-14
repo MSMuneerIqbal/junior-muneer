@@ -167,7 +167,9 @@ export function ChatView() {
       <Composer
         onSend={onSend}
         busy={busy}
-        disabledReason={connected ? undefined : "Connecting to the backend…"}
+        notice={
+          connected ? undefined : "Connecting to the backend… messages are sent once it's up."
+        }
       />
     </div>
   );
