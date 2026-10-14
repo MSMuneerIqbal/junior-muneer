@@ -121,7 +121,7 @@ junior-muneer/
 - [x] **P0-18 Memory page**
   - List, edit and delete what Junior Muneer remembers.
   - *Done when:* editing a memory changes his answers.
-- [ ] **P0-19 Activity page**
+- [x] **P0-19 Activity page**
   - The audit log, newest first, filtered by type.
   - *Done when:* every chat's steps show up there.
 - [ ] **P0-20 Settings page (basic)**
