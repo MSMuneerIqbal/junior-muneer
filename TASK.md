@@ -209,6 +209,15 @@ Nothing is posted by the system in this phase: approved items are copy and paste
 - [x] **P2-11 Planned posts**
   - Pick a day and time for a draft; the scheduler reminds you then (real posting comes in phase 3).
 - [ ] **P2-12 Tests + your acceptance test + push**
+  - Automated tests all pass (backend, and 30 end-to-end tests on desktop and phone).
+  - **Your acceptance test** (about 20 minutes, a few cents). Start the app with `start.bat`, then:
+    1. **Profile:** open Profile and check it's right (it's the only source of facts for every post).
+    2. **Ideas:** in the chat, ask "Give me 5 LinkedIn post ideas for this week". Open **Social**: they're under Ideas.
+    3. **Five posts:** use **Write it** on ideas (or ask "Write a LinkedIn post about …") until you have 5 drafts you'd really publish. Watch the team's steps; open **Show work** on one.
+    4. **Fix and approve:** Edit any draft you'd change, add an image to one (🖼 Add image), plan one for tomorrow (📅 Plan), then **Copy** each, post it if you want, and **Mark as posted**. Posted texts become your style memory.
+    5. **A comment:** copy a real LinkedIn post, press 📋 in the chat, paste it, and ask "Should I comment on this? If yes, write a short comment."
+    6. **Modes:** switch the mode under the message box to **Plan** and ask for a post: he shows a plan and writes nothing. Switch back to **Auto**.
+  - Tell me what felt wrong or slow; we fix it, then push and start Phase 2b.
 
 ## Phase 2b: News agents (AI news + Pakistan news)
 

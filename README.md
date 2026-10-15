@@ -18,7 +18,9 @@ The full design is in [PLAN.md](PLAN.md); progress is tracked in [TASK.md](TASK.
 - **Phase 2 (in progress):** your **Profile** page; platform **playbooks**; **permissions** (Ask / Auto /
   Deny per action, and the **mode menu** under the message box: Auto, Manual, Plan, Pause everything);
   the **Approvals** queue with cards in the chat; the **📋 Paste box** for text from other sites; and the
-  **writing team** (Writer, Checker, Humanizer): "Write a LinkedIn post about…" gives a checked, scored draft.
+  **writing team** (Writer, Checker, Humanizer): "Write a LinkedIn post about…" gives a checked, scored draft;
+  the **Social Media Manager** (ideas, "write idea 3", should I comment on this?); images on drafts; style
+  memory from what you post; the **Social** page; and **planned posts** with a reminder when it's time.
 
 ## Start it
 

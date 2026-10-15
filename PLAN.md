@@ -486,6 +486,8 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 
 ## 18. Change log
 
+- **v7.5 (2026-10-15):** Phase 2 built: Social Media Manager with an idea list, images on drafts (Instagram waits for one), style memory,
+  the Social page and planned posts (the scheduler now checks every minute, so reminders are on time).
 - **v7.4 (2026-10-15):** mode menu like Claude's (section 8): Auto, Manual and a new Plan mode, with Pause everything in the same menu.
   The writing team's Checker uses the strong model (the small one flagged true profile facts as invented in a live test). Writing-team steps show live in the chat and in Show work.
 - **v7.3 (2026-10-15):** added phase 2b, the news agents (section 6.4): the AI News Agent and the Social News Agent (Pakistan), reading official RSS feeds and pages, with a daily digest.
