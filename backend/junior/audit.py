@@ -16,7 +16,7 @@ from junior.db import AuditLog, session_scope
 log = logging.getLogger("junior.audit")
 router = APIRouter()
 
-KINDS = ("agent_run", "tool_call", "web_search", "memory", "setting", "action", "system")
+KINDS = ("agent_run", "tool_call", "web_search", "memory", "setting", "action", "news", "system")
 MAX_TEXT = 500
 
 

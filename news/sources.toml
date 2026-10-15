@@ -20,8 +20,14 @@
 #   xAI (x.ai blocks automated readers and has no feed), Qwen (qwen.ai is app-only; its old
 #   GitHub blog stopped in 2025), LMArena's leaderboard (blocks automated readers; its blog is
 #   below), The News (its feeds stopped updating in 2025).
+# [search] lists extra official sites web search may use (for questions a digest doesn't cover).
 # Rankings ("who's on top") come from the Artificial Analysis API when ARTIFICIAL_ANALYSIS_API_KEY
 # is set in backend/.env (free key: artificialanalysis.ai).
+
+# Web search for things a digest doesn't cover may only search these sites, plus every source's own site.
+[search]
+ai = ["x.ai", "qwen.ai", "lmarena.ai", "artificialanalysis.ai", "anthropic.com", "openai.com", "deepseek.com"]
+pakistan = ["pbs.gov.pk", "sbp.org.pk", "pta.gov.pk", "fbr.gov.pk"]
 
 # ---------- AI: the companies' own sites ----------
 

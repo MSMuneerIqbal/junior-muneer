@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     # Optional: other providers' keys (see [providers] in agents/models.toml).
     deepseek_api_key: str = ""
+    # Optional: Artificial Analysis's free API key, for "who's on top" rankings in AI news.
+    artificial_analysis_api_key: str = ""
     data_dir: Path = Path("data")
     log_level: str = "INFO"
     backend_host: str = "127.0.0.1"

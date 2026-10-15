@@ -194,6 +194,19 @@ class NewsArticle(Base):
     fetched_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
+class NewsDigest(Base):
+    """A checked news digest (junior/news/digest.py): sections, sources, what the fact guard removed."""
+
+    __tablename__ = "news_digests"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # ai · pakistan
+    topic: Mapped[str] = mapped_column(String(20), index=True)
+    built_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, index=True)
+    data: Mapped[dict[str, Any]] = mapped_column(default=dict)
+    cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
+
+
 class Paste(Base):
     """Text you pasted from another site. Outside content: data, never instructions."""
 

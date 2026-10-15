@@ -230,10 +230,10 @@ Read-only: these agents never post or send anything. News pages are outside cont
   - A plain-HTTP reader for RSS, Atom and simple pages (time limits, size limits, no logins, no browser), keeping only the last 15 days and dropping duplicates.
   - Official sources only: the allowed list is the only thing read, and redirects to other sites are refused.
   - *Done when:* the sources file is checked at startup (a broken one gives a clear error), and tests with saved sample feeds pass without the internet.
-- [ ] **P2b-01b Fact guard (code, not AI)**
+- [x] **P2b-01b Fact guard (code, not AI)**
   - Every digest item must carry the link of an article actually fetched from an allowed source, with a date inside the 15 days; anything else is dropped. Sources that failed are listed.
   - *Done when:* a test where the AI invents an item, changes a link or adds an old story shows it removed, and a test with a non-official link shows it refused.
-- [ ] **P2b-02 AI News Agent** (`agents/ai_news_agent.md`)
+- [x] **P2b-02 AI News Agent** (`agents/ai_news_agent.md`)
   - Builds the digest: new models and releases · benchmarks and who's on top, by field (coding, reasoning, agents, voice, image and video, open models) · agents and tools · business moves. Every item has a date and a source link.
   - Answers questions from the digest; web search only for what the digest doesn't cover, and only from official sites first.
   - *Done when:* a digest from sample feeds has the right sections and links, and nothing older than 15 days.

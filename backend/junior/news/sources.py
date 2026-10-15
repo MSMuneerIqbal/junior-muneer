@@ -11,6 +11,7 @@ SOURCES_FILE = REPO_DIR / "news" / "sources.toml"
 TOPICS = ("ai", "pakistan")
 KINDS = ("rss", "page", "trends")
 _FIELDS = {"name", "topic", "kind", "url", "domains", "link_prefix", "keywords", "max_items"}
+MAX_SEARCH_SITES = 20  # the web search filter's limit
 
 
 class NewsSourceError(Exception):
@@ -111,6 +112,23 @@ def load_sources(path: Path | None = None) -> list[Source]:
             )
         )
     return sources
+
+
+def official_sites(topic: str, path: Path | None = None) -> list[str]:
+    """Every official site for a topic: the sources' own sites plus [search] extras (for web search
+    and for checking the links in answers)."""
+    path = path or SOURCES_FILE
+    sites: list[str] = []
+    for s in load_sources(path):
+        if s.topic == topic:
+            sites.extend(s.sites)
+    extra = tomllib.loads(path.read_text(encoding="utf-8")).get("search", {}).get(topic, [])
+    if not isinstance(extra, list) or not all(isinstance(e, str) for e in extra):
+        raise NewsSourceError(f"news/sources.toml: [search] {topic} must be a list of sites.")
+    sites.extend(e.lower().removeprefix("www.") for e in extra)
+    unique = list(dict.fromkeys(sites))
+    # "news.microsoft.com" is already covered by "microsoft.com".
+    return [s for s in unique if not any(s != p and s.endswith("." + p) for p in unique)]
 
 
 def sources_for(topic: str, sources: list[Source] | None = None) -> list[Source]:

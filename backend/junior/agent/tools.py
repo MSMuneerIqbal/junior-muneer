@@ -130,10 +130,20 @@ def _hosted_web_search() -> list[Tool]:
 
 
 # Name in the agent file -> the tools it gives.
+def _official_search(topic: str) -> list[Tool]:
+    """Web search that can only search the official sites in news/sources.toml."""
+    from junior.news.sources import MAX_SEARCH_SITES, official_sites
+
+    sites = official_sites(topic)[:MAX_SEARCH_SITES]
+    return [WebSearchTool(filters={"allowed_domains": sites}, search_context_size="low")]
+
+
 TOOL_FACTORIES: dict[str, Callable[[], list[Tool]]] = {
     "web_search": lambda: [web_search],
     "hosted_web_search": _hosted_web_search,
     "database": lambda: list(DATABASE_TOOLS),
+    "ai_official_search": lambda: _official_search("ai"),
+    "pakistan_official_search": lambda: _official_search("pakistan"),
 }
 
 

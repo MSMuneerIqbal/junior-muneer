@@ -1,6 +1,6 @@
 """Articles that were really read: the fact guard checks digest items against these."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from sqlalchemy import delete, select
 
@@ -11,11 +11,12 @@ from junior.news.reader import Article
 KEEP_DAYS = 30
 
 
-def save_articles(articles: list[Article]) -> dict[str, int]:
+def save_articles(articles: list[Article], now: datetime | None = None) -> dict[str, int]:
     """Save (or refresh) articles; returns url -> id. Articles older than 30 days are removed."""
     ids: dict[str, int] = {}
+    now = now or utcnow()
     with session_scope() as s:
-        s.execute(delete(NewsArticle).where(NewsArticle.published_at < utcnow() - timedelta(days=KEEP_DAYS)))
+        s.execute(delete(NewsArticle).where(NewsArticle.published_at < now - timedelta(days=KEEP_DAYS)))
         existing = {
             a.url: a
             for a in s.scalars(select(NewsArticle).where(NewsArticle.url.in_([x.url for x in articles])))
