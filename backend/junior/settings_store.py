@@ -20,14 +20,21 @@ DEFAULTS: dict[str, Any] = {
     "voice_autoplay": True,
     # Live calls cost the most, so they have a daily limit.
     "call_minutes_per_day": 30,
+    # natural (full realtime model) · economy (mini)
+    "call_quality": "natural",
+    # patient · balanced · quick: how soon he answers when you pause
+    "turn_taking": "balanced",
     # Text models (Settings -> Models). "" = the default from agents/models.toml.
     "main_model": "",
     "helper_model": "",
 }
-# Voices that work both for spoken replies and in live calls.
+# Voices that work both for spoken replies and in live calls. Marin and Cedar are
+# OpenAI's newest, most natural voices, so they come first.
 TTS_VOICES = (
     "marin", "cedar", "alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse",
 )
+NATURAL_VOICES = ("marin", "cedar")
+TURN_TAKING = {"patient": "low", "balanced": "auto", "quick": "high"}
 # How he sounds. Used for spoken replies and live calls.
 ACCENTS = {
     "pakistani": (

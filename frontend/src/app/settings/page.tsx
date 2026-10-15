@@ -107,6 +107,8 @@ function SettingsForm({ initial }: { initial: Settings }) {
         tts_speed: Number(form.tts_speed),
         voice_autoplay: form.voice_autoplay,
         call_minutes_per_day: Number(form.call_minutes_per_day),
+        call_quality: form.call_quality,
+        turn_taking: form.turn_taking,
         main_model: form.main_model,
         helper_model: form.helper_model,
       });
@@ -183,6 +185,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
             {(voices ?? [form.tts_voice]).map((v) => (
               <option key={v} value={v}>
                 {v[0].toUpperCase() + v.slice(1)}
+                {v === "marin" || v === "cedar" ? " · most natural" : ""}
               </option>
             ))}
           </select>
@@ -223,8 +226,39 @@ function SettingsForm({ initial }: { initial: Settings }) {
           Read answers aloud automatically when I send a voice message
         </label>
         <Field
+          label="Call quality"
+          hint="Natural uses OpenAI's full voice model: the most human-sounding, about $0.04–0.06 a minute. Economy uses the mini model: about a third of the price, flatter."
+        >
+          <select
+            value={form.call_quality}
+            onChange={(e) =>
+              setForm({ ...form, call_quality: e.target.value as Settings["call_quality"] })
+            }
+            className={input}
+          >
+            <option value="natural">Natural (recommended)</option>
+            <option value="economy">Economy</option>
+          </select>
+        </Field>
+        <Field
+          label="Turn-taking"
+          hint="How soon he answers when you pause. Patient lets you stop and think mid-sentence."
+        >
+          <select
+            value={form.turn_taking}
+            onChange={(e) =>
+              setForm({ ...form, turn_taking: e.target.value as Settings["turn_taking"] })
+            }
+            className={input}
+          >
+            <option value="patient">Patient: waits while you think</option>
+            <option value="balanced">Balanced (recommended)</option>
+            <option value="quick">Quick: answers as soon as you pause</option>
+          </select>
+        </Field>
+        <Field
           label="Live-call minutes per day"
-          hint="Live calls cost the most (about $0.02–0.05 a minute). The call ends when the limit is reached."
+          hint="Live calls cost the most. The call ends when the limit is reached."
         >
           <input
             type="number"

@@ -112,14 +112,18 @@ def test_session_has_his_personality_voice_tools_and_urdu_transcription():
     call, answer, gw = run_call([])
     session = gw.sessions[0]
     assert answer == "v=0 fake-answer"
-    assert session["model"] == "gpt-realtime-2.1-mini"
-    assert "You are **Junior Muneer**" in session["instructions"]
-    assert "You are on a live voice call" in session["instructions"]
+    assert session["model"] == "gpt-realtime-2.1"  # "Natural" call quality by default
+    assert "You are Junior Muneer" in session["instructions"]
+    assert "on a live voice call" in session["instructions"]
+    assert "# Pacing" in session["instructions"] and "# Variety" in session["instructions"]
     assert "{{" not in session["instructions"]
     assert session["audio"]["output"]["voice"] == "cedar"
     assert session["audio"]["input"]["transcription"]["model"] == "gpt-4o-transcribe"
     assert "Urdu script" in session["audio"]["input"]["transcription"]["prompt"]
-    assert session["audio"]["input"]["turn_detection"]["interrupt_response"] is True
+    turn = session["audio"]["input"]["turn_detection"]
+    assert turn["type"] == "semantic_vad" and turn["eagerness"] == "auto"
+    assert turn["interrupt_response"] is True
+    assert turn["create_response"] is True  # answers right away, no waiting for the transcript
     assert {t["name"] for t in session["tools"]} == {
         "web_search",
         "ask_junior",
@@ -143,8 +147,8 @@ def test_both_sides_are_saved_as_a_call_chat_with_cost_and_minutes():
         rows = s.scalars(select(Usage).where(Usage.mode == "call")).all()
         cost_row = next(r for r in rows if r.agent == "junior_muneer_live")
         minutes_row = next(r for r in rows if r.agent == "live_call")
-    # gpt-realtime-2.1-mini: audio in $10, text in $0.60, audio out $20, text out $2.40 per 1M
-    assert cost_row.cost_usd == pytest.approx((1000 * 10 + 500 * 0.6 + 2000 * 20 + 100 * 2.4) / 1e6)
+    # gpt-realtime-2.1: audio in $32, text in $4, audio out $64, text out $24 per 1M
+    assert cost_row.cost_usd == pytest.approx((1000 * 32 + 500 * 4 + 2000 * 64 + 100 * 24) / 1e6)
     assert "seconds" in minutes_row.extra
 
 
@@ -242,7 +246,7 @@ def test_daily_call_minutes_limit(client):
     r = client.post("/api/call/start", json={"sdp": "v=0 offer from browser"})
     assert r.status_code == 429 and "live-call limit" in r.json()["detail"]
     limits = client.get("/api/call/limits").json()
-    assert limits["minutes_allowed"] == 0 and limits["model"] == "gpt-realtime-2.1-mini"
+    assert limits["minutes_allowed"] == 0 and limits["model"] == "gpt-realtime-2.1"
 
 
 def test_cap_blocks_starting_a_call(client):
@@ -312,20 +316,25 @@ def test_a_lookup_cut_off_by_hanging_up_still_shows_in_show_work():
 
 
 
-def test_he_replies_in_the_language_you_just_spoke():
+def test_switching_language_updates_him_for_the_rest_of_the_call():
     _, _, gw = run_call(
-        [heard("السلام علیکم، آپ کیسے ہیں؟"), heard("Okay, now in English please."), heard("ٹھیک ہے")]
+        [
+            heard("السلام علیکم، آپ کیسے ہیں؟"),
+            heard("آج کیا پلان ہے؟"),  # still Urdu: nothing to update
+            heard("Okay, now in English please."),
+            heard("ٹھیک ہے"),
+        ]
     )
-    replies = [e for e in gw.conn.sent if e["type"] == "response.create"]
-    notes = [r["response"]["instructions"].rsplit("## This reply", 1)[1] for r in replies]
-    assert "spoke URDU" in notes[0]
-    assert "spoke ENGLISH" in notes[1]
-    assert "spoke URDU" in notes[2]
-    # Each reply keeps his whole personality, not just the language note.
-    assert all("You are **Junior Muneer**" in r["response"]["instructions"] for r in replies)
-    # The server waits for us instead of answering on its own.
-    turn = gw.sessions[0]["audio"]["input"]["turn_detection"]
-    assert turn["create_response"] is False and turn["interrupt_response"] is True
+    updates = [e for e in gw.conn.sent if e["type"] == "session.update"]
+    notes = [u["session"]["instructions"].rsplit("# Language right now", 1)[1] for u in updates]
+    assert len(updates) == 3
+    assert "speaking URDU" in notes[0]
+    assert "speaking ENGLISH" in notes[1]
+    assert "speaking URDU" in notes[2]
+    # He keeps his whole personality in every update.
+    assert all("You are Junior Muneer" in u["session"]["instructions"] for u in updates)
+    # He answers by himself the moment you finish: we don't start replies.
+    assert not [e for e in gw.conn.sent if e["type"] == "response.create"]
 
 
 def test_accent_goes_into_the_call():
@@ -354,21 +363,35 @@ def noisy(text, logprob):
 
 
 def test_breathing_and_noise_are_ignored():
+    def reply(rid):
+        return {"type": "response.created", "response": {"id": rid}}
+
+    def noise_item(text, logprob, item):
+        return {**noisy(text, logprob), "item_id": item}
+
     call, _, gw = run_call(
         [
-            noisy("ٹھیک ہے", -2.3),  # made up from breathing
-            noisy("Hi", -4.1),
-            noisy("", -0.01),
-            noisy("آپ کیسے ہیں؟", -0.07),  # real speech
-            noisy("Hello.", -1.13),  # a short real word in a live call: kept
+            reply("r1"),
+            noise_item("ٹھیک ہے", -2.3, "i1"),  # made up from breathing
+            said("Haan?"),  # his reply to the noise: cancelled, not saved
+            reply("r2"),
+            noise_item("آپ کیسے ہیں؟", -0.07, "i2"),  # real speech
+            said("Main theek hoon"),
+            reply("r3"),
+            noise_item("Hello.", -1.13, "i3"),  # a short real word in a live call: kept
         ]
     )
     with session_scope() as s:
-        said_by_you = s.scalars(
-            select(Message.content).where(Message.conversation_id == call.conversation_id)
+        user_lines = s.scalars(
+            select(Message.content).where(
+                Message.conversation_id == call.conversation_id, Message.role == "user"
+            )
         ).all()
-    assert said_by_you == ["آپ کیسے ہیں؟", "Hello."]
-    assert len([e for e in gw.conn.sent if e["type"] == "response.create"]) == 2  # two replies
+    assert user_lines == ["آپ کیسے ہیں؟", "Hello."]
+    sent = gw.conn.sent
+    assert {"type": "response.cancel", "response_id": "r1"} in sent
+    assert {"type": "conversation.item.delete", "item_id": "i1"} in sent
+    assert not any(e.get("item_id") in ("i2", "i3") for e in sent if e["type"] == "conversation.item.delete")
 
 
 def test_quick_web_search_goes_straight_to_the_researcher():
@@ -399,7 +422,8 @@ def test_he_says_still_looking_while_a_slow_search_runs(monkeypatch):
     call, _, gw = run_call([heard("What's the news?"), tool("web_search", '{"query": "news"}', "w1")])
     fillers = [
         e for e in gw.conn.sent
-        if e["type"] == "response.create" and e["response"].get("metadata") == {"kind": "filler"}
+        if e["type"] == "response.create"
+        and e.get("response", {}).get("metadata") == {"kind": "filler"}
     ]
     assert fillers, "no filler was said during the search"
     assert fillers[0]["response"]["conversation"] == "none"  # not saved as part of the chat
@@ -430,3 +454,12 @@ def test_english_replies_are_left_alone():
     assert model.calls == ()
     with session_scope() as s:
         assert s.scalars(select(Message.content).where(Message.role == "assistant")).one() == "Hi Muneer! How are you?"
+
+
+def test_economy_quality_and_patient_turn_taking():
+    set_setting("call_quality", "economy")
+    set_setting("turn_taking", "patient")
+    _, _, gw = run_call([])
+    session = gw.sessions[0]
+    assert session["model"] == "gpt-realtime-2.1-mini"
+    assert session["audio"]["input"]["turn_detection"]["eagerness"] == "low"

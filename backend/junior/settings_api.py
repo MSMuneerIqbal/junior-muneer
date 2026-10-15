@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field, field_validator
 from junior.audit import audit
 from junior.agent.builder import chosen_model
 from junior.models import get_router
-from junior.settings_store import TTS_VOICES, all_settings, set_setting
+from junior.settings_store import NATURAL_VOICES, TTS_VOICES, all_settings, set_setting
 from junior.timeutil import zone
 
 router = APIRouter()
@@ -29,6 +29,8 @@ class SettingsUpdate(BaseModel):
     tts_speed: float | None = Field(default=None, ge=0.5, le=2.0)
     voice_autoplay: bool | None = None
     call_minutes_per_day: int | None = Field(default=None, ge=0, le=600)
+    call_quality: Literal["natural", "economy"] | None = None
+    turn_taking: Literal["patient", "balanced", "quick"] | None = None
     main_model: str | None = Field(default=None, max_length=100)
     helper_model: str | None = Field(default=None, max_length=100)
 
@@ -73,6 +75,11 @@ def update_settings(body: SettingsUpdate) -> dict:
 @router.get("/api/voices")
 def voices() -> list[str]:
     return list(TTS_VOICES)
+
+
+@router.get("/api/voices/natural")
+def natural_voices() -> list[str]:
+    return list(NATURAL_VOICES)
 
 
 MODEL_LABELS = {

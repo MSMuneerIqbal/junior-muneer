@@ -93,6 +93,8 @@ export type Settings = {
   tts_speed: number;
   voice_autoplay: boolean;
   call_minutes_per_day: number;
+  call_quality: "natural" | "economy";
+  turn_taking: "patient" | "balanced" | "quick";
   main_model: string;
   helper_model: string;
 };

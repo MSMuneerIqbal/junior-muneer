@@ -40,25 +40,12 @@ from junior.costs import BudgetExceeded, budget_left
 from junior.db import Conversation, Message, Usage, session_scope
 from junior.db.models import utcnow
 from junior.models import get_router
-from junior.settings_store import ACCENTS, all_settings
+from junior.settings_store import ACCENTS, TURN_TAKING, all_settings
 from junior.timeutil import start_of_today_utc, zone
 from junior.voice import TRANSCRIBE_PROMPT, average_logprob, is_noise
 
 log = logging.getLogger(__name__)
 router = APIRouter()
-
-CALL_ADDENDUM = """
-## You are on a live voice call
-- {{user_name}} is talking to you live; your words are spoken aloud. Keep answers short and natural, like a phone call: one to three sentences unless asked for more. No lists, tables, links or markdown.
-- They can interrupt you at any time; if they do, stop and listen.
-- {{accent}}
-- Your spoken words are also shown as text. When you speak Urdu, write it in Urdu script (اردو), not Roman Urdu or Hindi script.
-- Always answer in the language {{user_name}} just used. Each reply comes with a note saying which language that is; follow it.
-- For anything current (news, weather, prices, scores), call `web_search` right away; it takes a few seconds. Say a very short "let me check" first, then tell them the answer in your own words, briefly.
-- For questions about their past chats or spending, call `ask_junior`.
-- `save_memory` only for facts {{user_name}} says in this call, quoting their exact words. If saving is refused, say why in one line.
-- Approvals never happen by voice: anything that needs an OK shows on their screen.
-"""
 
 WEB_SEARCH_TOOL = {
     "type": "function",
@@ -211,6 +198,8 @@ class LiveCall:
     instructions: str = ""
     language: str = "english"  # the language of what you said last
     tools_running: int = 0
+    current_response: str | None = None  # his reply being made right now
+    dropped_responses: set = field(default_factory=set)  # replies to noise, cancelled
     filler_ids: set = field(default_factory=set)  # short "still looking" responses
     filler_done: asyncio.Event = field(default_factory=asyncio.Event)
     tool_tasks: set = field(default_factory=set)
@@ -232,11 +221,10 @@ class CallManager:
     # -- start -----------------------------------------------------------------
 
     def call_instructions(self, settings: dict) -> str:
-        spec = self.registry.get("junior_muneer")
+        """His speech-first personality (agents/junior_muneer_voice.md)."""
+        spec = self.registry.get("junior_muneer_voice")
         accent = ACCENTS.get(settings.get("voice_accent", "pakistani"), ACCENTS["pakistani"])
-        return render_instructions(spec, settings) + CALL_ADDENDUM.replace(
-            "{{user_name}}", settings["user_name"]
-        ).replace("{{accent}}", accent)
+        return render_instructions(spec, settings).replace("{{accent}}", accent)
 
     def session_config(self, settings: dict, model: str) -> dict:
         instructions = self.call_instructions(settings)
@@ -251,12 +239,14 @@ class CallManager:
                         "model": model_router.audio_model("transcribe"),
                         "prompt": TRANSCRIBE_PROMPT.format(name=settings["user_name"]),
                     },
+                    # Semantic turn detection: he answers when you've finished your thought,
+                    # not at every pause. He starts right away (no waiting for the
+                    # transcript), and you can interrupt him any time.
                     "turn_detection": {
                         "type": "semantic_vad",
-                        "eagerness": "auto",
+                        "eagerness": TURN_TAKING.get(settings.get("turn_taking"), "auto"),
                         "interrupt_response": True,
-                        # We start each reply ourselves, once we know your language.
-                        "create_response": False,
+                        "create_response": True,
                     },
                     "noise_reduction": {"type": "near_field"},
                 },
@@ -278,7 +268,9 @@ class CallManager:
                 "You can raise it in Settings, or keep chatting by text or voice messages."
             )
         gateway = self.gateway_factory()
-        model = get_router().audio_model("realtime")
+        model = get_router().audio_model(
+            "realtime_economy" if settings.get("call_quality") == "economy" else "realtime"
+        )
         session = self.session_config(settings, model)
         answer, call_id = await gateway.create_call(sdp, session)
 
@@ -348,21 +340,36 @@ class CallManager:
                 average_logprob(_get(event, "logprobs")),
             )
             if is_noise(text, _get(event, "logprobs")):
-                # Breathing, a cough or background noise: no message, no reply.
+                # Breathing, a cough or background noise: stop any reply to it, and
+                # take it out of the conversation.
                 log.info("Call %s: ignored noise %r", call.call_id, text[:40])
+                await self._drop_noise(call, conn, _get(event, "item_id"))
             else:
                 message_id = self._save(call, "user", text)
                 call.context.user_message_ids.append(message_id)
                 call.context.outside_content_seen = False  # a new turn of yours
-                call.language = spoken_language(text)
-                await conn.send(self.reply_request(call))
+                language = spoken_language(text)
+                if language != call.language:
+                    # You switched language: tell him, for the rest of the call.
+                    call.language = language
+                    await conn.send(
+                        {
+                            "type": "session.update",
+                            "session": {
+                                "type": "realtime",
+                                "instructions": call.instructions + LANGUAGE_NOTES[language],
+                            },
+                        }
+                    )
         elif kind == "response.created":
             if _get(event, "response", "metadata", "kind") == "filler":
                 call.filler_ids.add(_get(event, "response", "id"))
+            else:
+                call.current_response = _get(event, "response", "id")
         elif kind == "response.output_audio_transcript.done":
             text = (_get(event, "transcript", default="") or "").strip()
-            if _get(event, "response_id") in call.filler_ids:
-                pass  # "still looking…" isn't part of the conversation
+            if _get(event, "response_id") in call.filler_ids | call.dropped_responses:
+                pass  # "still looking…" and replies to noise aren't part of the conversation
             elif text:
                 text = await self._in_urdu_script(call, text)
                 call.answer_in_response = self._save(
@@ -464,11 +471,16 @@ class CallManager:
             await asyncio.sleep(FILLER_EVERY_SECONDS)
 
     def reply_request(self, call: LiveCall) -> dict:
-        """Start his reply, in the language you just spoke."""
-        return {
-            "type": "response.create",
-            "response": {"instructions": call.instructions + LANGUAGE_NOTES[call.language]},
-        }
+        """Let him carry on talking (after a tool)."""
+        return {"type": "response.create"}
+
+    async def _drop_noise(self, call: LiveCall, conn, item_id: str | None) -> None:
+        if call.current_response:
+            call.dropped_responses.add(call.current_response)
+            await conn.send({"type": "response.cancel", "response_id": call.current_response})
+            await conn.send({"type": "output_audio_buffer.clear"})
+        if item_id:
+            await conn.send({"type": "conversation.item.delete", "item_id": item_id})
 
     async def run_tool(self, call: LiveCall, name: str | None, arguments: str) -> str:
         try:
@@ -684,21 +696,21 @@ FILLER_FIRST_SECONDS = 2.5
 FILLER_EVERY_SECONDS = 7.0
 FILLER_WAIT_SECONDS = 6.0
 FILLER_NOTE = (
-    "\n\n## Right now\nYou are still looking something up for them. Say ONE very short, "
-    "natural filler of 3 to 8 words so they know you're on it, for example \"Ek second, "
-    "dekh raha hoon…\" or \"Still checking, one moment…\". Vary it. Don't answer yet "
-    "and don't ask a question."
+    "\n\n# Right now\nYou are still looking something up for them. Say ONE short, calm, "
+    "natural line (3 to 8 words) so they know you're on it, describing what you're doing, "
+    "for example \"Abhi dekh raha hoon, bas ek second\" or \"Still pulling that up\". "
+    "Never repeat an earlier line. Don't answer yet and don't ask a question."
 )
 
 URDU_LETTERS = re.compile(r"[\u0600-\u06FF\u0750-\u077F\u0900-\u097F]")
 LANGUAGE_NOTES = {
     "urdu": (
-        "\n\n## This reply\nThe user just spoke URDU. Reply in Urdu only (Urdu script in the "
-        "transcript), with the accent above. Do not reply in English."
+        "\n\n# Language right now\nThey are speaking URDU now. Reply in Urdu (Urdu script in "
+        "your text), with your accent, until they switch to English."
     ),
     "english": (
-        "\n\n## This reply\nThe user just spoke ENGLISH. Reply in English only, with the "
-        "accent above."
+        "\n\n# Language right now\nThey are speaking ENGLISH now. Reply in English, with your "
+        "accent, until they switch to Urdu."
     ),
 }
 
