@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Markdown } from "@/components/chat/Markdown";
 import { BACKEND_URL, send } from "@/lib/api";
 import { speakMessage, stopSpeaking, usePlayer } from "@/lib/player";
@@ -71,19 +71,32 @@ function ShowWork({ steps, cost }: { steps: Step[]; cost: number }) {
   );
 }
 
-// Memories undone this session. Shared, because the note under a live answer is
-// replaced by the saved answer's note when the answer finishes.
+// Memories undone this session: a small shared store, because the note under a live
+// answer is replaced by the saved answer's note when the answer finishes (even while
+// an Undo is still being sent).
 const undoneMemories = new Set<number>();
+const undoneListeners = new Set<() => void>();
+function markUndone(id: number) {
+  undoneMemories.add(id);
+  undoneListeners.forEach((l) => l());
+}
+function subscribeUndone(listener: () => void) {
+  undoneListeners.add(listener);
+  return () => undoneListeners.delete(listener);
+}
 
 function MemoryNoteLine({ note }: { note: MemoryNote }) {
-  const [undone, setUndone] = useState(() => note.undone || undoneMemories.has(note.id));
+  const undone = useSyncExternalStore(
+    subscribeUndone,
+    () => Boolean(note.undone) || undoneMemories.has(note.id),
+    () => Boolean(note.undone),
+  );
   const [error, setError] = useState<string | null>(null);
 
   async function undo() {
     try {
       await send("DELETE", `/api/memories/${note.id}`);
-      undoneMemories.add(note.id);
-      setUndone(true);
+      markUndone(note.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Undo failed");
     }

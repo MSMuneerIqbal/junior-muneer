@@ -49,8 +49,9 @@ export function MicButton({
   async function finish(cancel = false) {
     const rec = await stop(cancel);
     setTapMode(false);
-    if (!rec) return;
-    if (rec.seconds < MIN_SECONDS) {
+    if (cancel) return;
+    // A very quick tap can end before any sound is recorded at all.
+    if (!rec || rec.seconds < MIN_SECONDS) {
       setError("Too short. Hold the mic button while you speak.");
       return;
     }

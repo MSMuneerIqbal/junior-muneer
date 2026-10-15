@@ -26,9 +26,14 @@ test("too short a press asks you to hold", async ({ page }) => {
   const mic = page.getByRole("button", { name: "Record a voice message" });
   const box = await mic.boundingBox();
   if (!box) throw new Error("mic button not visible");
-  // A quick tap starts tap-to-talk; a second quick tap stops it almost at once.
+  // A quick tap starts tap-to-talk; a second tap stops it the moment recording starts
+  // (clicked from inside the page, so a busy test machine doesn't stretch the gap).
   await mic.click();
-  await page.waitForTimeout(200);
-  await page.getByRole("button", { name: "Stop and send voice message" }).click();
+  await page.getByRole("button", { name: "Stop and send voice message" }).waitFor();
+  await page.evaluate(() => {
+    const b = document.querySelector<HTMLButtonElement>('[aria-label="Stop and send voice message"]');
+    b?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    b?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+  });
   await expect(page.getByText("Too short. Hold the mic button while you speak.")).toBeVisible();
 });
