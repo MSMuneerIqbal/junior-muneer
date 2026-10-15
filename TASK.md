@@ -24,8 +24,8 @@ Built from [PLAN.md](PLAN.md) v7 (safe workflow, no browser bots). This is the w
 Built and tested with a fake AI, then checked with the real key on 2026-10-14 (all passed):
 
 - [x] **P0-06:** `python -m junior.agent "How are you?"`, the same in Urdu, and `python -m junior.agent "What's new in Pakistan today?"` (web search)
-- [ ] **P1-07 (you):** a 5-minute live call in English and one in Urdu; both should show in the sidebar with 📞, a transcript and a cost.
-- [ ] **P1-03 (you):** send a voice message in Urdu and one in English; listen to his spoken answers, and try Marin, Cedar and Ash in Settings → Voice. Tell me which you like.
+- [x] **P1-07 (you):** a 5-minute live call in English and one in Urdu; both should show in the sidebar with 📞, a transcript and a cost.
+- [x] **P1-03 (you):** send a voice message in Urdu and one in English; listen to his spoken answers, and try Marin, Cedar and Ash in Settings → Voice. Tell me which you like.
 - [x] **P0-09:** tell him a fact in one chat ("my rate is $25/hr"), then ask about it in a new chat; press undo on a memory note
 
 ## Folder layout (created in P0-01)
@@ -154,7 +154,7 @@ junior-muneer/
 - [x] **P1-02 Spoken replies**
   - Text-to-speech for his answers. Settings: auto-play on/off, voice, speed.
   - *Done when:* he answers aloud in English and in Urdu.
-- [~] **P1-03 Urdu voice test** (measured: see PLAN.md 14b; your listening check is below)
+- [x] **P1-03 Urdu voice test** (see PLAN.md 14b)
   - Compare the speech-to-text and voice options for Urdu, and pick the best by quality and cost. Results go into PLAN.md.
   - *Done when:* you're happy with how he sounds and understands you in Urdu.
 - [x] **P1-04 Live call: backend**
@@ -167,7 +167,7 @@ junior-muneer/
 - [x] **P1-06 Calls in history + cost**
   - The full transcript is saved as a chat with a 📞 icon; voice messages get a 🎙 icon with playable audio. Cost per minute is tracked, with a daily live-call minutes limit.
   - *Done when:* the call shows in the sidebar, and its cost shows in Show work and the spend panel.
-- [~] **P1-07 Tests + your acceptance test + push** (tests done: 135 backend, 10 end-to-end incl. voice; your 5-minute calls are next)
+- [x] **P1-07 Tests + your acceptance test + push**
 
 ---
 
