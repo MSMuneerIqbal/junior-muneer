@@ -15,6 +15,10 @@ The full design is in [PLAN.md](PLAN.md); progress is tracked in [TASK.md](TASK.
   web search, Activity log, spend tracking with a daily cap, Pause, daily backups, and the dashboard.
 - **Phase 1 (voice):** voice messages (hold 🎙 to talk; he answers aloud), and **📞 live calls**:
   hands-free, real-time, interruptible, in English and Urdu, saved in your chat history with their cost.
+- **Phase 2 (in progress):** your **Profile** page; platform **playbooks**; **permissions** (Ask / Auto /
+  Deny per action, and the **mode menu** under the message box: Auto, Manual, Plan, Pause everything);
+  the **Approvals** queue with cards in the chat; the **📋 Paste box** for text from other sites; and the
+  **writing team** (Writer, Checker, Humanizer): "Write a LinkedIn post about…" gives a checked, scored draft.
 
 ## Start it
 
