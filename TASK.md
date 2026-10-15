@@ -181,7 +181,7 @@ Nothing is posted by the system in this phase: approved items are copy and paste
   - A Profile page: what you do, services, skills, rates, real projects and results, who you want to reach, your writing voice, things to avoid, hashtags, platforms you use.
   - It's the only source of facts for anything written about you. You fill it in (I'll help).
   - *Done when:* the writing team gets your profile as text, and an empty profile gives a clear "fill in your profile" message.
-- [ ] **P2-02 Playbooks**
+- [x] **P2-02 Playbooks**
   - `playbooks/linkedin.md`, `facebook.md`, `instagram.md`, `x.md`: structure, length, hashtags, tone, red lines. You can edit them.
   - *Done when:* each is loaded and checked at startup, and a broken one gives a clear error.
 - [ ] **P2-03 Permission rules**
