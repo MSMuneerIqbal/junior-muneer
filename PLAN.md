@@ -286,7 +286,16 @@ Every outgoing action has a type, for example `facebook.page.post`, `linkedin.po
 | **Deny** | It never runs |
 
 Approval buttons: **Approve · Approve + always allow this kind** (switches the rule to Auto; hidden on locked types and on items caused by outside content) **· Edit · Reject**.
-Global switch: **Ask everything** · **Use my rules** · **Pause everything**.
+**Mode menu** (under the message box, like Claude's permission modes; also in Settings):
+
+| Mode | What happens |
+|---|---|
+| **Auto** | Each action follows its Ask / Auto / Deny rule above |
+| **Manual** | Every action waits for your OK, even ones set to Auto |
+| **Plan** | He shows a short plan first; nothing is drafted or queued until you switch to Auto or Manual |
+| **Pause everything** (on/off) | Nothing is sent and no background work runs; chat still works |
+
+There is no "bypass permissions": locked types and anything caused by outside content always wait for you.
 
 | Action | Default | Can change to Auto? |
 |---|---|---|
@@ -477,6 +486,8 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 
 ## 18. Change log
 
+- **v7.4 (2026-10-15):** mode menu like Claude's (section 8): Auto, Manual and a new Plan mode, with Pause everything in the same menu.
+  The writing team's Checker uses the strong model (the small one flagged true profile facts as invented in a live test). Writing-team steps show live in the chat and in Show work.
 - **v7.3 (2026-10-15):** added phase 2b, the news agents (section 6.4): the AI News Agent and the Social News Agent (Pakistan), reading official RSS feeds and pages, with a daily digest.
 - **v7.2 (2026-10-15):** voice: gpt-4o-transcribe for speech-to-text after the Urdu test (section 14b); spoken replies stream.
 - **v7.1 (2026-10-14):** web search moved to a small web-researcher helper after live testing showed the built-in tool adds ~4,400 tokens to every message (a hello cost $0.011; now $0.0023).
