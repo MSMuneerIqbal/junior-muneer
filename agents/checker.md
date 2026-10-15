@@ -1,7 +1,7 @@
 ---
 name: checker
 description: The Checker on the writing team. Scores a draft out of 10 for facts, voice, platform fit and red lines, and lists exactly what to fix. Called by the writing team pipeline, not directly.
-model: small
+model: strong
 tools: []
 action_types: []
 ---
