@@ -10,7 +10,7 @@ REST (chats):
 WebSocket /ws/chat:
     you send   {"type": "message", "conversation_id": 12 | null, "text": "...",
                 "audio_id": "<from /api/voice/transcribe>", "audio_seconds": 4.2}  (audio: voice only)
-    you get    conversation · user_message · delta · step · memory · done · error events
+    you get    conversation · user_message · delta · step · memory · approval · done · error events
 """
 
 import logging
@@ -21,6 +21,7 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 
+from junior.approvals import ApprovalOut, items_for_messages
 from junior.db import Conversation, Message, Usage, session_scope
 
 log = logging.getLogger(__name__)
@@ -47,6 +48,8 @@ class MessageOut(BaseModel):
     audio_file: str | None = None
     audio_seconds: float | None = None
     created_at: datetime
+    # Approval cards under this answer.
+    approvals: list[ApprovalOut] = []
 
 
 class ConversationCreate(BaseModel):
@@ -151,6 +154,7 @@ def read_messages(conversation_id: int) -> list[MessageOut]:
         rows = s.scalars(
             select(Message).where(Message.conversation_id == conversation_id).order_by(Message.id)
         ).all()
+        cards = items_for_messages([m.id for m in rows if m.role == "assistant"])
         return [
             MessageOut(
                 id=m.id,
@@ -162,6 +166,7 @@ def read_messages(conversation_id: int) -> list[MessageOut]:
                 audio_file=m.audio_file,
                 audio_seconds=m.audio_seconds,
                 created_at=m.created_at,
+                approvals=cards.get(m.id, []),
             )
             for m in rows
         ]
@@ -183,6 +188,9 @@ async def chat_socket(websocket: WebSocket) -> None:
                 continue
             audio_id = data.get("audio_id")
             audio_seconds = data.get("audio_seconds")
+            # If you leave the page mid-answer, the answer still finishes and is saved
+            # (with its approval cards); it's there when you come back.
+            gone = False
             async for event in chat.reply(
                 conversation_id,
                 str(data.get("text", "")),
@@ -191,6 +199,14 @@ async def chat_socket(websocket: WebSocket) -> None:
                 if isinstance(audio_seconds, (int, float))
                 else None,
             ):
-                await websocket.send_json(event)
+                if gone:
+                    continue
+                try:
+                    await websocket.send_json(event)
+                except (WebSocketDisconnect, RuntimeError, OSError):  # the page was closed
+                    gone = True
+            if gone:
+                log.debug("Chat socket closed mid-answer; the answer was saved")
+                return
     except WebSocketDisconnect:
         log.debug("Chat socket closed")

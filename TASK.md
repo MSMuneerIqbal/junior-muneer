@@ -187,7 +187,7 @@ Nothing is posted by the system in this phase: approved items are copy and paste
 - [x] **P2-03 Permission rules**
   - Action types (e.g. `linkedin.post`, `facebook.page.post`, `gmail.send`), each Ask / Auto / Deny; locked types; "outside content always Ask"; a global mode (ask everything · use my rules · pause); "run at most once".
   - *Done when:* strict tests cover every rule, including locked types and outside content.
-- [ ] **P2-04 Approval queue**
+- [x] **P2-04 Approval queue**
   - Approval items (copy-and-paste or API), with status: waiting · approved · rejected · posted · check manually. Edits are kept.
   - Cards inside the chat and an Approvals page: Copy · Open platform · Edit · Mark as posted · Reject (API items: Approve · Always allow · Edit · Reject). "Needs your OK" and Mode in the Today panel become real.
   - *Done when:* approving in the chat updates the Approvals page and the other way round.

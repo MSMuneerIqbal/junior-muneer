@@ -29,6 +29,8 @@ class TurnContext:
     outside_content_seen: bool = False
     # Events from tools (e.g. "memory updated") for the chat to show.
     pending_events: list[dict[str, Any]] = field(default_factory=list)
+    # Approval items made in this turn; shown as cards under the answer.
+    approval_ids: list[int] = field(default_factory=list)
     # Every model call so far, kept here so the cost is saved even if the turn fails.
     usage: list[ModelUsage] = field(default_factory=list)
     # Runs helper agents for tools (a junior.agent.helpers.HelperRunner).

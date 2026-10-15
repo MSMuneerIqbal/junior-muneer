@@ -255,3 +255,57 @@ def forget_memory(ctx: Ctx, memory_id: int) -> str:
 
 MEMORY_TOOLS: list[FunctionTool] = [save_memory, forget_memory]
 TOOL_FACTORIES["memory"] = lambda: list(MEMORY_TOOLS)
+
+
+# ---- approvals ----------------------------------------------------------------
+
+
+def add_to_approvals_for(
+    context: TurnContext, platform: str, item_type: str, text: str, title: str = ""
+) -> str:
+    """Queue a copy-and-paste draft. Nothing is ever sent by the system."""
+    from junior.approvals import ApprovalError, create_item
+
+    try:
+        item = create_item(
+            kind="copy",
+            platform=platform,
+            item_type=item_type,
+            text=text,
+            title=title,
+            from_outside=context.outside_content_seen,
+            conversation_id=context.conversation_id,
+        )
+    except ApprovalError as e:
+        return f"NOT added: {e}"
+    context.approval_ids.append(item.id)
+    context.pending_events.append({"type": "approval", "item": item.model_dump(mode="json")})
+    return (
+        f"Added to the approval queue as item {item.id}. It shows as a card under your answer: "
+        "the user copies it, posts it themself, then marks it as posted. Don't repeat the full text."
+    )
+
+
+@function_tool
+def add_to_approvals(
+    ctx: Ctx,
+    platform: Literal["linkedin", "facebook", "instagram", "x", "upwork", "fiverr", "email", "github", "other"],
+    item_type: str,
+    text: str,
+    title: str = "",
+) -> str:
+    """Save a ready draft (post, comment, proposal, message) to the user's approval queue.
+
+    Use it when the user asks to save, queue or keep a draft for posting. It never sends
+    anything: the user copies and pastes it themself.
+
+    Args:
+        platform: Where it will be posted.
+        item_type: post, comment, reply, proposal, message or email.
+        text: The exact final text, ready to paste.
+        title: A few words saying what it is, e.g. "Post about my MCP server".
+    """
+    return add_to_approvals_for(ctx.context, platform, item_type, text, title)
+
+
+TOOL_FACTORIES["approvals"] = lambda: [add_to_approvals]

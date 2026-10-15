@@ -13,6 +13,7 @@ const FILTERS = [
   { kind: "tool_call", label: "Tool calls" },
   { kind: "web_search", label: "Web searches" },
   { kind: "memory", label: "Memory" },
+  { kind: "action", label: "Approvals" },
   { kind: "setting", label: "Settings" },
   { kind: "system", label: "System" },
 ];

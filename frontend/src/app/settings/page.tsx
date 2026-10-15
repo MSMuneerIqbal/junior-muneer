@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { BACKEND_URL, fetcher, send } from "@/lib/api";
-import { SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
+import { PERMISSIONS_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
 import type { Settings } from "@/lib/types";
 
 // ---- data shapes ---------------------------------------------------------------
@@ -610,7 +610,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
 const RULE_LABEL: Record<Rule, string> = { ask: "Ask", auto: "Auto", deny: "Deny" };
 
 function PermissionsSection() {
-  const { data, mutate } = useSWR<Permissions>("/api/permissions", fetcher);
+  const { data, mutate } = useSWR<Permissions>(PERMISSIONS_KEY, fetcher);
   const [error, setError] = useState<string | null>(null);
 
   async function change(path: string, body: object) {

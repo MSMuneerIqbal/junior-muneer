@@ -9,6 +9,7 @@ from junior.agent.builder import ModelProvider, NoApiKeyError, build_agent, chos
 from junior.agent.context import TurnContext
 from junior.agent.helpers import HelperRunner
 from junior.agent.runner import TurnResult, stream_turn
+from junior.approvals import attach_to_message
 from junior.audit import audit
 from junior.chat.history import build_input, save_usage, summarize_if_long
 from junior.costs import BudgetExceeded, budget_left
@@ -227,6 +228,7 @@ class ChatService:
 
         assert result is not None
         message_id = self._finish(conversation_id, result)
+        attach_to_message(context.approval_ids, message_id)
         self._audit_run(conversation_id, context, "ok", steps=[st["label"] for st in result.steps])
         yield {
             "type": "done",

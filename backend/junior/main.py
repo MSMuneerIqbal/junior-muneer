@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from junior import __version__
 from junior.agent.builder import ModelProvider, openai_model_provider
 from junior.agent.fake import fake_model_provider
+from junior.approvals import router as approvals_router
 from junior.audit import router as audit_router
 from junior.backup import router as backup_router
 from junior.calls import CallManager, OpenAIRealtime, RealtimeGateway
@@ -102,6 +103,7 @@ def create_app(
     app.include_router(profile_router)
     app.include_router(playbooks_router)
     app.include_router(permissions_router)
+    app.include_router(approvals_router)
     return app
 
 

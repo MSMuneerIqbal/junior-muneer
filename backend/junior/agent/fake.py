@@ -4,7 +4,9 @@ It echoes your message, streamed in small pieces. Two tricks to see the UI work:
   - a message containing "search" calls the web_search tool, and the web
     researcher does a (pretend) hosted search;
   - a message starting with "remember " saves the rest as a memory, through the
-    real save_memory tool and its safety checks.
+    real save_memory tool and its safety checks;
+  - a message starting with "draft " puts the rest in the approval queue as a
+    LinkedIn post (a card under the answer).
 """
 
 import asyncio
@@ -70,6 +72,15 @@ class FakeModel(Model):
             return [
                 function_call(
                     "save_memory", {"fact": words, "your_words": words}, call_id="fake-mem"
+                )
+            ], False
+        if text.lower().startswith("draft ") and "add_to_approvals" in tool_names:
+            words = text[len("draft ") :].strip()
+            return [
+                function_call(
+                    "add_to_approvals",
+                    {"platform": "linkedin", "item_type": "post", "text": words},
+                    call_id="fake-draft",
                 )
             ], False
         reply = (

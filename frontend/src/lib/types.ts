@@ -28,6 +28,32 @@ export type Message = {
   audio_file: string | null;
   audio_seconds: number | null;
   created_at: string;
+  approvals?: ApprovalItem[];
+};
+
+export type ApprovalStatus = "waiting" | "approved" | "rejected" | "posted" | "check_manually";
+
+export type ApprovalItem = {
+  id: number;
+  kind: "copy" | "api";
+  platform: string;
+  platform_label: string;
+  item_type: string;
+  action_type: string | null;
+  title: string;
+  text: string;
+  original_text: string;
+  edits: { at: string; before: string; after: string }[];
+  meta: { score?: number; issues?: string[]; image_idea?: string; [key: string]: unknown };
+  status: ApprovalStatus;
+  from_outside: boolean;
+  can_always_allow: boolean;
+  reason: string;
+  open_url: string;
+  conversation_id: number | null;
+  message_id: number | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type MemoryNote = {
@@ -44,6 +70,7 @@ export type ChatEvent =
   | { type: "delta"; text: string }
   | ({ type: "step" } & Step)
   | ({ type: "memory" } & MemoryNote)
+  | { type: "approval"; item: ApprovalItem }
   | {
       type: "done";
       conversation_id: number;

@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import useSWR from "swr";
 import { fetcher, send } from "@/lib/api";
+import { useWaitingCount } from "@/lib/approvals";
 import { PAUSE_KEY, USAGE_KEY } from "@/lib/keys";
 import type { UsageToday } from "@/lib/types";
 
@@ -115,6 +117,23 @@ function CallMinutes() {
   );
 }
 
+function NeedsYourOk() {
+  const waiting = useWaitingCount();
+  return (
+    <section aria-label="Needs your OK">
+      <Link href="/approvals" className="flex items-baseline justify-between rounded-md hover:text-accent">
+        <span className="text-sm text-muted">Needs your OK</span>
+        <span className="font-semibold tabular-nums" data-testid="needs-ok">
+          {waiting ?? "…"}
+        </span>
+      </Link>
+      <p className="mt-1 text-xs text-muted">
+        {waiting ? "Drafts are waiting on the Approvals page." : "Nothing waits for you."}
+      </p>
+    </section>
+  );
+}
+
 /** Today's spend, Pause, and what needs your OK. */
 export function TodayPanel() {
   return (
@@ -123,22 +142,7 @@ export function TodayPanel() {
       <PauseButton />
       <Spend />
       <CallMinutes />
-      <section aria-label="Needs your OK">
-        <div className="flex items-baseline justify-between">
-          <span className="text-sm text-muted">Needs your OK</span>
-          <span className="font-semibold">0</span>
-        </div>
-        <p className="mt-1 text-xs text-muted">Approvals arrive in phase 2.</p>
-      </section>
-      <section aria-label="Mode">
-        <label className="flex items-center justify-between text-sm text-muted">
-          Mode
-          <select disabled className="rounded-md border border-line bg-panel px-2 py-1 text-ink disabled:opacity-50">
-            <option>Ask</option>
-          </select>
-        </label>
-        <p className="mt-1 text-xs text-muted">Ask / Auto / Deny rules arrive in phase 2.</p>
-      </section>
+      <NeedsYourOk />
     </div>
   );
 }

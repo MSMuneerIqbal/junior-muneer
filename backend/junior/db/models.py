@@ -140,6 +140,40 @@ class AuditLog(Base):
     )
 
 
+class ApprovalItem(Base):
+    """A draft waiting for you (junior/approvals.py)."""
+
+    __tablename__ = "approvals"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # copy (you send it yourself) · api (sent through an official API after your OK)
+    kind: Mapped[str] = mapped_column(String(10))
+    platform: Mapped[str] = mapped_column(String(30), index=True)
+    # post · comment · reply · proposal · message · email ...
+    item_type: Mapped[str] = mapped_column(String(40))
+    action_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    title: Mapped[str] = mapped_column(String(200))
+    text: Mapped[str] = mapped_column(Text)
+    original_text: Mapped[str] = mapped_column(Text)
+    edits: Mapped[list[Any]] = mapped_column(default=list)
+    # score, issues, image idea, the post it answers (source_url)...
+    meta: Mapped[dict[str, Any]] = mapped_column(default=dict)
+    # waiting · approved · rejected · posted · check_manually
+    status: Mapped[str] = mapped_column(String(20), index=True)
+    from_outside: Mapped[bool] = mapped_column(Boolean, default=False)
+    reason: Mapped[str] = mapped_column(String(300), default="")
+    conversation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("conversations.id", ondelete="SET NULL"), nullable=True
+    )
+    message_id: Mapped[int | None] = mapped_column(
+        ForeignKey("messages.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, index=True)
+    decided_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    posted_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+
+
 class ActionRun(Base):
     """"Run at most once": every outgoing action is claimed here by a unique key before it runs."""
 

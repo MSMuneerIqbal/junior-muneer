@@ -8,8 +8,8 @@ import { Composer } from "@/components/chat/Composer";
 import type { VoiceMessage } from "@/components/chat/MicButton";
 import { AssistantMessage, ErrorNotice, UserMessage } from "@/components/chat/MessageView";
 import { fetcher } from "@/lib/api";
-import { isChatsKey, PAUSE_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
-import type { ChatEvent, MemoryNote, Message, Step } from "@/lib/types";
+import { isApprovalsKey, isChatsKey, PAUSE_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
+import type { ApprovalItem, ChatEvent, MemoryNote, Message, Step } from "@/lib/types";
 import { useChatSocket } from "@/lib/useChatSocket";
 import { speakMessage } from "@/lib/player";
 import type { ChatSummary, Settings } from "@/lib/types";
@@ -23,6 +23,7 @@ type Turn = {
   text: string;
   steps: Step[];
   notes: MemoryNote[];
+  approvals: ApprovalItem[];
   status: "streaming" | "done" | "error";
   error?: string;
   messageId?: number;
@@ -33,11 +34,25 @@ function upsertStep(steps: Step[], step: Step): Step[] {
   return i === -1 ? [...steps, step] : steps.map((s, j) => (j === i ? step : s));
 }
 
+/** One of your recent messages (last 3 minutes) has no answer saved yet. */
+function answerPending(messages: Message[] | undefined): boolean {
+  if (!messages?.length) return false;
+  const yours = messages.filter((m) => m.role === "user");
+  const answers = messages.length - yours.length;
+  const last = yours[yours.length - 1];
+  return yours.length > answers && !!last && Date.now() - Date.parse(last.created_at) < 180_000;
+}
+
 export function ChatView() {
   const params = useSearchParams();
   const conversationId = params.get("c") ? Number(params.get("c")) : null;
   const messagesKey = conversationId ? `/api/conversations/${conversationId}/messages` : null;
-  const { data: saved, error: loadError, mutate } = useSWR<Message[]>(messagesKey, fetcher);
+  // The latest turn, kept in step with every update, for event handlers.
+  const turnRef = useRef<Turn | null>(null);
+  // If you came back while an answer was still being written, check every 2 s until it's saved.
+  const { data: saved, error: loadError, mutate } = useSWR<Message[]>(messagesKey, fetcher, {
+    refreshInterval: (data) => (!turnRef.current && answerPending(data) ? 2000 : 0),
+  });
   const { mutate: mutateGlobal } = useSWRConfig();
 
   const { data: pause } = useSWR<{ paused: boolean }>(PAUSE_KEY, fetcher);
@@ -48,8 +63,6 @@ export function ChatView() {
   const { data: settings } = useSWR<Settings>(SETTINGS_KEY, fetcher);
   const autoplay = settings?.voice_autoplay ?? true;
   const [turn, setTurnState] = useState<Turn | null>(null);
-  // The latest turn, kept in step with every update, for event handlers.
-  const turnRef = useRef<Turn | null>(null);
   const setTurn = useCallback((next: Turn | null | ((t: Turn | null) => Turn | null)) => {
     const value = typeof next === "function" ? next(turnRef.current) : next;
     turnRef.current = value;
@@ -84,6 +97,10 @@ export function ChatView() {
           setTurn((t) => t && { ...t, notes: [...t.notes, note] });
           break;
         }
+        case "approval":
+          setTurn((t) => t && { ...t, approvals: [...t.approvals, event.item] });
+          mutateGlobal(isApprovalsKey);
+          break;
         case "done": {
           const t = turnRef.current;
           if (t?.notes.length) {
@@ -116,7 +133,7 @@ export function ChatView() {
 
   function onSend(text: string): boolean {
     if (!send(conversationId, text)) return false;
-    setTurn({ conversationId, userText: text, text: "", steps: [], notes: [], status: "streaming" });
+    setTurn({ conversationId, userText: text, text: "", steps: [], notes: [], approvals: [], status: "streaming" });
     return true;
   }
 
@@ -129,6 +146,7 @@ export function ChatView() {
       text: "",
       steps: [],
       notes: [],
+      approvals: [],
       status: "streaming",
     });
   }
@@ -207,6 +225,7 @@ export function ChatView() {
                   steps={m.steps}
                   cost={m.cost_usd}
                   notes={notesByMessage[m.id]}
+                  approvals={m.approvals}
                 />
               ),
             )}
@@ -216,6 +235,7 @@ export function ChatView() {
                 text={liveTurn.text}
                 steps={liveTurn.steps}
                 notes={liveTurn.notes}
+                approvals={liveTurn.approvals}
                 streaming={liveTurn.status === "streaming"}
               />
             )}

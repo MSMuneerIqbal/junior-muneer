@@ -7,10 +7,12 @@ import { ChatHistory } from "@/components/ChatHistory";
 import { SidebarLeftIcon, SidebarRightIcon } from "@/components/icons";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { TodayPanel } from "@/components/TodayPanel";
+import { WaitingBadge } from "@/components/approvals/WaitingBadge";
 import { setHidden, useHidden } from "@/lib/layoutPrefs";
 
 const NAV = [
   { href: "/", label: "Chat", icon: "💬" },
+  { href: "/approvals", label: "Approvals", icon: "✅" },
   { href: "/profile", label: "Profile", icon: "👤" },
   { href: "/memory", label: "Memory", icon: "🧠" },
   { href: "/activity", label: "Activity", icon: "📜" },
@@ -96,6 +98,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               >
                 <span aria-hidden>{item.icon}</span>
                 {item.label}
+                {item.href === "/approvals" && <WaitingBadge />}
               </Link>
             );
           })}

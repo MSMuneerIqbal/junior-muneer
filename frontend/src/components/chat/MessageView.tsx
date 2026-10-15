@@ -6,7 +6,8 @@ import { MicIcon } from "@/components/icons";
 import { BACKEND_URL, send } from "@/lib/api";
 import { urduClass } from "@/lib/urdu";
 import { speakMessage, stopSpeaking, usePlayer } from "@/lib/player";
-import type { MemoryNote, Step } from "@/lib/types";
+import { ApprovalCard } from "@/components/approvals/ApprovalCard";
+import type { ApprovalItem, MemoryNote, Step } from "@/lib/types";
 
 export function UserMessage({ text, audioId }: { text: string; audioId?: string | null }) {
   return (
@@ -152,6 +153,7 @@ export function AssistantMessage({
   steps,
   cost,
   notes = [],
+  approvals = [],
   streaming = false,
 }: {
   messageId?: number;
@@ -159,6 +161,7 @@ export function AssistantMessage({
   steps: Step[];
   cost?: number;
   notes?: MemoryNote[];
+  approvals?: ApprovalItem[];
   streaming?: boolean;
 }) {
   return (
@@ -177,6 +180,13 @@ export function AssistantMessage({
       {notes.map((n) => (
         <MemoryNoteLine key={`${n.action}-${n.id}`} note={n} />
       ))}
+      {approvals.length > 0 && (
+        <div className="mt-3 flex flex-col gap-3">
+          {approvals.map((a) => (
+            <ApprovalCard key={a.id} item={a} />
+          ))}
+        </div>
+      )}
       {!streaming && cost !== undefined && (
         <div className="flex flex-wrap items-start gap-x-4">
           <ShowWork steps={steps} cost={cost} />

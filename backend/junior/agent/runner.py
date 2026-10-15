@@ -36,6 +36,7 @@ STEP_LABELS = {
     "spending": "Checking your spending",
     "save_memory": "Saving a memory",
     "forget_memory": "Forgetting a memory",
+    "add_to_approvals": "Adding it to your approval queue",
 }
 
 

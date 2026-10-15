@@ -3,6 +3,7 @@
 from junior.db.engine import get_engine, init_db, session_scope
 from junior.db.models import (
     ActionRun,
+    ApprovalItem,
     AuditLog,
     Base,
     Conversation,
@@ -14,6 +15,7 @@ from junior.db.models import (
 
 __all__ = [
     "ActionRun",
+    "ApprovalItem",
     "AuditLog",
     "Base",
     "Conversation",

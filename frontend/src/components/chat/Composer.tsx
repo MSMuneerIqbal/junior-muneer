@@ -2,6 +2,7 @@
 
 import { useRef, useState, type KeyboardEvent } from "react";
 import { MicButton, type VoiceMessage } from "@/components/chat/MicButton";
+import { ModeSelect } from "@/components/chat/ModeSelect";
 import { SendIcon } from "@/components/icons";
 import { urduClass } from "@/lib/urdu";
 
@@ -75,7 +76,10 @@ export function Composer({
           )}
         </button>
       </div>
-      {notice && <p className="mx-auto mt-1.5 max-w-3xl text-xs text-warn">{notice}</p>}
+      <div className="mx-auto mt-2 flex max-w-3xl flex-wrap items-center gap-x-3 gap-y-1 px-1">
+        <ModeSelect />
+        {notice && <p className="text-xs text-warn">{notice}</p>}
+      </div>
     </div>
   );
 }
