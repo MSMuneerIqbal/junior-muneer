@@ -1,67 +1,156 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { BACKEND_URL, fetcher, send } from "@/lib/api";
 import { SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
 import type { Settings } from "@/lib/types";
 
+// ---- data shapes ---------------------------------------------------------------
+
+type ModelChoice = {
+  model: string;
+  label: string;
+  note: string;
+  speed: "fast" | "medium" | "slow";
+  provider: string;
+  ready: boolean;
+  key_env: string;
+  price_per_million: { input: number; output: number };
+};
+type Choices = { choices: ModelChoice[]; defaults: { main_model: string; helper_model: string } };
 type ModelsView = {
-  tiers: Record<string, string>;
   agents: {
     agent: string;
     description: string;
-    tier: string;
     model: string;
-    price_per_million: { input: number; cached_input: number; output: number };
+    price_per_million: { input: number; output: number };
   }[];
 };
 
-const LANGUAGES: { value: Settings["language"]; label: string }[] = [
-  { value: "match", label: "Match me (reply in the language I use)" },
-  { value: "english", label: "Always English" },
-  { value: "urdu", label: "Always Urdu (اردو)" },
-];
+const SECTIONS = [
+  { id: "profile", title: "Profile" },
+  { id: "budget", title: "Budget" },
+  { id: "models", title: "Models" },
+  { id: "voice", title: "Voice" },
+  { id: "calls", title: "Live calls" },
+  { id: "advanced", title: "Advanced" },
+] as const;
 
-const ACCENTS: { value: Settings["voice_accent"]; label: string }[] = [
-  { value: "pakistani", label: "Pakistani (Urdu)" },
-  { value: "indian", label: "Indian (Hindi-Urdu)" },
-  { value: "neutral", label: "Neutral / international" },
-];
+// ---- building blocks ---------------------------------------------------------------
 
-/** Plays a short Urdu + English sample of the chosen voice and accent. */
-function VoicePreview({ voice, accent }: { voice: string; accent: string }) {
-  const [state, setState] = useState<"idle" | "loading" | "playing" | "error">("idle");
-  const audio = useRef<HTMLAudioElement | null>(null);
-
-  function play() {
-    audio.current?.pause();
-    const el = new Audio(`${BACKEND_URL}/api/voice/preview/${voice}/${accent}.mp3`);
-    audio.current = el;
-    setState("loading");
-    el.onplaying = () => setState("playing");
-    el.onended = () => setState("idle");
-    el.onerror = () => setState("error");
-    el.play().catch(() => setState("error"));
-  }
-
+function Section({
+  id,
+  title,
+  description,
+  children,
+}: {
+  id: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="flex items-center gap-3 text-sm">
-      <button
-        type="button"
-        onClick={play}
-        className="rounded-lg border border-line px-3 py-1.5 hover:bg-panel-2"
-      >
-        {state === "loading" ? "Loading…" : state === "playing" ? "Playing…" : "▶ Preview this voice"}
-      </button>
-      <span className="text-xs text-muted">
-        {state === "error"
-          ? "Couldn't play the preview."
-          : "A short sample in Urdu and English (the first time takes a few seconds)."}
-      </span>
+    <section id={id} className="@container scroll-mt-20 rounded-2xl border border-line bg-panel shadow-sm">
+      <header className="border-b border-line px-6 py-4">
+        <h2 className="text-base font-semibold">{title}</h2>
+        <p className="mt-0.5 text-sm text-muted">{description}</p>
+      </header>
+      <div className="divide-y divide-line">{children}</div>
+    </section>
+  );
+}
+
+/** One setting: label and explanation on the left, the control on the right. */
+function Row({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="grid gap-3 px-6 py-5 @3xl:grid-cols-[13rem_1fr] @3xl:gap-8">
+      <div>
+        <p className="text-sm font-medium">{label}</p>
+        {hint && <p className="mt-1 text-xs leading-relaxed text-muted">{hint}</p>}
+      </div>
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }
+
+/** A few options side by side, like iOS / macOS segmented controls. */
+function Segmented<T extends string>({
+  value,
+  options,
+  onChange,
+  label,
+}: {
+  value: T;
+  options: { value: T; label: string; sub?: string }[];
+  onChange: (v: T) => void;
+  label: string;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="grid gap-2 @md:auto-cols-fr @md:grid-flow-col">
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(o.value)}
+            className={`rounded-xl border px-3 py-2.5 text-left transition ${
+              on
+                ? "border-accent bg-accent-soft ring-1 ring-accent"
+                : "border-line hover:border-muted hover:bg-panel-2"
+            }`}
+          >
+            <span className="block text-sm font-medium">{o.label}</span>
+            {o.sub && <span className="mt-0.5 block text-xs text-muted">{o.sub}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function Toggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative h-6 w-11 shrink-0 rounded-full transition ${checked ? "bg-accent" : "bg-line"}`}
+    >
+      <span
+        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+          checked ? "left-[22px]" : "left-0.5"
+        }`}
+      />
+    </button>
+  );
+}
+
+function Badge({ tone, children }: { tone: "accent" | "warn" | "muted" | "ok"; children: ReactNode }) {
+  const style = {
+    accent: "bg-accent-soft text-accent",
+    warn: "bg-warn-soft text-warn",
+    muted: "bg-panel-2 text-muted",
+    ok: "bg-accent-soft text-ok",
+  }[tone];
+  return <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${style}`}>{children}</span>;
+}
+
+const input =
+  "w-full rounded-xl border border-line bg-bg px-3.5 py-2.5 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20";
 
 function timezones(current: string): string[] {
   try {
@@ -72,52 +161,198 @@ function timezones(current: string): string[] {
   }
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+// ---- models -------------------------------------------------------------------------
+
+const SPEED: Record<ModelChoice["speed"], { label: string; tone: "ok" | "muted" | "warn" }> = {
+  fast: { label: "Fast", tone: "ok" },
+  medium: { label: "Normal speed", tone: "muted" },
+  slow: { label: "Slow", tone: "warn" },
+};
+
+function ModelPicker({
+  value,
+  defaultModel,
+  choices,
+  onChange,
+  label,
+}: {
+  value: string;
+  defaultModel: string;
+  choices: ModelChoice[];
+  onChange: (model: string) => void;
+  label: string;
+}) {
+  const current = value || defaultModel;
   return (
-    <label className="flex flex-col gap-1">
-      <span className="text-sm font-medium">{label}</span>
-      {children}
-      {hint && <span className="text-xs text-muted">{hint}</span>}
-    </label>
+    <div role="radiogroup" aria-label={label} className="grid gap-2 @md:grid-cols-2 @4xl:grid-cols-3">
+      {choices.map((c) => {
+        const on = c.model === current;
+        return (
+          <button
+            key={c.model}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(c.model === defaultModel ? "" : c.model)}
+            className={`flex flex-col gap-1.5 rounded-xl border p-3 text-left transition ${
+              on ? "border-accent bg-accent-soft ring-1 ring-accent" : "border-line hover:bg-panel-2"
+            }`}
+          >
+            <span className="flex flex-wrap items-center gap-1.5">
+              <span className="text-sm font-semibold">{c.label}</span>
+              <span className="text-xs text-muted">{c.provider}</span>
+            </span>
+            <span className="flex flex-wrap gap-1.5">
+              <Badge tone={SPEED[c.speed].tone}>{SPEED[c.speed].label}</Badge>
+              <Badge tone="muted">
+                ${c.price_per_million.input} / ${c.price_per_million.output} per 1M
+              </Badge>
+              {c.model === defaultModel && <Badge tone="accent">Default</Badge>}
+              {!c.ready && <Badge tone="warn">Needs key</Badge>}
+            </span>
+            {c.note && <span className="text-xs leading-relaxed text-muted">{c.note}</span>}
+            {on && !c.ready && (
+              <span className="text-xs text-warn">
+                Add {c.key_env}=… to backend/.env and restart to use this model.
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
-const input =
-  "rounded-lg border border-line bg-panel px-3 py-2 outline-none focus:border-accent";
+// ---- voice --------------------------------------------------------------------------
+
+const ACCENTS: { value: Settings["voice_accent"]; label: string; sub: string }[] = [
+  { value: "pakistani", label: "Pakistani", sub: "Lahore / Karachi" },
+  { value: "indian", label: "Indian", sub: "Delhi Hindi-Urdu" },
+  { value: "neutral", label: "Neutral", sub: "International" },
+];
+
+function usePreview() {
+  const audio = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState<string | null>(null);
+  const [loading, setLoading] = useState<string | null>(null);
+  useEffect(() => () => audio.current?.pause(), []);
+  function play(voice: string, accent: string) {
+    audio.current?.pause();
+    if (playing === voice || loading === voice) {
+      setPlaying(null);
+      setLoading(null);
+      return;
+    }
+    const el = new Audio(`${BACKEND_URL}/api/voice/preview/${voice}/${accent}.mp3`);
+    audio.current = el;
+    setLoading(voice);
+    setPlaying(null);
+    el.onplaying = () => {
+      setLoading(null);
+      setPlaying(voice);
+    };
+    el.onended = el.onerror = () => {
+      setLoading(null);
+      setPlaying(null);
+    };
+    el.play().catch(() => setLoading(null));
+  }
+  return { play, playing, loading };
+}
+
+function VoicePicker({
+  voices,
+  value,
+  accent,
+  onChange,
+}: {
+  voices: string[];
+  value: string;
+  accent: string;
+  onChange: (v: string) => void;
+}) {
+  const preview = usePreview();
+  return (
+    <div role="radiogroup" aria-label="His voice" className="grid grid-cols-2 gap-2 @lg:grid-cols-3 @4xl:grid-cols-5">
+      {voices.map((v) => {
+        const on = v === value;
+        const natural = v === "marin" || v === "cedar";
+        const busy = preview.loading === v;
+        const playing = preview.playing === v;
+        return (
+          <div
+            key={v}
+            className={`flex items-center gap-2 rounded-xl border p-2 pl-3 transition ${
+              on ? "border-accent bg-accent-soft ring-1 ring-accent" : "border-line hover:bg-panel-2"
+            }`}
+          >
+            <button
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => onChange(v)}
+              className="min-w-0 flex-1 text-left"
+            >
+              <span className="block text-sm font-medium">{v[0].toUpperCase() + v.slice(1)}</span>
+              <span className="block text-[11px] text-muted">{natural ? "Most natural" : " "}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => preview.play(v, accent)}
+              aria-label={`${playing ? "Stop" : "Play"} a sample of ${v}`}
+              title="Hear a short Urdu + English sample"
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs ${
+                playing ? "border-accent bg-accent text-accent-fg" : "border-line hover:bg-panel"
+              }`}
+            >
+              {busy ? "…" : playing ? "■" : "▶"}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---- the form ------------------------------------------------------------------------
 
 function SettingsForm({ initial }: { initial: Settings }) {
   const { mutate } = useSWRConfig();
   const { data: voices } = useSWR<string[]>("/api/voices", fetcher);
+  const { data: models } = useSWR<Choices>("/api/models/choices", fetcher);
   const [form, setForm] = useState(initial);
+  const [saved, setSaved] = useState(initial);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
-  const changed = (Object.keys(form) as (keyof Settings)[]).some((k) => form[k] !== initial[k]);
+  const changed = (Object.keys(form) as (keyof Settings)[]).some(
+    (k) => String(form[k]) !== String(saved[k]),
+  );
+  const set = <K extends keyof Settings>(key: K, value: Settings[K]) =>
+    setForm((f) => ({ ...f, [key]: value }));
+
+  useEffect(() => {
+    if (!status?.ok) return;
+    const t = setTimeout(() => setStatus(null), 3000);
+    return () => clearTimeout(t);
+  }, [status]);
 
   async function save() {
     setSaving(true);
     setStatus(null);
     try {
-      const saved = await send<Settings>("PATCH", SETTINGS_KEY, {
-        user_name: form.user_name,
-        language: form.language,
-        timezone: form.timezone,
+      const result = await send<Settings>("PATCH", SETTINGS_KEY, {
+        ...form,
         daily_cap_usd: Number(form.daily_cap_usd),
-        tts_voice: form.tts_voice,
-        voice_accent: form.voice_accent,
         tts_speed: Number(form.tts_speed),
-        voice_autoplay: form.voice_autoplay,
         call_minutes_per_day: Number(form.call_minutes_per_day),
-        call_quality: form.call_quality,
-        turn_taking: form.turn_taking,
-        mic_type: form.mic_type,
-        main_model: form.main_model,
-        helper_model: form.helper_model,
+        paused: undefined,
       });
-      await mutate(SETTINGS_KEY, saved, { revalidate: false });
+      await mutate(SETTINGS_KEY, result, { revalidate: false });
       await mutate(USAGE_KEY);
       await mutate("/api/models");
-      setForm(saved);
-      setStatus({ ok: true, text: "Saved. It applies from your next message." });
+      setForm(result);
+      setSaved(result);
+      setStatus({ ok: true, text: "Saved. Applies from your next message or call." });
     } catch (e) {
       setStatus({ ok: false, text: e instanceof Error ? e.message : "Couldn't save" });
     } finally {
@@ -126,312 +361,316 @@ function SettingsForm({ initial }: { initial: Settings }) {
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded-xl border border-line bg-panel p-5">
-      <Field label="Your name" hint="Junior Muneer calls you by this name.">
-        <input
-          dir="auto"
-          value={form.user_name}
-          onChange={(e) => setForm({ ...form, user_name: e.target.value })}
-          className={input}
-          maxLength={50}
-        />
-      </Field>
-      <Field label="Language" hint="Client work (posts, proposals, emails) stays in English.">
-        <select
-          value={form.language}
-          onChange={(e) => setForm({ ...form, language: e.target.value as Settings["language"] })}
-          className={input}
+    <div className="flex flex-col gap-6 pb-28">
+      <Section id="profile" title="Profile" description="Who you are and how he talks to you.">
+        <Row label="Your name" hint="Junior Muneer calls you by this name.">
+          <input
+            dir="auto"
+            value={form.user_name}
+            onChange={(e) => set("user_name", e.target.value)}
+            className={`${input} max-w-sm`}
+            maxLength={50}
+            aria-label="Your name"
+          />
+        </Row>
+        <Row
+          label="Language"
+          hint="For chat and calls. Client work (posts, proposals, emails) stays in English."
         >
-          {LANGUAGES.map((l) => (
-            <option key={l.value} value={l.value}>
-              {l.label}
-            </option>
-          ))}
-        </select>
-      </Field>
-      <Field label="Time zone" hint="Used for 'today', spend and backups.">
-        <select
-          value={form.timezone}
-          onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-          className={input}
+          <Segmented
+            label="Language"
+            value={form.language}
+            onChange={(v) => set("language", v)}
+            options={[
+              { value: "match", label: "Match me", sub: "Same as you write" },
+              { value: "english", label: "English", sub: "Always" },
+              { value: "urdu", label: "Urdu اردو", sub: "Always" },
+            ]}
+          />
+        </Row>
+        <Row label="Time zone" hint="Used for “today”, your spend and backups.">
+          <select
+            value={form.timezone}
+            onChange={(e) => set("timezone", e.target.value)}
+            className={`${input} max-w-sm`}
+            aria-label="Time zone"
+          >
+            {timezones(form.timezone).map((tz) => (
+              <option key={tz}>{tz}</option>
+            ))}
+          </select>
+        </Row>
+      </Section>
+
+      <Section id="budget" title="Budget" description="A safety net against surprises.">
+        <Row
+          label="Daily safety cap"
+          hint="When today's AI spend reaches this, new AI work stops until midnight. Live calls end too."
         >
-          {timezones(form.timezone).map((tz) => (
-            <option key={tz}>{tz}</option>
-          ))}
-        </select>
-      </Field>
-      <Field
-        label="Daily safety cap (US$)"
-        hint="When today's AI spend reaches this, new AI work stops until midnight."
+          <div className="flex max-w-[12rem] items-center rounded-xl border border-line bg-bg focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
+            <span className="pl-3.5 text-sm text-muted">$</span>
+            <input
+              type="number"
+              min={0}
+              max={1000}
+              step={0.5}
+              value={form.daily_cap_usd}
+              onChange={(e) => set("daily_cap_usd", e.target.value as unknown as number)}
+              className="w-full bg-transparent px-2 py-2.5 text-sm outline-none"
+              aria-label="Daily safety cap in US dollars"
+            />
+            <span className="pr-3.5 text-xs whitespace-nowrap text-muted">per day</span>
+          </div>
+        </Row>
+      </Section>
+
+      <Section
+        id="models"
+        title="Models"
+        description="Which AI writes his typed answers. Voice messages and live calls always use OpenAI."
       >
-        <input
-          type="number"
-          min={0}
-          max={1000}
-          step={0.5}
-          value={form.daily_cap_usd}
-          onChange={(e) => setForm({ ...form, daily_cap_usd: e.target.value as unknown as number })}
-          className={`${input} w-40`}
-          aria-label="Daily safety cap in US dollars"
-        />
-      </Field>
-      <fieldset className="flex flex-col gap-4 border-t border-line pt-4">
-        <legend className="pr-2 text-sm font-semibold">Voice</legend>
-        <Field label="His voice" hint="Used for spoken answers and live calls.">
-          <select
+        {models ? (
+          <>
+            <Row
+              label="Chat model"
+              hint="For typed messages. Prices are US$ per 1 million tokens, in / out (a message is usually under 2,000)."
+            >
+              <ModelPicker
+                label="Chat model"
+                value={form.main_model}
+                defaultModel={models.defaults.main_model}
+                choices={models.choices}
+                onChange={(m) => set("main_model", m)}
+              />
+            </Row>
+            <Row label="Helper model" hint="Summarizes long chats in the background. A cheap model is fine.">
+              <ModelPicker
+                label="Helper model"
+                value={form.helper_model}
+                defaultModel={models.defaults.helper_model}
+                choices={models.choices.filter((c) => c.speed !== "slow")}
+                onChange={(m) => set("helper_model", m)}
+              />
+            </Row>
+          </>
+        ) : (
+          <p className="px-6 py-5 text-sm text-muted">Loading models…</p>
+        )}
+      </Section>
+
+      <Section id="voice" title="Voice" description="How he sounds when he speaks to you.">
+        <Row label="His voice" hint="Used for spoken answers and live calls. Press ▶ to hear each one.">
+          <VoicePicker
+            voices={voices ?? [form.tts_voice]}
             value={form.tts_voice}
-            onChange={(e) => setForm({ ...form, tts_voice: e.target.value })}
-            className={input}
-          >
-            {(voices ?? [form.tts_voice]).map((v) => (
-              <option key={v} value={v}>
-                {v[0].toUpperCase() + v.slice(1)}
-                {v === "marin" || v === "cedar" ? " · most natural" : ""}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Accent" hint="How he sounds in Urdu and in English.">
-          <select
+            accent={form.voice_accent}
+            onChange={(v) => set("tts_voice", v)}
+          />
+        </Row>
+        <Row label="Accent" hint="How he pronounces Urdu and English. The ▶ samples use this accent.">
+          <Segmented
+            label="Accent"
             value={form.voice_accent}
-            onChange={(e) =>
-              setForm({ ...form, voice_accent: e.target.value as Settings["voice_accent"] })
-            }
-            className={input}
-          >
-            {ACCENTS.map((a) => (
-              <option key={a.value} value={a.value}>
-                {a.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <VoicePreview voice={form.tts_voice} accent={form.voice_accent} />
-        <Field label={`Speaking speed: ${Number(form.tts_speed).toFixed(2)}×`}>
-          <input
-            type="range"
-            min={0.75}
-            max={1.5}
-            step={0.05}
-            value={form.tts_speed}
-            onChange={(e) => setForm({ ...form, tts_speed: Number(e.target.value) })}
-            aria-label="Speaking speed"
+            onChange={(v) => set("voice_accent", v)}
+            options={ACCENTS}
           />
-        </Field>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
+        </Row>
+        <Row label="Speaking speed" hint="For spoken answers and calls.">
+          <div className="flex max-w-sm items-center gap-4">
+            <input
+              type="range"
+              min={0.75}
+              max={1.5}
+              step={0.05}
+              value={form.tts_speed}
+              onChange={(e) => set("tts_speed", Number(e.target.value))}
+              aria-label="Speaking speed"
+              className="flex-1 accent-[var(--accent)]"
+            />
+            <span className="w-14 rounded-lg bg-panel-2 py-1 text-center text-sm tabular-nums">
+              {Number(form.tts_speed).toFixed(2)}×
+            </span>
+          </div>
+        </Row>
+        <Row label="Auto-play answers" hint="When you send a voice message, he reads his answer aloud.">
+          <Toggle
+            label="Auto-play answers"
             checked={form.voice_autoplay}
-            onChange={(e) => setForm({ ...form, voice_autoplay: e.target.checked })}
+            onChange={(v) => set("voice_autoplay", v)}
           />
-          Read answers aloud automatically when I send a voice message
-        </label>
-        <Field
-          label="Call quality"
-          hint="Natural uses OpenAI's full voice model: the most human-sounding, about $0.04–0.06 a minute. Economy uses the mini model: about a third of the price, flatter."
-        >
-          <select
+        </Row>
+      </Section>
+
+      <Section
+        id="calls"
+        title="Live calls"
+        description="Real-time voice conversations. These cost the most, so they have their own limits."
+      >
+        <Row label="Call quality">
+          <Segmented
+            label="Call quality"
             value={form.call_quality}
-            onChange={(e) =>
-              setForm({ ...form, call_quality: e.target.value as Settings["call_quality"] })
-            }
-            className={input}
-          >
-            <option value="natural">Natural (recommended)</option>
-            <option value="economy">Economy</option>
-          </select>
-        </Field>
-        <Field
-          label="Turn-taking"
-          hint="How soon he answers when you pause. Patient lets you stop and think mid-sentence."
-        >
-          <select
-            value={form.turn_taking}
-            onChange={(e) =>
-              setForm({ ...form, turn_taking: e.target.value as Settings["turn_taking"] })
-            }
-            className={input}
-          >
-            <option value="patient">Patient: waits while you think</option>
-            <option value="balanced">Balanced (recommended)</option>
-            <option value="quick">Quick: answers as soon as you pause</option>
-          </select>
-        </Field>
-        <Field
-          label="Microphone"
-          hint="Cleans up background noise in calls to suit your microphone."
-        >
-          <select
-            value={form.mic_type}
-            onChange={(e) => setForm({ ...form, mic_type: e.target.value as Settings["mic_type"] })}
-            className={input}
-          >
-            <option value="headset">Headset or earphones</option>
-            <option value="laptop">Laptop or desk microphone</option>
-            <option value="off">Off (no noise reduction)</option>
-          </select>
-        </Field>
-        <Field
-          label="Live-call minutes per day"
-          hint="Live calls cost the most. The call ends when the limit is reached."
-        >
-          <input
-            type="number"
-            min={0}
-            max={600}
-            step={5}
-            value={form.call_minutes_per_day}
-            onChange={(e) =>
-              setForm({ ...form, call_minutes_per_day: e.target.value as unknown as number })
-            }
-            className={`${input} w-40`}
-            aria-label="Live-call minutes per day"
+            onChange={(v) => set("call_quality", v)}
+            options={[
+              { value: "natural", label: "Natural", sub: "Most human · ~$0.05/min" },
+              { value: "economy", label: "Economy", sub: "Flatter · ~$0.02/min" },
+            ]}
           />
-        </Field>
-      </fieldset>
-      <ModelChoices form={form} setForm={setForm} />
-      <div className="flex items-center gap-3">
+        </Row>
+        <Row label="Turn-taking" hint="How long he waits when you pause before he answers.">
+          <Segmented
+            label="Turn-taking"
+            value={form.turn_taking}
+            onChange={(v) => set("turn_taking", v)}
+            options={[
+              { value: "patient", label: "Patient", sub: "Lets you think" },
+              { value: "balanced", label: "Balanced", sub: "Recommended" },
+              { value: "quick", label: "Quick", sub: "Any pause" },
+            ]}
+          />
+        </Row>
+        <Row label="Microphone" hint="Noise reduction tuned to your microphone.">
+          <Segmented
+            label="Microphone"
+            value={form.mic_type}
+            onChange={(v) => set("mic_type", v)}
+            options={[
+              { value: "headset", label: "Headset", sub: "Or earphones" },
+              { value: "laptop", label: "Laptop mic", sub: "Or desk mic" },
+              { value: "off", label: "Off", sub: "No filtering" },
+            ]}
+          />
+        </Row>
+        <Row label="Minutes per day" hint="A call ends when today's minutes run out.">
+          <div className="flex max-w-[12rem] items-center rounded-xl border border-line bg-bg focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
+            <input
+              type="number"
+              min={0}
+              max={600}
+              step={5}
+              value={form.call_minutes_per_day}
+              onChange={(e) => set("call_minutes_per_day", e.target.value as unknown as number)}
+              className="w-full bg-transparent px-3.5 py-2.5 text-sm outline-none"
+              aria-label="Live-call minutes per day"
+            />
+            <span className="pr-3.5 text-xs whitespace-nowrap text-muted">minutes</span>
+          </div>
+        </Row>
+      </Section>
+
+      <AdvancedSection />
+
+      {/* Save bar: appears when something changed. */}
+      <div
+        className={`fixed inset-x-0 bottom-0 z-20 flex justify-center px-4 pb-4 transition ${
+          changed || status ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"
+        }`}
+      >
+        <div className="flex w-full max-w-xl items-center gap-3 rounded-2xl border border-line bg-panel px-4 py-3 shadow-lg">
+          <span role="status" className={`flex-1 text-sm ${status && !status.ok ? "text-danger" : status ? "text-ok" : ""}`}>
+            {status ? status.text : "You have unsaved changes"}
+          </span>
+          {changed && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setForm(saved);
+                  setStatus(null);
+                }}
+                className="rounded-xl px-3 py-2 text-sm text-muted hover:bg-panel-2 hover:text-ink"
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={save}
+                disabled={saving}
+                className="rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-accent-fg disabled:opacity-50"
+              >
+                {saving ? "Saving…" : "Save changes"}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdvancedSection() {
+  const { data } = useSWR<ModelsView>("/api/models", fetcher);
+  const [open, setOpen] = useState(false);
+  return (
+    <Section id="advanced" title="Advanced" description="What each agent uses right now.">
+      <div className="px-6 py-4">
         <button
-          onClick={save}
-          disabled={!changed || saving}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-fg disabled:opacity-40"
+          type="button"
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+          className="text-sm font-medium text-accent hover:underline"
         >
-          {saving ? "Saving…" : "Save"}
+          {open ? "Hide" : "Show"} models per agent
         </button>
-        {status && (
-          <span role="status" className={`text-sm ${status.ok ? "text-ok" : "text-danger"}`}>
-            {status.text}
-          </span>
+        {open && data && (
+          <div className="mt-3 overflow-x-auto rounded-xl border border-line">
+            <table className="w-full text-sm">
+              <thead className="bg-panel-2 text-left text-xs text-muted">
+                <tr>
+                  <th className="px-3 py-2 font-medium">Agent</th>
+                  <th className="px-3 py-2 font-medium">Model</th>
+                  <th className="px-3 py-2 font-medium">$ per 1M (in / out)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {data.agents.map((a) => (
+                  <tr key={a.agent} title={a.description}>
+                    <td className="px-3 py-2">{a.agent}</td>
+                    <td className="px-3 py-2 font-mono text-xs">{a.model}</td>
+                    <td className="px-3 py-2 tabular-nums">
+                      {a.price_per_million.input} / {a.price_per_million.output}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="px-3 py-2 text-xs text-muted">
+              Defaults live in <code>agents/models.toml</code>.
+            </p>
+          </div>
         )}
       </div>
-    </section>
+    </Section>
   );
 }
 
-type Choices = {
-  choices: {
-    model: string;
-    label: string;
-    provider: string;
-    ready: boolean;
-    key_env: string;
-    price_per_million: { input: number; output: number };
-  }[];
-  defaults: { main_model: string; helper_model: string };
-};
-
-/** Which text models answer you (OpenAI or DeepSeek). Voice always uses OpenAI. */
-function ModelChoices({
-  form,
-  setForm,
-}: {
-  form: Settings;
-  setForm: (s: Settings) => void;
-}) {
-  const { data } = useSWR<Choices>("/api/models/choices", fetcher);
-  if (!data) return null;
-  const pick = (key: "main_model" | "helper_model", hint: string, label: string) => {
-    const current = form[key] || data.defaults[key];
-    const chosen = data.choices.find((c) => c.model === current);
-    return (
-      <Field label={label} hint={hint}>
-        <select
-          value={current}
-          onChange={(e) =>
-            setForm({ ...form, [key]: e.target.value === data.defaults[key] ? "" : e.target.value })
-          }
-          className={input}
-        >
-          {data.choices.map((c) => (
-            <option key={c.model} value={c.model}>
-              {c.label} · ${c.price_per_million.input} / ${c.price_per_million.output} per 1M
-              {c.model === data.defaults[key] ? " (default)" : ""}
-              {c.ready ? "" : " · needs key"}
-            </option>
-          ))}
-        </select>
-        {chosen && !chosen.ready && (
-          <span className="text-xs text-warn">
-            Add {chosen.key_env}=… to backend/.env and restart, or he can&apos;t answer with this
-            model.
-          </span>
-        )}
-        {chosen?.provider === "DeepSeek" && (
-          <span className="text-xs text-muted">
-            DeepSeek is very cheap but can be slow when busy (after 20 s he answers with OpenAI
-            instead). Your typed chats go to DeepSeek (servers in China). Web search and all voice
-            stay on OpenAI.
-          </span>
-        )}
-      </Field>
-    );
-  };
-  return (
-    <fieldset className="flex flex-col gap-4 border-t border-line pt-4">
-      <legend className="pr-2 text-sm font-semibold">Models</legend>
-      {pick(
-        "main_model",
-        "Writes his answers to typed messages. Voice messages and live calls always use OpenAI. Prices are $ per 1M tokens in / out.",
-        "Chat model (typed chat)",
-      )}
-      {pick("helper_model", "Summarizes long chats in the background.", "Helper model")}
-    </fieldset>
-  );
-}
-
-function ModelsTable() {
-  const { data, error } = useSWR<ModelsView>("/api/models", fetcher);
-  if (error) return <p className="text-danger">Couldn&apos;t load models: {error.message}</p>;
-  if (!data) return null;
-  return (
-    <section className="flex flex-col gap-3 rounded-xl border border-line bg-panel p-5">
-      <div>
-        <h2 className="font-semibold">Models per agent</h2>
-        <p className="text-sm text-muted">
-          View only. To change a model, edit <code className="text-xs">agents/models.toml</code>;
-          it applies on the next message.
-        </p>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="text-left text-muted">
-            <tr>
-              <th className="py-1 pr-3 font-medium">Agent</th>
-              <th className="py-1 pr-3 font-medium">Tier</th>
-              <th className="py-1 pr-3 font-medium">Model</th>
-              <th className="py-1 font-medium">$ per 1M tokens (in / out)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.agents.map((a) => (
-              <tr key={a.agent} className="border-t border-line" title={a.description}>
-                <td className="py-1.5 pr-3">{a.agent}</td>
-                <td className="py-1.5 pr-3">{a.tier}</td>
-                <td className="py-1.5 pr-3 font-mono text-xs">{a.model}</td>
-                <td className="py-1.5 tabular-nums">
-                  {a.price_per_million.input} / {a.price_per_million.output}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
+// ---- page -----------------------------------------------------------------------------
 
 export default function SettingsPage() {
   const { data, error } = useSWR<Settings>(SETTINGS_KEY, fetcher);
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto flex max-w-2xl flex-col gap-5 px-4 py-6 sm:px-6">
-        <header>
-          <h1 className="text-2xl font-semibold">Settings</h1>
-          <p className="mt-1 text-muted">Basic settings. More arrive with each phase.</p>
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-8">
+        <header className="mb-5">
+          <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+          <p className="mt-1 text-sm text-muted">Changes apply from your next message or call.</p>
         </header>
+        <nav
+          aria-label="Settings sections"
+          className="sticky top-0 z-10 -mx-1 mb-6 flex gap-1.5 overflow-x-auto bg-bg/90 px-1 py-2 backdrop-blur"
+        >
+          {SECTIONS.map((s) => (
+            <a
+              key={s.id}
+              href={`#${s.id}`}
+              className="shrink-0 rounded-full border border-line bg-panel px-3.5 py-1.5 text-sm text-muted hover:border-muted hover:text-ink"
+            >
+              {s.title}
+            </a>
+          ))}
+        </nav>
         {error && <p className="text-danger">Couldn&apos;t load settings: {error.message}</p>}
         {data && <SettingsForm initial={data} />}
-        <ModelsTable />
       </div>
     </div>
   );

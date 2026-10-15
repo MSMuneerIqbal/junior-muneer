@@ -83,13 +83,23 @@ def natural_voices() -> list[str]:
     return list(NATURAL_VOICES)
 
 
-MODEL_LABELS = {
-    "gpt-6-astra": "OpenAI GPT-6 Astra (best, most expensive)",
-    "gpt-6.1-sol": "OpenAI GPT-6.1 Sol (strong)",
-    "gpt-6-sol": "OpenAI GPT-6 Sol",
-    "gpt-6-luna": "OpenAI GPT-6 Luna (fast, cheap)",
-    "deepseek:deepseek-flash": "DeepSeek Flash (very cheap)",
-    "deepseek:deepseek-v4-pro": "DeepSeek V4 Pro (slow: thinks ~25 s before answering)",
+# How each text model shows in Settings: name, a short note, and its speed as
+# measured on this PC (time to the first words of an answer, Oct 2026).
+MODEL_INFO = {
+    "gpt-6.1-sol": ("GPT-6.1 Sol", "Strong and reliable. The default.", "medium"),
+    "gpt-6-luna": ("GPT-6 Luna", "Fastest and cheapest; fine for everyday chat.", "fast"),
+    "gpt-6-sol": ("GPT-6 Sol", "Strong, slightly older.", "medium"),
+    "gpt-6-astra": ("GPT-6 Astra", "OpenAI's best, and the most expensive.", "medium"),
+    "deepseek:deepseek-flash": (
+        "DeepSeek Flash",
+        "Very cheap and quick. Can stall when DeepSeek is busy (OpenAI steps in after 20 s).",
+        "fast",
+    ),
+    "deepseek:deepseek-v4-pro": (
+        "DeepSeek V4 Pro",
+        "Thinks before every answer: about 25 s, even for 'hi'.",
+        "slow",
+    ),
 }
 
 
@@ -110,10 +120,13 @@ def model_choices() -> dict:
             else getattr(settings, info.get("key_env", "").lower(), "")
         )
         price = model_router.price(model)
+        name, note, speed = MODEL_INFO.get(model, (model, "", "medium"))
         choices.append(
             {
                 "model": model,
-                "label": MODEL_LABELS.get(model, model),
+                "label": name,
+                "note": note,
+                "speed": speed,
                 "provider": info.get("label", "OpenAI") if provider != "openai" else "OpenAI",
                 "ready": ready,
                 "key_env": info.get("key_env", "OPENAI_API_KEY"),
