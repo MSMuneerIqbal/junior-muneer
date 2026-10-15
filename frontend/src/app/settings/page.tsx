@@ -41,6 +41,7 @@ const SECTIONS = [
   { id: "models", title: "Models" },
   { id: "voice", title: "Voice" },
   { id: "calls", title: "Live calls" },
+  { id: "posting", title: "Posting" },
   { id: "news", title: "News" },
   { id: "permissions", title: "Permissions" },
   { id: "advanced", title: "Advanced" },
@@ -564,6 +565,23 @@ function SettingsForm({ initial }: { initial: Settings }) {
             />
             <span className="pr-3.5 text-xs whitespace-nowrap text-muted">minutes</span>
           </div>
+        </Row>
+      </Section>
+
+      <Section id="posting" title="Posting" description="Posts that go out through the official APIs (Facebook Page, Instagram, LinkedIn).">
+        <Row
+          label="Posts per platform per day"
+          hint="The Safety Guard stops more than this many API posts on one platform in a day. Copy-and-paste items don't count."
+        >
+          <input
+            type="number"
+            min={0}
+            max={50}
+            value={form.api_posts_per_day}
+            onChange={(e) => set("api_posts_per_day", Number(e.target.value))}
+            className={`${input} w-28`}
+            aria-label="Posts per platform per day"
+          />
         </Row>
       </Section>
 

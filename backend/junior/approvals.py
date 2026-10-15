@@ -26,7 +26,7 @@ Planned posts: you pick a time; the scheduler reminds you then (real posting com
 from datetime import datetime
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
@@ -92,6 +92,8 @@ class ApprovalOut(BaseModel):
     reminded_at: datetime | None = None
     # Planned, still waiting or approved, and its time has come.
     due: bool = False
+    # An API item whose platform is connected, so it can be posted from here.
+    can_send: bool = False
     conversation_id: int | None
     message_id: int | None
     created_at: datetime
@@ -118,6 +120,14 @@ def _needs_image(platform: str, item_type: str) -> bool:
 
 
 PLANNABLE = ("waiting", "approved")
+
+
+def _can_send(item: ApprovalItem) -> bool:
+    if item.kind != "api" or not item.action_type:
+        return False
+    from junior.senders.registry import CURRENT
+
+    return CURRENT.for_action(item.action_type) is not None
 
 
 def _is_due(item: ApprovalItem) -> bool:
@@ -154,6 +164,7 @@ def to_out(item: ApprovalItem, images: list[dict[str, Any]] | None = None) -> Ap
         planned_at=item.planned_at,
         reminded_at=item.reminded_at,
         due=_is_due(item),
+        can_send=_can_send(item),
         conversation_id=item.conversation_id,
         message_id=item.message_id,
         created_at=item.created_at,
@@ -190,6 +201,8 @@ def create_item(
         reason = decision.reason
         if decision.rule == "auto":
             status = "approved"
+            # The sender sends exactly this text; your Auto rule approved it.
+            meta = {**(meta or {}), "approved_text": text, "approved_by": "auto rule"}
     elif action_type:
         raise ApprovalError("Copy-and-paste items have no action type: the system never sends them.")
     with session_scope() as s:
@@ -307,8 +320,8 @@ def approve_item(item_id: int, always_allow: bool = False) -> ApprovalOut:
             set_rule(item.action_type, "auto")
         item.status = "approved"
         item.decided_at = utcnow()
-        # The API sender (phase 3) sends exactly this text, once.
-        item.meta = {**item.meta, "approved_text": item.text}
+        # The API sender sends exactly this text, once.
+        item.meta = {**item.meta, "approved_text": item.text, "approved_by": "you"}
 
     return _change(item_id, "approved", fn)
 
@@ -417,9 +430,13 @@ def remind_due() -> int:
     return len(found)
 
 
+NEEDS_YOU = ("waiting", "check_manually")
+
+
 def waiting_count() -> int:
+    """Items that need you: drafts waiting for your OK, and sends to check."""
     with session_scope() as s:
-        return s.scalar(select(func.count()).select_from(ApprovalItem).where(ApprovalItem.status == "waiting")) or 0
+        return s.scalar(select(func.count()).select_from(ApprovalItem).where(ApprovalItem.status.in_(NEEDS_YOU))) or 0
 
 
 # ---- API --------------------------------------------------------------------
@@ -461,7 +478,9 @@ def list_items(
         raise HTTPException(422, f"status must be 'all' or one of {list(STATUSES)}")
     with session_scope() as s:
         q = select(ApprovalItem).order_by(ApprovalItem.updated_at.desc()).limit(min(limit, 500))
-        if status != "all":
+        if status == "waiting":  # everything that needs you, including "check manually"
+            q = q.where(ApprovalItem.status.in_(NEEDS_YOU))
+        elif status != "all":
             q = q.where(ApprovalItem.status == status)
         if platform:
             q = q.where(ApprovalItem.platform == platform)
@@ -513,8 +532,19 @@ def patch_item(item_id: int, body: EditBody) -> ApprovalOut:
 
 
 @router.post("/api/approvals/{item_id}/approve", response_model=ApprovalOut)
-def post_approve(item_id: int, body: ApproveBody | None = None) -> ApprovalOut:
-    return _call(approve_item, item_id, bool(body and body.always_allow))
+async def post_approve(item_id: int, request: Request, body: ApproveBody | None = None) -> ApprovalOut:
+    """Approve, then send it right away when its platform is connected (and it isn't planned for later)."""
+    from junior.senders.dispatch import SendError, send_item
+
+    approved = _call(approve_item, item_id, bool(body and body.always_allow))
+    senders = getattr(request.app.state, "senders", None)
+    later = approved.planned_at is not None and approved.planned_at > utcnow()
+    if senders is None or later or not approved.action_type or senders.for_action(approved.action_type) is None:
+        return approved
+    try:
+        return await send_item(item_id, senders)
+    except SendError:
+        return get_item(item_id)  # stays approved; the card shows why it wasn't sent
 
 
 @router.post("/api/approvals/{item_id}/posted", response_model=ApprovalOut)

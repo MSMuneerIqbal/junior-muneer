@@ -285,9 +285,13 @@ def add_to_approvals_for(
 
     if refusal := plan_mode_refusal():
         return refusal
+    from junior.senders.registry import CURRENT
+
+    action = CURRENT.connected_action(platform, item_type)
     try:
         item = create_item(
-            kind="copy",
+            kind="api" if action else "copy",
+            action_type=action,
             platform=platform,
             item_type=item_type,
             text=text,

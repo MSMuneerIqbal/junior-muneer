@@ -259,7 +259,7 @@ Read-only: these agents never post or send anything. News pages are outside cont
 
 **Phase done when:** an approved post goes live through the API, and a reply to a real comment is sent.
 
-- [ ] **P3-01** API sender base: plain code (no AI), sends the exact stored approved text, Safety Guard check first, "run at most once", "check manually" on unclear results. Fake-API tests
+- [x] **P3-01** API sender base: plain code (no AI), sends the exact stored approved text, Safety Guard check first, "run at most once", "check manually" on unclear results. Fake-API tests
 - [ ] **P3-02** Meta developer app (guide for you) → Facebook Page posting
 - [ ] **P3-03** Instagram professional posting (pick: Facebook-linked API or Instagram Login; temporary public image host)
 - [ ] **P3-04** LinkedIn developer app (guide for you) → posts to your profile, with a 60-day reconnect warning

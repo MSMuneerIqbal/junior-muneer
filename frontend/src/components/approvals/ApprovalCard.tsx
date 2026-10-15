@@ -19,6 +19,53 @@ const button =
 const primary =
   "rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-accent-fg transition hover:opacity-90 disabled:opacity-50";
 
+/** For API items: why it wasn't sent, or what to check. */
+function SendState({
+  item,
+  busy,
+  onResolve,
+}: {
+  item: ApprovalItem;
+  busy: boolean;
+  onResolve: (posted: boolean) => void;
+}) {
+  const blocked = Array.isArray(item.meta.blocked) ? (item.meta.blocked as string[]) : [];
+  const error = typeof item.meta.last_error === "string" ? item.meta.last_error : "";
+  if (item.status === "check_manually") {
+    return (
+      <div role="alert" className="mx-4 mb-3 rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn">
+        <p className="font-medium">We couldn&apos;t tell if it was posted.</p>
+        {error && <p className="mt-0.5">{error}</p>}
+        <p className="mt-1">Check {item.platform_label}, then tell us:</p>
+        <div className="mt-1.5 flex flex-wrap gap-2">
+          <button type="button" disabled={busy} onClick={() => onResolve(true)} className="rounded-md bg-warn px-2.5 py-1 font-medium text-white">
+            It&apos;s posted
+          </button>
+          <button type="button" disabled={busy} onClick={() => onResolve(false)} className="rounded-md border border-warn/50 px-2.5 py-1 font-medium">
+            It didn&apos;t post
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (item.status !== "approved") return null;
+  if (blocked.length || error) {
+    return (
+      <p role="note" className="mx-4 mb-3 rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">
+        Not posted: {blocked[0] ?? error}
+      </p>
+    );
+  }
+  if (!item.can_send) {
+    return (
+      <p className="mx-4 mb-3 text-xs text-muted">
+        Approved. {item.platform_label} isn&apos;t connected yet: connect it in Settings, or copy it and post it yourself.
+      </p>
+    );
+  }
+  return null;
+}
+
 /** A draft waiting for your OK: the same card in the chat and on the Approvals page. */
 export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
   const { item, act } = useApprovalItem(initial);
@@ -147,6 +194,8 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
         </p>
       </div>
 
+      {item.kind === "api" && <SendState item={item} busy={busy} onResolve={(posted) => run("resolve", { posted })} />}
+
       {planning !== null && (
         <div className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-2.5 text-sm">
           <label className="flex items-center gap-2">
@@ -191,9 +240,9 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
           </>
         ) : (
           <>
-            {item.kind === "copy" && (
+            {(item.kind === "copy" || item.status !== "posted") && (
               <>
-                <button type="button" className={waiting ? primary : button} onClick={copy}>
+                <button type="button" className={waiting && item.kind === "copy" ? primary : button} onClick={copy}>
                   {copied ? "Copied ✓" : "Copy"}
                 </button>
                 {item.open_url && (
@@ -203,10 +252,24 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
                 )}
               </>
             )}
+            {item.kind === "api" && item.status === "approved" && item.can_send && (
+              <button type="button" className={primary} disabled={busy} onClick={() => run("send")}>
+                {busy
+                  ? "Posting…"
+                  : item.meta.last_error || (Array.isArray(item.meta.blocked) && item.meta.blocked.length)
+                    ? "Try again"
+                    : "Post now"}
+              </button>
+            )}
+            {item.status === "posted" && typeof item.meta.post_url === "string" && item.meta.post_url && (
+              <a href={item.meta.post_url} target="_blank" rel="noopener noreferrer" className={button}>
+                View post ↗
+              </a>
+            )}
             {waiting && item.kind === "api" && (
               <>
                 <button type="button" className={primary} disabled={busy} onClick={() => run("approve")}>
-                  Approve
+                  {busy && item.can_send ? "Posting…" : item.can_send ? "Approve & post" : "Approve"}
                 </button>
                 {item.can_always_allow && (
                   <button

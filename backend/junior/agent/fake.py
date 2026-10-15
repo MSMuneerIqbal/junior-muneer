@@ -106,10 +106,13 @@ class FakeModel(Model):
             return [function_call("social_media", {"request": text}, call_id="fake-social")], False
         if text.lower().startswith("draft ") and "add_to_approvals" in tool_names:
             words = text[len("draft ") :].strip()
+            platform = "linkedin"
+            if words.lower().startswith("facebook "):  # "draft facebook ..." -> the (fake) connected Page
+                platform, words = "facebook", words[len("facebook ") :].strip()
             return [
                 function_call(
                     "add_to_approvals",
-                    {"platform": "linkedin", "item_type": "post", "text": words},
+                    {"platform": platform, "item_type": "post", "text": words},
                     call_id="fake-draft",
                 )
             ], False

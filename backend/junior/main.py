@@ -37,6 +37,9 @@ from junior.playbooks import router as playbooks_router
 from junior.profile import router as profile_router
 from junior.registry import load_registry
 from junior.scheduler import scheduler_loop
+from junior.senders.api import router as senders_router
+from junior.senders.dispatch import recover_interrupted_sends
+from junior.senders.registry import SenderRegistry, set_current
 from junior.settings_api import router as settings_router
 from junior.voice import FakeVoice, OpenAIVoice, VoiceClient
 from junior.voice import router as voice_router
@@ -44,10 +47,21 @@ from junior.voice import router as voice_router
 log = logging.getLogger(__name__)
 
 
+def default_senders(settings) -> SenderRegistry:
+    """The connected API senders. FAKE_AI: a fake Facebook Page, so posting can be tried safely."""
+    registry = SenderRegistry()
+    if settings.fake_ai:
+        from junior.senders.fake import FakeSender
+
+        registry.add(FakeSender())
+    return registry
+
+
 def create_app(
     model_provider: Callable[[], ModelProvider] | None = None,
     voice: Callable[[], VoiceClient] | None = None,
     realtime: Callable[[], RealtimeGateway] | None = None,
+    senders: Callable[[], SenderRegistry] | None = None,
 ) -> FastAPI:
     """The app. Tests pass a fake model_provider and voice so no real AI is called."""
     settings = get_settings()
@@ -69,6 +83,9 @@ def create_app(
         app.state.registry = load_registry()
         app.state.playbooks = load_playbooks()
         app.state.news_sources = load_sources()
+        app.state.senders = senders() if senders is not None else default_senders(settings)
+        recover_interrupted_sends()
+        set_current(app.state.senders)
         app.state.chat = ChatService(app.state.registry, model_provider)
         app.state.voice = voice
         app.state.calls = CallManager(realtime, app.state.registry, model_provider)
@@ -116,6 +133,7 @@ def create_app(
     app.include_router(permissions_router)
     app.include_router(approvals_router)
     app.include_router(news_router)
+    app.include_router(senders_router)
     app.include_router(ideas_router)
     app.include_router(images_router)
     return app

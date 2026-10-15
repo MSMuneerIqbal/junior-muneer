@@ -61,6 +61,7 @@ export type ApprovalItem = {
   planned_at: string | null;
   reminded_at: string | null;
   due: boolean;
+  can_send: boolean;
   conversation_id: number | null;
   message_id: number | null;
   created_at: string;
@@ -137,6 +138,7 @@ export type Settings = {
   mic_type: "headset" | "laptop" | "off";
   main_model: string;
   helper_model: string;
+  api_posts_per_day: number;
   news_digest_enabled: boolean;
   news_digest_time: string;
 };

@@ -494,6 +494,10 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 
 ## 18. Change log
 
+- **v7.7 (2026-10-16):** P3-01 sender base: the Safety Guard (code) checks every send (rule and mode, your own OK where needed, pause,
+  exactly the approved text, hard limits, no keys/tokens/passwords/placeholders, a daily limit of 5 API posts per platform). Each send is claimed
+  once and never retried by itself: "failed" stays approved for a retry by hand, "unclear" (or a send cut off by a restart) becomes "check manually".
+  Drafts become API items only when their platform is connected; FAKE_AI mode has a fake Facebook Page to try it safely.
 - **v7.6 (2026-10-16):** Phase 2b built: news agents with 26 verified official sources, a code fact guard (links and dates from real articles only; invented
   items, old stories and made-up numbers removed), rankings from Artificial Analysis's API (optional free key), morning digests, a News page, and news
   questions in chat and live calls. xAI, Qwen and Arena's leaderboard can't be read without a browser, so they're not used.

@@ -17,7 +17,17 @@ export function useApprovalItem(initial: ApprovalItem) {
   const item = data ?? initial;
 
   async function act(
-    action: "approve" | "posted" | "reject" | "restore" | "edit" | "add_image" | "remove_image" | "plan",
+    action:
+      | "approve"
+      | "posted"
+      | "reject"
+      | "restore"
+      | "edit"
+      | "add_image"
+      | "remove_image"
+      | "plan"
+      | "send"
+      | "resolve",
     body?: object | File | number,
   ) {
     let updated: ApprovalItem;
@@ -41,6 +51,7 @@ export function useApprovalItem(initial: ApprovalItem) {
     await mutate(itemKey(item.id), updated, { revalidate: false });
     void mutate((key) => isApprovalsKey(key) && key !== itemKey(item.id));
     if (action === "approve") void mutate(PERMISSIONS_KEY);
+    if (action === "approve" || action === "send" || action === "resolve") void mutate("/api/usage/today");
     return updated;
   }
 

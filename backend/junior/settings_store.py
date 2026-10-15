@@ -32,6 +32,8 @@ DEFAULTS: dict[str, Any] = {
     "helper_model": "",
     # Your profile (Profile page). Kept here, edited through /api/profile.
     "profile": {},
+    # Phase 3: at most this many posts per platform per day through the APIs (Safety Guard).
+    "api_posts_per_day": 5,
     # News (Phase 2b): both digests are built each morning at this local time.
     "news_digest_enabled": True,
     "news_digest_time": "07:30",
