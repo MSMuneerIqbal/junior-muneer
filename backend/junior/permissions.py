@@ -1,0 +1,258 @@
+"""Permission rules: Ask / Auto / Deny for every outgoing action (PLAN.md section 8).
+
+Every action has a type such as `linkedin.post` or `gmail.send`, and each type has a rule:
+
+    ask    it goes into your approval queue; nothing happens until you click
+    auto   it runs by itself (still logged, checked and limited per day)
+    deny   it never runs
+
+On top of the rules:
+    - Locked types keep their default; you can't change them (merges, deletes, terminal...).
+    - Anything caused by outside content (emails, comments, pastes, web pages) is at
+      least Ask, and "Always allow" is never offered for it.
+    - The global mode: "Ask everything" turns every Auto into Ask; "Pause everything"
+      (the pause switch) holds everything for you.
+    - Deny always wins.
+    - "Run at most once": an action is claimed by a unique key before it runs, so a
+      retry or a double click can never send it twice.
+
+    GET /api/permissions                   mode and every action type with its rule
+    PUT /api/permissions/mode   {"mode"}   ask_all · rules
+    PUT /api/permissions/rules/{type}  {"rule"}   change one rule (refused when locked)
+"""
+
+import re
+from dataclasses import dataclass
+from typing import Literal
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
+
+from junior.audit import audit
+from junior.db import ActionRun, session_scope
+from junior.db.models import utcnow
+from junior.pause import is_paused
+from junior.settings_store import get_setting, set_setting
+
+router = APIRouter()
+
+Rule = Literal["ask", "auto", "deny"]
+Mode = Literal["ask_all", "rules"]
+RULES: tuple[Rule, ...] = ("ask", "auto", "deny")
+MODES: tuple[Mode, ...] = ("ask_all", "rules")
+
+_ACTION_TYPE = re.compile(r"^[a-z0-9_]+(\.[a-z0-9_]+)+$")
+
+
+@dataclass(frozen=True)
+class ActionType:
+    key: str
+    label: str
+    group: str
+    default: Rule
+    locked: bool = False
+    note: str = ""
+
+
+def _t(key, label, group, default, locked=False, note=""):
+    return ActionType(key, label, group, default, locked, note)
+
+
+# Reading, drafting, chat and search are not outgoing actions: they need no rule.
+# Copy-and-paste items (Upwork, Fiverr, LinkedIn comments, X...) are sent by you, never by the system.
+CATALOG: dict[str, ActionType] = {
+    t.key: t
+    for t in (
+        _t("linkedin.post", "Post on LinkedIn", "Social", "ask"),
+        _t("facebook.page.post", "Post on your Facebook Page", "Social", "ask"),
+        _t("instagram.post", "Post on Instagram", "Social", "ask"),
+        _t("facebook.comment.reply", "Reply to a Facebook comment", "Social", "ask", True,
+           "Replies answer outside content, so they always wait for you."),
+        _t("instagram.comment.reply", "Reply to an Instagram comment", "Social", "ask", True,
+           "Replies answer outside content, so they always wait for you."),
+        _t("gmail.send", "Send a new email", "Email", "ask",
+           note="Auto is possible but not recommended."),
+        _t("gmail.reply", "Reply to an email", "Email", "ask", True,
+           "Replies answer outside content, so they always wait for you."),
+        _t("github.issue.create", "Create a GitHub issue", "GitHub", "ask"),
+        _t("github.comment", "Comment on GitHub", "GitHub", "ask"),
+        _t("github.pr.open", "Open a pull request", "GitHub", "ask"),
+        _t("github.push.branch", "Push to a branch", "GitHub", "ask"),
+        _t("github.merge", "Merge a pull request", "GitHub", "ask", True),
+        _t("github.push.main", "Push to main", "GitHub", "ask", True),
+        _t("github.release", "Create a release", "GitHub", "ask", True),
+        _t("github.repo.delete", "Delete a repository", "GitHub", "deny", True),
+        _t("github.branch.delete", "Delete a branch", "GitHub", "deny", True),
+        _t("github.force_push", "Force-push", "GitHub", "deny", True),
+        _t("github.settings", "Change repo visibility or settings", "GitHub", "deny", True),
+        _t("terminal.run", "Run an allowed terminal command", "Terminal", "ask", True,
+           "Commands like python or npm can run any code, so you check every one."),
+        _t("terminal.other", "Run any other terminal command", "Terminal", "deny", True),
+        _t("system.delete", "Delete anything", "Never", "deny", True),
+        _t("system.payment", "Make a payment", "Never", "deny", True),
+        _t("system.account_settings", "Change account settings", "Never", "deny", True),
+        _t("system.password", "Type a password", "Never", "deny", True),
+    )
+}
+
+
+class RuleChangeError(Exception):
+    """A rule change that isn't allowed. The message says why."""
+
+
+def _check_type(action_type: str) -> None:
+    if not _ACTION_TYPE.match(action_type):
+        raise RuleChangeError(f"{action_type!r} isn't an action type; use dotted names like gmail.send.")
+
+
+def get_mode() -> Mode:
+    mode = get_setting("permission_mode")
+    return mode if mode in MODES else "rules"
+
+
+def set_mode(mode: str) -> None:
+    if mode not in MODES:
+        raise RuleChangeError(f"Mode must be one of {list(MODES)}.")
+    if mode != get_mode():
+        set_setting("permission_mode", mode)
+        audit("setting", "permission_mode", detail={"mode": mode})
+
+
+def _saved_rules() -> dict[str, str]:
+    rules = get_setting("permission_rules")
+    return rules if isinstance(rules, dict) else {}
+
+
+def rule_for(action_type: str) -> Rule:
+    """Your rule for a type (before the mode and outside-content checks)."""
+    _check_type(action_type)
+    known = CATALOG.get(action_type)
+    if known and known.locked:
+        return known.default
+    saved = _saved_rules().get(action_type)
+    if saved in RULES:
+        return saved  # type: ignore[return-value]
+    return known.default if known else "ask"  # anything not listed: Ask
+
+
+def set_rule(action_type: str, rule: str) -> None:
+    _check_type(action_type)
+    if rule not in RULES:
+        raise RuleChangeError(f"Rule must be one of {list(RULES)}.")
+    known = CATALOG.get(action_type)
+    if known and known.locked:
+        raise RuleChangeError(f"{known.label} is locked to {known.default.capitalize()}; it can't be changed.")
+    before = rule_for(action_type)
+    rules = _saved_rules()
+    rules[action_type] = rule
+    set_setting("permission_rules", rules)
+    if before != rule:
+        audit("setting", "permission_rule", detail={"type": action_type, "from": before, "to": rule})
+
+
+@dataclass(frozen=True)
+class Decision:
+    rule: Rule
+    reason: str
+    # Show "Approve + always allow this kind"?
+    can_always_allow: bool = False
+    # Paused: allowed in principle, but nothing runs until you resume.
+    held: bool = False
+
+
+def decide(action_type: str, *, from_outside: bool) -> Decision:
+    """What happens to one action. Deny wins; outside content and "Ask everything" turn Auto into Ask."""
+    rule = rule_for(action_type)
+    known = CATALOG.get(action_type)
+    locked = bool(known and known.locked)
+    held = is_paused()
+
+    if rule == "deny":
+        why = "it's locked to Deny" if locked else "your rule is Deny"
+        return Decision("deny", f"Never runs: {why}.")
+    can_always_allow = not locked and not from_outside
+    if from_outside:
+        return Decision("ask", "It comes from outside content, so it always waits for you.", False, held)
+    if rule == "auto" and get_mode() == "ask_all":
+        return Decision("ask", "Ask everything is on.", can_always_allow, held)
+    if rule == "auto":
+        return Decision("auto", "Your rule is Auto.", False, held)
+    why = "it's locked to Ask" if locked else "your rule is Ask"
+    return Decision("ask", f"Waits for you: {why}.", can_always_allow, held)
+
+
+# --- Run at most once -------------------------------------------------------
+
+
+class AlreadyRun(Exception):
+    """This action was already claimed; running it again could send it twice."""
+
+
+def claim_run(key: str, action_type: str) -> int:
+    """Claim the right to run an action once. A second claim with the same key raises AlreadyRun."""
+    _check_type(action_type)
+    try:
+        with session_scope() as s:
+            run = ActionRun(key=key, action_type=action_type, status="running")
+            s.add(run)
+            s.flush()
+            return run.id
+    except IntegrityError:
+        raise AlreadyRun(f"{action_type} {key!r} already ran (or is running); not running it again.") from None
+
+
+def finish_run(run_id: int, status: Literal["done", "failed", "check_manually"], detail: dict | None = None) -> None:
+    """Record how a claimed run ended. A failed run stays claimed: you retry it on purpose, by hand."""
+    with session_scope() as s:
+        run = s.get(ActionRun, run_id)
+        run.status = status
+        run.detail = detail or {}
+        run.finished_at = utcnow()
+
+
+# --- API ---------------------------------------------------------------------
+
+
+class ModeBody(BaseModel):
+    mode: Mode
+
+
+class RuleBody(BaseModel):
+    rule: Rule
+
+
+@router.get("/api/permissions")
+def get_permissions() -> dict:
+    custom = [k for k in _saved_rules() if k not in CATALOG]
+    types = [
+        {
+            "type": t.key,
+            "label": t.label,
+            "group": t.group,
+            "rule": rule_for(t.key),
+            "default": t.default,
+            "locked": t.locked,
+            "note": t.note,
+        }
+        for t in CATALOG.values()
+    ] + [
+        {"type": k, "label": k, "group": "Other", "rule": rule_for(k), "default": "ask", "locked": False, "note": ""}
+        for k in sorted(custom)
+    ]
+    return {"mode": get_mode(), "paused": is_paused(), "types": types}
+
+
+@router.put("/api/permissions/mode")
+def put_mode(body: ModeBody) -> dict:
+    set_mode(body.mode)
+    return get_permissions()
+
+
+@router.put("/api/permissions/rules/{action_type}")
+def put_rule(action_type: str, body: RuleBody) -> dict:
+    try:
+        set_rule(action_type, body.rule)
+    except RuleChangeError as e:
+        raise HTTPException(400, str(e)) from None
+    return get_permissions()

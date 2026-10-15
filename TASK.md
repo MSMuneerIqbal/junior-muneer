@@ -184,7 +184,7 @@ Nothing is posted by the system in this phase: approved items are copy and paste
 - [x] **P2-02 Playbooks**
   - `playbooks/linkedin.md`, `facebook.md`, `instagram.md`, `x.md`: structure, length, hashtags, tone, red lines. You can edit them.
   - *Done when:* each is loaded and checked at startup, and a broken one gives a clear error.
-- [ ] **P2-03 Permission rules**
+- [x] **P2-03 Permission rules**
   - Action types (e.g. `linkedin.post`, `facebook.page.post`, `gmail.send`), each Ask / Auto / Deny; locked types; "outside content always Ask"; a global mode (ask everything · use my rules · pause); "run at most once".
   - *Done when:* strict tests cover every rule, including locked types and outside content.
 - [ ] **P2-04 Approval queue**

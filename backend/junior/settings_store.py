@@ -1,5 +1,6 @@
 """Your settings, stored in the database (the Settings page edits them)."""
 
+from copy import deepcopy
 from typing import Any
 
 from junior.db import Setting, session_scope
@@ -31,6 +32,9 @@ DEFAULTS: dict[str, Any] = {
     "helper_model": "",
     # Your profile (Profile page). Kept here, edited through /api/profile.
     "profile": {},
+    # Permission rules (/api/permissions): ask_all · rules, and your rule per action type.
+    "permission_mode": "rules",
+    "permission_rules": {},
 }
 # Voices that work both for spoken replies and in live calls. Marin and Cedar are
 # OpenAI's newest, most natural voices, so they come first.
@@ -63,7 +67,8 @@ def get_setting(key: str) -> Any:
         raise KeyError(f"Unknown setting {key!r}")
     with session_scope() as s:
         row = s.get(Setting, key)
-        return DEFAULTS[key] if row is None else row.value
+        # A copy, so changing the result never changes the defaults.
+        return deepcopy(DEFAULTS[key] if row is None else row.value)
 
 
 def set_setting(key: str, value: Any) -> None:

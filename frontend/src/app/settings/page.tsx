@@ -28,12 +28,20 @@ type ModelsView = {
   }[];
 };
 
+type Rule = "ask" | "auto" | "deny";
+type Permissions = {
+  mode: "ask_all" | "rules";
+  paused: boolean;
+  types: { type: string; label: string; group: string; rule: Rule; default: Rule; locked: boolean; note: string }[];
+};
+
 const SECTIONS = [
   { id: "profile", title: "Profile" },
   { id: "budget", title: "Budget" },
   { id: "models", title: "Models" },
   { id: "voice", title: "Voice" },
   { id: "calls", title: "Live calls" },
+  { id: "permissions", title: "Permissions" },
   { id: "advanced", title: "Advanced" },
 ] as const;
 
@@ -558,6 +566,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
         </Row>
       </Section>
 
+      <PermissionsSection />
       <AdvancedSection />
 
       {/* Save bar: appears when something changed. */}
@@ -595,6 +604,98 @@ function SettingsForm({ initial }: { initial: Settings }) {
         </div>
       </div>
     </div>
+  );
+}
+
+const RULE_LABEL: Record<Rule, string> = { ask: "Ask", auto: "Auto", deny: "Deny" };
+
+function PermissionsSection() {
+  const { data, mutate } = useSWR<Permissions>("/api/permissions", fetcher);
+  const [error, setError] = useState<string | null>(null);
+
+  async function change(path: string, body: object) {
+    setError(null);
+    try {
+      await mutate(send<Permissions>("PUT", path, body), { revalidate: false });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't save");
+    }
+  }
+
+  const groups = data ? [...new Set(data.types.map((t) => t.group))] : [];
+  return (
+    <Section
+      id="permissions"
+      title="Permissions"
+      description="What he may do on his own. Ask: waits for your click. Auto: runs by itself (still logged). Deny: never."
+    >
+      {data && (
+        <>
+          <Row
+            label="Mode"
+            hint={
+              data.paused
+                ? "Everything is paused right now (Today panel), so nothing runs until you resume."
+                : "Ask everything overrides your Auto rules. Pause everything is in the Today panel."
+            }
+          >
+            <Segmented
+              label="Permission mode"
+              value={data.mode}
+              onChange={(mode) => change("/api/permissions/mode", { mode })}
+              options={[
+                { value: "rules", label: "Use my rules", sub: "Each action follows its rule below" },
+                { value: "ask_all", label: "Ask everything", sub: "Every action waits for you" },
+              ]}
+            />
+          </Row>
+          {groups.map((group) => (
+            <Row key={group} label={group}>
+              <ul className="divide-y divide-line rounded-xl border border-line">
+                {data.types
+                  .filter((t) => t.group === group)
+                  .map((t) => (
+                    <li key={t.type} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3.5 py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm">{t.label}</p>
+                        {t.note && <p className="text-xs text-muted">{t.note}</p>}
+                      </div>
+                      {t.locked ? (
+                        <span title="Locked for your safety; it can't be changed." className="flex items-center gap-1.5">
+                          <Badge tone={t.rule === "deny" ? "warn" : "muted"}>{RULE_LABEL[t.rule]}</Badge>
+                          <span className="text-xs text-muted">🔒 locked</span>
+                        </span>
+                      ) : (
+                        <div role="radiogroup" aria-label={t.label} className="flex rounded-lg border border-line p-0.5">
+                          {(["ask", "auto", "deny"] as const).map((r) => (
+                            <button
+                              key={r}
+                              type="button"
+                              role="radio"
+                              aria-checked={t.rule === r}
+                              onClick={() => t.rule !== r && change(`/api/permissions/rules/${t.type}`, { rule: r })}
+                              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                                t.rule === r ? "bg-accent text-accent-fg" : "text-muted hover:bg-panel-2 hover:text-ink"
+                              }`}
+                            >
+                              {RULE_LABEL[r]}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </li>
+                  ))}
+              </ul>
+            </Row>
+          ))}
+          <p className="px-6 py-4 text-xs leading-relaxed text-muted">
+            Anything caused by outside content (emails, comments, pasted text, web pages) always waits for you,
+            whatever the rule. Copy-and-paste items (Upwork, Fiverr, LinkedIn comments, X) are never sent by him.
+            {error && <span className="mt-1 block text-danger">{error}</span>}
+          </p>
+        </>
+      )}
+    </Section>
   );
 }
 

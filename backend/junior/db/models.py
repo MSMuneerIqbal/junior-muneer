@@ -140,6 +140,21 @@ class AuditLog(Base):
     )
 
 
+class ActionRun(Base):
+    """"Run at most once": every outgoing action is claimed here by a unique key before it runs."""
+
+    __tablename__ = "action_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    key: Mapped[str] = mapped_column(String(200), unique=True)
+    action_type: Mapped[str] = mapped_column(String(100), index=True)
+    # running · done · failed · check_manually
+    status: Mapped[str] = mapped_column(String(20), default="running")
+    detail: Mapped[dict[str, Any]] = mapped_column(default=dict)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+
+
 class Setting(Base):
     __tablename__ = "settings"
 

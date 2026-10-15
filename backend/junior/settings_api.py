@@ -57,9 +57,13 @@ class SettingsUpdate(BaseModel):
         return v
 
 
+# Edited through their own pages and endpoints (/api/profile, /api/permissions).
+NOT_HERE = {"profile", "permission_mode", "permission_rules"}
+
+
 @router.get("/api/settings")
 def get_settings_api() -> dict:
-    return {k: v for k, v in all_settings().items() if k != "profile"}
+    return {k: v for k, v in all_settings().items() if k not in NOT_HERE}
 
 
 @router.patch("/api/settings")
@@ -70,7 +74,7 @@ def update_settings(body: SettingsUpdate) -> dict:
         if before[key] != value:
             set_setting(key, value)
             audit("setting", key, detail={"before": before[key], "after": value})
-    return {k: v for k, v in all_settings().items() if k != "profile"}
+    return {k: v for k, v in all_settings().items() if k not in NOT_HERE}
 
 
 @router.get("/api/voices")
