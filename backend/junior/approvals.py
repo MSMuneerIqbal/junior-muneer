@@ -342,6 +342,23 @@ def recent_titles(days: int = 30, limit: int = 30) -> list[str]:
         return [f"{t} ({p}, {st})" for t, p, st in s.execute(q)]
 
 
+def style_examples(platform: str, item_type: str, limit: int = 3) -> list[str]:
+    """Style memory: the texts you approved or posted on this platform, newest first.
+    They're the final texts, with your own edits, so the Writer copies your real voice."""
+    with session_scope() as s:
+        q = (
+            select(ApprovalItem.text)
+            .where(
+                ApprovalItem.platform == platform,
+                ApprovalItem.item_type == item_type,
+                ApprovalItem.status.in_(("approved", "posted")),
+            )
+            .order_by(ApprovalItem.decided_at.desc(), ApprovalItem.id.desc())
+            .limit(limit)
+        )
+        return list(s.scalars(q))
+
+
 def waiting_count() -> int:
     with session_scope() as s:
         return s.scalar(select(func.count()).select_from(ApprovalItem).where(ApprovalItem.status == "waiting")) or 0

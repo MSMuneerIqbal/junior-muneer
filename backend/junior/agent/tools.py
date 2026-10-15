@@ -365,21 +365,33 @@ async def write_draft_for(
         if idea is None:
             return f"NOT written: there's no idea {idea_id}."
         notes = f"From idea {idea.id}: {idea.title}. {idea.angle}\n{notes}".strip()
-    context.emit(
-        {
-            "type": "step",
-            "id": f"write-{len(context.approval_ids) + 1}-{len(context.pending_events)}",
-            "kind": "tool",
-            "label": f"Writing team: {playbook.label} {item_type}",
-            "status": "done",
-        }
-    )
+    from junior.approvals import style_examples
+
+    examples = style_examples(platform, item_type)
+    step = {
+        "type": "step",
+        "id": f"write-{len(context.approval_ids) + 1}-{len(context.pending_events)}",
+        "kind": "tool",
+        "label": f"Writing team: {playbook.label} {item_type}",
+        "status": "done",
+    }
+    if examples:
+        n = len(examples)
+        step["notes"] = [f"Style memory: copying the voice of your last {n} approved {item_type}{'s' if n > 1 else ''}"]
+    context.emit(step)
 
     async def ask(agent_name, prompt, output_type):
         return await context.helpers.run_structured(agent_name, prompt, context, output_type)
 
     team = WritingTeam(ask, context, step_prefix=f"team-{len(context.approval_ids) + 1}")
-    brief = Brief(playbook=playbook, item_type=item_type, request=request, notes=notes, their_text=their_text)
+    brief = Brief(
+        playbook=playbook,
+        item_type=item_type,
+        request=request,
+        notes=notes,
+        their_text=their_text,
+        examples=examples,
+    )
     try:
         result = await team.write(brief)
     except ProfileMissing as e:

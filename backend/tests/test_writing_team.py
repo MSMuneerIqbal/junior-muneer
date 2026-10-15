@@ -234,3 +234,37 @@ def test_lint_rules():
     # A comment isn't held to the post's word count, but shouldn't carry hashtags.
     assert lint("Nice work on this!", pb, "comment") == []
     assert any("doesn't need hashtags" in i for i in lint("Nice! #a #b", pb, "comment"))
+
+
+def test_style_memory_uses_your_approved_and_posted_texts(client, model):
+    from junior.approvals import create_item, edit_item, mark_posted, reject_item
+
+    old = create_item(kind="copy", platform="linkedin", item_type="post", text="Old draft")
+    edit_item(old.id, "Shipped it today. Small tools, clear logs, happy users. #MCP")  # your edit counts
+    mark_posted(old.id)
+    rejected = create_item(kind="copy", platform="linkedin", item_type="post", text="A rejected draft")
+    reject_item(rejected.id)
+    other = create_item(kind="copy", platform="x", item_type="post", text="An X post")
+    mark_posted(other.id)
+    waiting = create_item(kind="copy", platform="linkedin", item_type="post", text="Still waiting")
+    assert waiting.status == "waiting"
+
+    model.extend([*write_call(), draft(GOOD), review(9, True), human(GOOD), review(9, True), MANAGER_DONE, chunked_answer("ok")])
+    done = chat(client, "Write a LinkedIn post")[-1]
+
+    writer_prompt = prompts(model, "You are the Writer")[0]
+    assert "Texts I approved before (copy the voice, not the content)" in writer_prompt
+    assert "Shipped it today. Small tools, clear logs" in writer_prompt
+    for not_used in ("Old draft", "A rejected draft", "An X post", "Still waiting"):
+        assert not_used not in writer_prompt
+    step = next(s for s in done["steps"] if s["label"] == "Writing team: LinkedIn post")
+    assert step["notes"] == ["Style memory: copying the voice of your last 1 approved post"]
+
+
+def test_style_memory_keeps_the_newest_three():
+    from junior.approvals import create_item, mark_posted, style_examples
+
+    for n in range(5):
+        mark_posted(create_item(kind="copy", platform="linkedin", item_type="post", text=f"Post {n}").id)
+    assert style_examples("linkedin", "post") == ["Post 4", "Post 3", "Post 2"]
+    assert style_examples("linkedin", "comment") == []

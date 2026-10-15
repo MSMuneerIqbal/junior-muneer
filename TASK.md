@@ -202,7 +202,7 @@ Nothing is posted by the system in this phase: approved items are copy and paste
   - *Done when:* "write a LinkedIn post about X" in chat gives an approval card with a checked draft.
 - [x] **P2-08 Images**
   - Upload your own images and attach them to drafts; each draft comes with an image idea; Instagram drafts wait for an image.
-- [ ] **P2-09 Style memory**
+- [x] **P2-09 Style memory**
   - Approved and posted texts become examples for future drafts on that platform.
 - [ ] **P2-10 Social page**
   - Drafts, ideas, planned and posted items per platform.
