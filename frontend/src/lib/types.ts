@@ -95,6 +95,7 @@ export type Settings = {
   call_minutes_per_day: number;
   call_quality: "natural" | "economy";
   turn_taking: "patient" | "balanced" | "quick";
+  mic_type: "headset" | "laptop" | "off";
   main_model: string;
   helper_model: string;
 };

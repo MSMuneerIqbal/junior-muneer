@@ -40,6 +40,7 @@ def test_defaults(client):
         "call_minutes_per_day": 30,
         "call_quality": "natural",
         "turn_taking": "balanced",
+        "mic_type": "headset",
         "main_model": "",
         "helper_model": "",
     }

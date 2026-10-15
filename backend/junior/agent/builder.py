@@ -98,10 +98,13 @@ def chosen_model(spec: AgentSpec, router: ModelRouter) -> str:
 
 
 def build_agent(
-    spec: AgentSpec, router: ModelRouter, model_provider: ModelProvider
+    spec: AgentSpec,
+    router: ModelRouter,
+    model_provider: ModelProvider,
+    model_override: str | None = None,
 ) -> tuple[Agent[TurnContext], str]:
     """The SDK agent and the model name it uses."""
-    model_name = chosen_model(spec, router)
+    model_name = model_override or chosen_model(spec, router)
 
     def instructions(ctx: RunContextWrapper[TurnContext], _agent: Agent[TurnContext]) -> str:
         return render_instructions(spec, ctx.context.settings)

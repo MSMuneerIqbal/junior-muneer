@@ -24,6 +24,8 @@ DEFAULTS: dict[str, Any] = {
     "call_quality": "natural",
     # patient · balanced · quick: how soon he answers when you pause
     "turn_taking": "balanced",
+    # headset · laptop · off: noise reduction to suit your microphone in calls
+    "mic_type": "headset",
     # Text models (Settings -> Models). "" = the default from agents/models.toml.
     "main_model": "",
     "helper_model": "",
@@ -35,6 +37,7 @@ TTS_VOICES = (
 )
 NATURAL_VOICES = ("marin", "cedar")
 TURN_TAKING = {"patient": "low", "balanced": "auto", "quick": "high"}
+NOISE_REDUCTION = {"headset": "near_field", "laptop": "far_field", "off": None}
 # How he sounds. Used for spoken replies and live calls.
 ACCENTS = {
     "pakistani": (

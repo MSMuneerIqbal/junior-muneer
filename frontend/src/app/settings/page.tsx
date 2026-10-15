@@ -109,6 +109,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
         call_minutes_per_day: Number(form.call_minutes_per_day),
         call_quality: form.call_quality,
         turn_taking: form.turn_taking,
+        mic_type: form.mic_type,
         main_model: form.main_model,
         helper_model: form.helper_model,
       });
@@ -254,6 +255,20 @@ function SettingsForm({ initial }: { initial: Settings }) {
             <option value="patient">Patient: waits while you think</option>
             <option value="balanced">Balanced (recommended)</option>
             <option value="quick">Quick: answers as soon as you pause</option>
+          </select>
+        </Field>
+        <Field
+          label="Microphone"
+          hint="Cleans up background noise in calls to suit your microphone."
+        >
+          <select
+            value={form.mic_type}
+            onChange={(e) => setForm({ ...form, mic_type: e.target.value as Settings["mic_type"] })}
+            className={input}
+          >
+            <option value="headset">Headset or earphones</option>
+            <option value="laptop">Laptop or desk microphone</option>
+            <option value="off">Off (no noise reduction)</option>
           </select>
         </Field>
         <Field

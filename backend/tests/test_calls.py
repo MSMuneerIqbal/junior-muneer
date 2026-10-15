@@ -463,3 +463,10 @@ def test_economy_quality_and_patient_turn_taking():
     session = gw.sessions[0]
     assert session["model"] == "gpt-realtime-2.1-mini"
     assert session["audio"]["input"]["turn_detection"]["eagerness"] == "low"
+
+
+@pytest.mark.parametrize(("mic", "expected"), [("headset", {"type": "near_field"}), ("laptop", {"type": "far_field"}), ("off", None)])
+def test_microphone_setting_picks_noise_reduction(mic, expected):
+    set_setting("mic_type", mic)
+    _, _, gw = run_call([])
+    assert gw.sessions[0]["audio"]["input"]["noise_reduction"] == expected

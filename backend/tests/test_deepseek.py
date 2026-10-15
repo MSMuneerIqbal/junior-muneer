@@ -96,3 +96,67 @@ def test_choices_without_a_deepseek_key(monkeypatch):
         data = client.get("/api/models/choices").json()
     flash = next(c for c in data["choices"] if c["model"] == "deepseek:deepseek-flash")
     assert flash["ready"] is False and flash["key_env"] == "DEEPSEEK_API_KEY"
+
+
+class StalledModel(ScriptedModel):
+    """Like a busy DeepSeek: accepts the request, then sends nothing."""
+
+    def __init__(self, words_first: bool = False):
+        super().__init__()
+        self.words_first = words_first
+
+    async def stream_response(self, *args, **kwargs):
+        import asyncio
+
+        if self.words_first:  # send the start of an answer, then go silent
+            for event in chunked_answer("Let me think").stream_events:
+                yield event
+                if getattr(event, "type", "") == "response.output_text.delta":
+                    break
+        await asyncio.sleep(3600)
+        yield None  # never reached
+
+
+def test_busy_deepseek_falls_back_to_openai(monkeypatch):
+    import junior.chat.service as service
+
+    monkeypatch.setattr(service, "FIRST_WORDS_SECONDS", 0.3)
+    openai_model = ScriptedModel([chunked_answer("Hi from OpenAI!")])
+    used = []
+
+    def provider(name):
+        used.append(name)
+        return StalledModel() if name.startswith("deepseek:") else openai_model
+
+    with TestClient(create_app(model_provider=lambda: provider)) as client:
+        client.patch("/api/settings", json={"main_model": "deepseek:deepseek-flash"})
+        events = chat(client, "hi")
+        done = events[-1]
+        assert done["type"] == "done" and done["text"] == "Hi from OpenAI!"
+        assert used == ["deepseek:deepseek-flash", "gpt-6.1-sol"]
+        note = next(e for e in events if e["type"] == "step" and e.get("name") == "fallback")
+        assert note["label"] == "DeepSeek is busy right now, so gpt-6.1-sol answered"
+        saved = client.get(f"/api/conversations/{done['conversation_id']}/messages").json()[1]
+        assert saved["steps"][0]["name"] == "fallback"  # shows in Show work
+
+
+def test_deepseek_stalling_mid_answer_gives_a_clear_error(monkeypatch):
+    import junior.chat.service as service
+
+    monkeypatch.setattr(service, "STALL_SECONDS", 0.3)
+    with TestClient(
+        create_app(model_provider=lambda: (lambda name: StalledModel(words_first=True)))
+    ) as client:
+        client.patch("/api/settings", json={"main_model": "deepseek:deepseek-flash"})
+        events = chat(client, "hi")
+    assert events[-1]["type"] == "error"
+    assert "stopped responding mid-answer" in events[-1]["message"]
+
+
+def test_openai_is_never_cut_off_by_the_deadline(monkeypatch):
+    import junior.chat.service as service
+
+    monkeypatch.setattr(service, "FIRST_WORDS_SECONDS", 0.0001)
+    model = ScriptedModel([chunked_answer("fine")])
+    with TestClient(create_app(model_provider=lambda: (lambda n: model))) as client:
+        assert chat(client, "hi")[-1]["type"] == "done"

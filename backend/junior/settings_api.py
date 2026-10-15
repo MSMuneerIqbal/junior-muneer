@@ -31,6 +31,7 @@ class SettingsUpdate(BaseModel):
     call_minutes_per_day: int | None = Field(default=None, ge=0, le=600)
     call_quality: Literal["natural", "economy"] | None = None
     turn_taking: Literal["patient", "balanced", "quick"] | None = None
+    mic_type: Literal["headset", "laptop", "off"] | None = None
     main_model: str | None = Field(default=None, max_length=100)
     helper_model: str | None = Field(default=None, max_length=100)
 
@@ -88,7 +89,7 @@ MODEL_LABELS = {
     "gpt-6-sol": "OpenAI GPT-6 Sol",
     "gpt-6-luna": "OpenAI GPT-6 Luna (fast, cheap)",
     "deepseek:deepseek-flash": "DeepSeek Flash (very cheap)",
-    "deepseek:deepseek-v4-pro": "DeepSeek V4 Pro",
+    "deepseek:deepseek-v4-pro": "DeepSeek V4 Pro (slow: thinks ~25 s before answering)",
 }
 
 

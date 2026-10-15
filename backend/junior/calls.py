@@ -40,7 +40,7 @@ from junior.costs import BudgetExceeded, budget_left
 from junior.db import Conversation, Message, Usage, session_scope
 from junior.db.models import utcnow
 from junior.models import get_router
-from junior.settings_store import ACCENTS, TURN_TAKING, all_settings
+from junior.settings_store import ACCENTS, NOISE_REDUCTION, TURN_TAKING, all_settings
 from junior.timeutil import start_of_today_utc, zone
 from junior.voice import TRANSCRIBE_PROMPT, average_logprob, is_noise
 
@@ -248,7 +248,12 @@ class CallManager:
                         "interrupt_response": True,
                         "create_response": True,
                     },
-                    "noise_reduction": {"type": "near_field"},
+                    # Noise reduction suited to your microphone (Settings).
+                    "noise_reduction": (
+                        {"type": NOISE_REDUCTION[settings.get("mic_type", "headset")]}
+                        if NOISE_REDUCTION.get(settings.get("mic_type", "headset"))
+                        else None
+                    ),
                 },
                 "output": {"voice": settings["tts_voice"], "speed": float(settings["tts_speed"])},
             },
