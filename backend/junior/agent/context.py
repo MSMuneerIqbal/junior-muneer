@@ -30,6 +30,8 @@ class TurnContext:
     outside_content_seen: bool = False
     # Events from tools (e.g. "memory updated") for the chat to show.
     pending_events: list[dict[str, Any]] = field(default_factory=list)
+    # Your message this turn, word for word (the writing team writes about exactly this).
+    user_text: str = ""
     # The paste behind this turn, if any: drafts made from it link back to it.
     paste: dict[str, Any] | None = None
     # Approval items made in this turn; shown as cards under the answer.

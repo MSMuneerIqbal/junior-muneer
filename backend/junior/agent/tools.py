@@ -391,6 +391,7 @@ async def write_draft_for(
         notes=notes,
         their_text=their_text,
         examples=examples,
+        your_words=context.user_text,
     )
     try:
         result = await team.write(brief)
@@ -508,7 +509,10 @@ def _manager_brief(context: TurnContext, request: str) -> str:
     from junior.profile import load_profile
 
     platforms = load_profile().platforms or ["linkedin"]
-    parts = [f"## Request from {context.settings['user_name']}\n{request}", "## Platforms they use\n" + ", ".join(platforms)]
+    parts = [f"## Request from {context.settings['user_name']}\n{request}"]
+    if context.user_text and context.user_text.strip() != request.strip():
+        parts.append(f"## Their message, word for word\n{context.user_text}")
+    parts.append("## Platforms they use\n" + ", ".join(platforms))
     recent = recent_titles(days=30)
     parts.append(
         "## Drafted or posted in the last 30 days (don't repeat)\n"

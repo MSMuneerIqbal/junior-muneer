@@ -206,7 +206,9 @@ class ChatService:
         yield {"type": "user_message", "id": user_message_id, "conversation_id": conversation_id, "text": text}
 
         settings = all_settings()
-        context = TurnContext(conversation_id=conversation_id, settings=settings, paste=saved_paste)
+        context = TurnContext(
+            conversation_id=conversation_id, settings=settings, paste=saved_paste, user_text=text
+        )
         try:
             budget = budget_left(settings)
             provider = self.model_provider()

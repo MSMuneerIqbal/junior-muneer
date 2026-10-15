@@ -63,16 +63,27 @@ class Brief:
     # Someone else's text you're answering (a pasted post, job or message).
     their_text: str = ""
     examples: list[str] = field(default_factory=list)  # style memory (P2-09)
+    # Your message, word for word: the main source of what the text says.
+    your_words: str = ""
 
     def block(self) -> str:
         parts = [
-            f"## About me (the ONLY source of facts about me)\n{profile_text()}",
-            f"## {self.playbook.label} playbook\n{self.playbook.text}",
             f"## What to write\n{KIND_WORDS.get(self.item_type, 'a ' + self.item_type)} for "
             f"{self.playbook.label}.\nRequest: {self.request}",
         ]
+        if self.your_words and self.your_words.strip() != self.request.strip():
+            parts.append(
+                "## What I asked for, in my own words (THE MAIN SOURCE: write about exactly this; "
+                f"facts I give here are true)\n{self.your_words}"
+            )
         if self.notes:
             parts.append(f"## Notes\n{self.notes}")
+        parts += [
+            "## About me (BACKGROUND ONLY: use it just where it fits the topic above; don't bring in "
+            "projects or achievements the topic doesn't need, and never invent anything beyond it)\n"
+            + profile_text(),
+            f"## {self.playbook.label} playbook\n{self.playbook.text}",
+        ]
         if self.their_text:
             fence = "=" * 10
             parts.append(

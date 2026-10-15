@@ -268,3 +268,36 @@ def test_style_memory_keeps_the_newest_three():
         mark_posted(create_item(kind="copy", platform="linkedin", item_type="post", text=f"Post {n}").id)
     assert style_examples("linkedin", "post") == ["Post 4", "Post 3", "Post 2"]
     assert style_examples("linkedin", "comment") == []
+
+
+def test_your_own_words_are_the_main_source_and_reach_the_writer_unchanged(client, model):
+    message = (
+        "Write a LinkedIn post about attending the Lahore AI meetup yesterday. "
+        "I met 3 founders, talked about voice agents, and learned that Urdu support matters for local businesses."
+    )
+    model.extend(
+        [
+            # Junior Muneer and the manager both shorten it; the team still gets it word for word.
+            [function_call("social_media", {"request": "post about the AI meetup"}, call_id="s1")],
+            [function_call("write_draft", {"platform": "linkedin", "item_type": "post", "request": "the AI meetup"}, call_id="w1")],
+            draft("Yesterday I went to the Lahore AI meetup and met 3 founders."),
+            review(9, True),
+            human("Yesterday I went to the Lahore AI meetup and met 3 founders."),
+            review(9, True),
+            MANAGER_DONE,
+            chunked_answer("Done."),
+        ]
+    )
+    chat(client, message)
+
+    writer = prompts(model, "You are the Writer")[0]
+    assert "THE MAIN SOURCE: write about exactly this" in writer
+    assert message in writer
+    # Your words come before the profile, which is background only.
+    assert writer.index(message) < writer.index("## About me (BACKGROUND ONLY")
+    checker = prompts(model, "You are the Checker")[0]
+    assert message in checker  # so your facts aren't flagged as invented
+    manager_brief = next(
+        c.input[0]["content"] for c in model.calls if "Social Media Manager. Junior Muneer" in (c.system_instructions or "")
+    )
+    assert f"## Their message, word for word\n{message}" in manager_brief
