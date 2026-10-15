@@ -237,7 +237,7 @@ Read-only: these agents never post or send anything. News pages are outside cont
   - Builds the digest: new models and releases · benchmarks and who's on top, by field (coding, reasoning, agents, voice, image and video, open models) · agents and tools · business moves. Every item has a date and a source link.
   - Answers questions from the digest; web search only for what the digest doesn't cover, and only from official sites first.
   - *Done when:* a digest from sample feeds has the right sections and links, and nothing older than 15 days.
-- [ ] **P2b-03 Social News Agent** (`agents/social_news_agent.md`)
+- [x] **P2b-03 Social News Agent** (`agents/social_news_agent.md`)
   - Pakistan only: top stories · trending online (Google Trends Pakistan) · tech, internet and freelancing · economy that affects you. Newest first, neutral, no political opinions.
   - *Done when:* a digest from sample feeds has the right sections and links, and news from other countries is left out.
 - [ ] **P2b-04 Junior Muneer sends news questions to them**
