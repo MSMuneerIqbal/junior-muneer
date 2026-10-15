@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { fetcher, send } from "@/lib/api";
 import { useWaitingCount } from "@/lib/approvals";
-import { PAUSE_KEY, USAGE_KEY } from "@/lib/keys";
+import { PAUSE_KEY, PERMISSIONS_KEY, USAGE_KEY } from "@/lib/keys";
 import type { UsageToday } from "@/lib/types";
 
 function money(n: number) {
@@ -61,6 +61,7 @@ function Spend() {
 
 export function PauseButton() {
   const { data, mutate } = useSWR<{ paused: boolean }>(PAUSE_KEY, fetcher);
+  const { mutate: mutateGlobal } = useSWRConfig();
   const [error, setError] = useState<string | null>(null);
   const paused = data?.paused ?? false;
 
@@ -71,6 +72,7 @@ export function PauseButton() {
         optimisticData: { paused: !paused },
         rollbackOnError: true,
       });
+      void mutateGlobal(PERMISSIONS_KEY); // the Permissions menu shows Pause too
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
     }
