@@ -17,7 +17,7 @@ On top of the rules:
       retry or a double click can never send it twice.
 
     GET /api/permissions                   mode and every action type with its rule
-    PUT /api/permissions/mode   {"mode"}   ask_all · rules
+    PUT /api/permissions/mode   {"mode"}   rules (Auto) · ask_all (Manual) · plan
     PUT /api/permissions/rules/{type}  {"rule"}   change one rule (refused when locked)
 """
 
@@ -38,9 +38,11 @@ from junior.settings_store import get_setting, set_setting
 router = APIRouter()
 
 Rule = Literal["ask", "auto", "deny"]
-Mode = Literal["ask_all", "rules"]
+# rules = "Auto" (your rules decide) · ask_all = "Manual" (everything asks)
+# plan = "Plan" (he shows a plan first; nothing is drafted or queued until you switch mode)
+Mode = Literal["rules", "ask_all", "plan"]
 RULES: tuple[Rule, ...] = ("ask", "auto", "deny")
-MODES: tuple[Mode, ...] = ("ask_all", "rules")
+MODES: tuple[Mode, ...] = ("rules", "ask_all", "plan")
 
 _ACTION_TYPE = re.compile(r"^[a-z0-9_]+(\.[a-z0-9_]+)+$")
 
@@ -174,12 +176,22 @@ def decide(action_type: str, *, from_outside: bool) -> Decision:
     can_always_allow = not locked and not from_outside
     if from_outside:
         return Decision("ask", "It comes from outside content, so it always waits for you.", False, held)
-    if rule == "auto" and get_mode() == "ask_all":
-        return Decision("ask", "Ask everything is on.", can_always_allow, held)
+    if rule == "auto" and get_mode() in ("ask_all", "plan"):
+        return Decision("ask", "Manual mode: everything waits for you.", can_always_allow, held)
     if rule == "auto":
         return Decision("auto", "Your rule is Auto.", False, held)
     why = "it's locked to Ask" if locked else "your rule is Ask"
     return Decision("ask", f"Waits for you: {why}.", can_always_allow, held)
+
+
+def plan_mode_refusal() -> str | None:
+    """In Plan mode nothing is drafted or queued: he shows the plan and waits."""
+    if get_mode() == "plan":
+        return (
+            "NOT done: Plan mode is on. Show your plan in a few short steps instead, and tell "
+            "them to switch the mode (under the message box) to Auto or Manual to go ahead."
+        )
+    return None
 
 
 # --- Run at most once -------------------------------------------------------

@@ -30,7 +30,7 @@ type ModelsView = {
 
 type Rule = "ask" | "auto" | "deny";
 type Permissions = {
-  mode: "ask_all" | "rules";
+  mode: "ask_all" | "rules" | "plan";
   paused: boolean;
   types: { type: string; label: string; group: string; rule: Rule; default: Rule; locked: boolean; note: string }[];
 };
@@ -636,7 +636,7 @@ function PermissionsSection() {
             hint={
               data.paused
                 ? "Everything is paused right now (Today panel), so nothing runs until you resume."
-                : "Ask everything overrides your Auto rules. Pause everything is in the Today panel."
+                : "The same modes as the menu under the message box. Pause everything is there too."
             }
           >
             <Segmented
@@ -644,8 +644,9 @@ function PermissionsSection() {
               value={data.mode}
               onChange={(mode) => change("/api/permissions/mode", { mode })}
               options={[
-                { value: "rules", label: "Use my rules", sub: "Each action follows its rule below" },
-                { value: "ask_all", label: "Ask everything", sub: "Every action waits for you" },
+                { value: "rules", label: "Auto", sub: "Each action follows its rule below" },
+                { value: "ask_all", label: "Manual", sub: "Every action waits for you" },
+                { value: "plan", label: "Plan", sub: "A plan first; nothing is done until you switch" },
               ]}
             />
           </Row>

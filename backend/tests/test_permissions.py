@@ -131,7 +131,7 @@ def test_ask_everything_turns_auto_into_ask(client):
     set_rule("linkedin.post", "auto")
     set_mode("ask_all")
     d = decide("linkedin.post", from_outside=False)
-    assert d.rule == "ask" and "Ask everything" in d.reason
+    assert d.rule == "ask" and "Manual mode" in d.reason
     assert decide("system.payment", from_outside=False).rule == "deny"  # Deny still wins
     set_mode("rules")
     assert decide("linkedin.post", from_outside=False).rule == "auto"
@@ -185,3 +185,24 @@ def test_api_lists_and_changes_rules(client):
     names = [a["name"] for a in client.get("/api/activity?kind=setting").json()]
     assert "permission_rule" in names and "permission_mode" in names
     assert "permission_rules" not in client.get("/api/settings").json()
+
+
+def test_plan_mode_shows_a_plan_and_queues_nothing(client):
+    from junior.agent.context import TurnContext
+    from junior.agent.tools import add_to_approvals_for
+    from junior.settings_store import all_settings
+
+    set_mode("plan")
+    set_rule("linkedin.post", "auto")
+    assert decide("linkedin.post", from_outside=False).rule == "ask"  # like Manual for actions
+    context = TurnContext(conversation_id=None, settings=all_settings())
+    assert add_to_approvals_for(context, "linkedin", "post", "Hello").startswith("NOT done: Plan mode is on")
+    assert client.get("/api/approvals/count").json() == {"waiting": 0}
+
+    from junior.agent.builder import render_instructions
+    from junior.registry import load_registry
+
+    text = render_instructions(load_registry().get("junior_muneer"), all_settings())
+    assert "PLAN MODE IS ON" in text
+    set_mode("rules")
+    assert "PLAN MODE IS ON" not in render_instructions(load_registry().get("junior_muneer"), all_settings())

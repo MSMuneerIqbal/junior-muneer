@@ -265,7 +265,10 @@ def add_to_approvals_for(
 ) -> str:
     """Queue a copy-and-paste draft. Nothing is ever sent by the system."""
     from junior.approvals import ApprovalError, create_item
+    from junior.permissions import plan_mode_refusal
 
+    if refusal := plan_mode_refusal():
+        return refusal
     try:
         item = create_item(
             kind="copy",

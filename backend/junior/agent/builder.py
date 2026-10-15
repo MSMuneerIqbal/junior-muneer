@@ -30,6 +30,12 @@ PAUSED_NOTE = (
     "and say they can resume with the Pause button."
 )
 RUNNING_NOTE = "Status: running normally."
+PLAN_NOTE = (
+    "PLAN MODE IS ON: for anything beyond a simple answer (writing drafts, queueing items, "
+    "multi-step tasks), first reply with a short numbered plan of what you'd do, and ask "
+    "{name} to switch the mode under the message box to Auto or Manual to go ahead. Don't "
+    "draft or queue anything yet. Chatting and answering questions work as usual."
+)
 
 
 class NoApiKeyError(RuntimeError):
@@ -79,8 +85,15 @@ def render_instructions(spec: AgentSpec, s: dict) -> str:
         now=local_now_text(s["timezone"]),
         memories=memories_for_prompt() if "memory" in spec.tools else "",
         profile=profile_for_chat() if "{{profile}}" in spec.instructions else "",
-        status=PAUSED_NOTE.format(name=s["user_name"]) if s.get("paused") else RUNNING_NOTE,
+        status=_status(s),
     )
+
+
+def _status(s: dict) -> str:
+    notes = [PAUSED_NOTE if s.get("paused") else RUNNING_NOTE]
+    if s.get("permission_mode") == "plan":
+        notes.append(PLAN_NOTE)
+    return "\n- ".join(n.format(name=s["user_name"]) for n in notes)
 
 
 # Agents whose model you can choose in Settings -> Models, and the setting for each.
