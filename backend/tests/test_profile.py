@@ -42,3 +42,30 @@ def test_save_and_use_profile(client):
 
 def test_too_long_is_refused(client):
     assert client.put("/api/profile", json={"headline": "x" * 201}).status_code == 422
+
+
+def test_junior_muneer_knows_your_profile_in_chat(client):
+    from fake_ai import ScriptedModel, chunked_answer
+
+    client.put(
+        "/api/profile",
+        json={"headline": "Agentic AI Engineer", "proof": ["MS Data Science (in progress)"],
+              "email": "me@example.com", "location": "Lahore, Pakistan", "languages": ["English", "Urdu"]},
+    )
+    model = ScriptedModel([chunked_answer("Sure!")])
+    with TestClient(create_app(model_provider=lambda: (lambda n: model))) as c:
+        with c.websocket_connect("/ws/chat") as ws:
+            ws.send_json({"type": "message", "conversation_id": None, "text": "What should I study next?"})
+            while ws.receive_json()["type"] not in ("done", "error"):
+                pass
+    prompt = model.last_call.system_instructions
+    assert "Who Muneer is (their profile)" in prompt
+    assert "What I do: Agentic AI Engineer" in prompt and "MS Data Science" in prompt
+    assert "Location: Lahore, Pakistan" in prompt and "Languages: English, Urdu" in prompt
+    assert "me@example.com" not in prompt  # contact details stay out of prompts
+
+
+def test_without_a_profile_he_suggests_filling_it(client):
+    from junior.profile import profile_for_chat
+
+    assert "Profile page" in profile_for_chat()

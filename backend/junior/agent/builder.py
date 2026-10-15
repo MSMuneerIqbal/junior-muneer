@@ -9,6 +9,7 @@ from junior.agent.context import TurnContext
 from junior.agent.tools import build_tools
 from junior.config import get_settings
 from junior.memories import memories_for_prompt
+from junior.profile import profile_for_chat
 from junior.models import ModelRouter, get_router
 from junior.registry import AgentSpec
 from junior.timeutil import local_now_text
@@ -77,6 +78,7 @@ def render_instructions(spec: AgentSpec, s: dict) -> str:
         timezone=s["timezone"],
         now=local_now_text(s["timezone"]),
         memories=memories_for_prompt() if "memory" in spec.tools else "",
+        profile=profile_for_chat() if "{{profile}}" in spec.instructions else "",
         status=PAUSED_NOTE.format(name=s["user_name"]) if s.get("paused") else RUNNING_NOTE,
     )
 

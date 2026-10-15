@@ -28,6 +28,9 @@ class Profile(BaseModel):
     hashtags: list[str] = Field(default_factory=list)
     platforms: list[str] = Field(default_factory=list)  # where you post
     links: list[str] = Field(default_factory=list)  # portfolio, GitHub, Upwork...
+    email: str = Field(default="", max_length=200)  # your own address (used from the email phase)
+    location: str = Field(default="", max_length=200)
+    languages: list[str] = Field(default_factory=list)
 
     def is_empty(self) -> bool:
         return not (self.headline or self.about or self.services or self.proof)
@@ -59,6 +62,10 @@ def profile_text(name: str | None = None) -> str:
         return "\n".join(f"- {i}" for i in items)
 
     parts = [f"Name: {name}"]
+    if p.location:
+        parts.append(f"Location: {p.location}")
+    if p.languages:
+        parts.append("Languages: " + ", ".join(p.languages))
     if p.headline:
         parts.append(f"What I do: {p.headline}")
     if p.about:
@@ -100,6 +107,7 @@ def put_profile(body: Profile) -> Profile:
             "avoid": _clean(body.avoid),
             "hashtags": _clean(body.hashtags),
             "links": _clean(body.links),
+            "languages": _clean(body.languages),
             "platforms": [p for p in body.platforms if p in PLATFORM_KEYS],
         }
     )
@@ -108,3 +116,11 @@ def put_profile(body: Profile) -> Profile:
     if changed:
         audit("setting", "profile", detail={"changed": changed})
     return cleaned
+
+
+def profile_for_chat() -> str:
+    """Your profile for Junior Muneer's own instructions, so he knows you in every chat."""
+    try:
+        return profile_text()
+    except ProfileMissing:
+        return "(Not filled in yet. If it matters, suggest filling in the Profile page.)"

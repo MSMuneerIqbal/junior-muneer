@@ -18,6 +18,9 @@ type Profile = {
   hashtags: string[];
   platforms: string[];
   links: string[];
+  email: string;
+  location: string;
+  languages: string[];
 };
 
 const PLATFORMS = [
@@ -145,6 +148,20 @@ function ProfileForm({ initial }: { initial: Profile }) {
         </Field>
         <Field label="Links" hint="Portfolio, GitHub, Upwork, LinkedIn… one per line.">
           <Lines label="Links" value={form.links} onChange={(v) => set("links", v)} rows={3} />
+        </Field>
+      </Section>
+
+      <Section title="Contact" description="Kept for later (the email phase uses your address). Not put into his prompts.">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Email">
+            <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className={input} />
+          </Field>
+          <Field label="Location">
+            <input value={form.location} onChange={(e) => set("location", e.target.value)} className={input} />
+          </Field>
+        </div>
+        <Field label="Languages" hint="One per line, e.g. “Urdu (native)”.">
+          <Lines label="Languages" value={form.languages} onChange={(v) => set("languages", v)} rows={2} />
         </Field>
       </Section>
 
