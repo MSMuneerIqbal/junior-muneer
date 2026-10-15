@@ -208,7 +208,7 @@ Nothing is posted by the system in this phase: approved items are copy and paste
   - Drafts, ideas, planned and posted items per platform.
 - [x] **P2-11 Planned posts**
   - Pick a day and time for a draft; the scheduler reminds you then (real posting comes in phase 3).
-- [ ] **P2-12 Tests + your acceptance test + push**
+- [x] **P2-12 Tests + your acceptance test + push** (accepted 2026-10-15, after the "write about exactly my topic" fix)
   - Automated tests all pass (backend, and 30 end-to-end tests on desktop and phone).
   - **Your acceptance test** (about 20 minutes, a few cents). Start the app with `start.bat`, then:
     1. **Profile:** open Profile and check it's right (it's the only source of facts for every post).
