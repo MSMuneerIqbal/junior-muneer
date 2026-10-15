@@ -407,3 +407,26 @@ def test_he_says_still_looking_while_a_slow_search_runs(monkeypatch):
     # The real answer still comes after the search.
     last = [e["type"] for e in gw.conn.sent][-2:]
     assert last == ["conversation.item.create", "response.create"]
+
+
+def test_roman_urdu_replies_are_saved_in_urdu_script():
+    model = ScriptedModel([chunked_answer("وعلیکم السلام، Muneer! کیسے ہو؟")])
+    call, _, _ = run_call(
+        [heard("السلام علیکم"), said("Wa'alaikum assalam, Muneer! Kaise ho?"), usage_event()],
+        model,
+    )
+    with session_scope() as s:
+        answer = s.scalars(
+            select(Message).where(Message.conversation_id == call.conversation_id, Message.role == "assistant")
+        ).one()
+    assert answer.content == "وعلیکم السلام، Muneer! کیسے ہو؟"
+    assert "Rewrite" not in model.calls[0].input[0]["content"]  # only the text is sent
+    assert model.calls[0].input[0]["content"] == "Wa'alaikum assalam, Muneer! Kaise ho?"
+
+
+def test_english_replies_are_left_alone():
+    model = ScriptedModel()  # no model call expected
+    call, _, _ = run_call([heard("Hello there"), said("Hi Muneer! How are you?")], model)
+    assert model.calls == ()
+    with session_scope() as s:
+        assert s.scalars(select(Message.content).where(Message.role == "assistant")).one() == "Hi Muneer! How are you?"

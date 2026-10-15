@@ -118,81 +118,94 @@ export function CallView({ onClose }: { onClose: (conversationId: number | null)
         )}
       </header>
 
-      <div className="relative flex flex-col items-center px-4">
-        <Orb
-          mic={call.micStream}
-          remote={call.remoteStream}
-          activity={call.activity}
-          muted={call.muted}
-        />
-        <p
-          role="status"
-          className="mt-1 font-mono text-xs tracking-[0.3em] text-teal-200/90 uppercase"
-        >
-          {status}
-          {(call.status === "connecting" || (live && ["thinking", "checking"].includes(call.activity))) && (
-            <span className="animate-pulse">…</span>
-          )}
-        </p>
-        {call.error && (
-          <p className="mt-2 max-w-md text-center text-sm text-rose-300">{call.error}</p>
-        )}
-      </div>
-
-      <div
-        ref={transcript}
-        className="relative mt-4 min-h-0 flex-1 overflow-y-auto px-4"
-        aria-label="Live transcript"
-        style={{ maskImage: "linear-gradient(transparent, black 12%, black 88%, transparent)" }}
-      >
-        <div className="mx-auto flex max-w-2xl flex-col gap-3 py-6">
-          {call.lines.map((l) => (
-            <div key={l.id} className={`flex ${l.who === "you" ? "justify-end" : ""}`}>
-              <p
-                dir="auto"
-                className={`max-w-[85%] rounded-2xl border px-4 py-2 backdrop-blur ${
-                  l.who === "you"
-                    ? "border-violet-300/20 bg-violet-400/10"
-                    : "border-teal-300/20 bg-teal-400/10"
-                } ${l.final ? "" : "opacity-70"} ${l.ignored ? "opacity-40" : ""}`}
-                title={l.ignored ? "Sounded like background noise, so he didn't reply" : undefined}
-              >
-                {l.text}
-                {l.ignored && <span className="ml-2 text-xs text-slate-400">(noise?)</span>}
-              </p>
-            </div>
-          ))}
-          {live && !call.lines.length && (
-            <p className="text-center text-sm text-slate-400">
-              Say hello. Speak Urdu or English; you can interrupt him any time.
-            </p>
+      {/* Left: the glowing orb and controls. Right: the conversation. Stacked on phones. */}
+      <div className="relative flex min-h-0 flex-1 flex-col md:flex-row">
+        <section className="flex flex-1 flex-col items-center justify-center px-4 md:w-[55%] md:flex-none">
+          <Orb
+            mic={call.micStream}
+            remote={call.remoteStream}
+            activity={call.activity}
+            muted={call.muted}
+          />
+          <p
+            role="status"
+            className="mt-1 font-mono text-xs tracking-[0.3em] text-teal-200/90 uppercase"
+          >
+            {status}
+            {(call.status === "connecting" ||
+              (live && ["thinking", "checking"].includes(call.activity))) && (
+              <span className="animate-pulse">…</span>
+            )}
+          </p>
+          {call.error && (
+            <p className="mt-2 max-w-md text-center text-sm text-rose-300">{call.error}</p>
           )}
           {call.status === "ended" && (
-            <p className="text-center text-sm text-slate-400">Saved in your chats.</p>
+            <p className="mt-3 text-center text-sm text-slate-400 md:hidden">
+              Saved in your chats. Tap Close to read it.
+            </p>
           )}
-        </div>
-      </div>
+          {(live || call.status === "connecting") && (
+            <div className="flex items-center justify-center gap-5 pt-6 pb-4">
+              <button
+                onClick={call.toggleMute}
+                disabled={!live}
+                aria-pressed={call.muted}
+                className="h-14 w-14 rounded-full border border-white/20 bg-white/5 text-xl backdrop-blur hover:bg-white/10 disabled:opacity-40"
+                aria-label={call.muted ? "Unmute" : "Mute"}
+                title={call.muted ? "Unmute" : "Mute"}
+              >
+                {call.muted ? "🔇" : "🎙"}
+              </button>
+              <button
+                onClick={() => void call.end()}
+                className="h-14 rounded-full bg-rose-500 px-8 text-sm font-semibold tracking-wide text-white shadow-[0_0_30px_rgba(244,63,94,0.45)] hover:bg-rose-400"
+              >
+                End call
+              </button>
+            </div>
+          )}
+        </section>
 
-      {(live || call.status === "connecting") && (
-        <footer className="relative flex items-center justify-center gap-5 px-4 pt-2 pb-8">
-          <button
-            onClick={call.toggleMute}
-            disabled={!live}
-            aria-pressed={call.muted}
-            className="h-14 w-14 rounded-full border border-white/20 bg-white/5 text-xl backdrop-blur hover:bg-white/10 disabled:opacity-40"
-            aria-label={call.muted ? "Unmute" : "Mute"}
-            title={call.muted ? "Unmute" : "Mute"}
+        <section className="hidden min-h-0 flex-1 flex-col border-l border-white/10 bg-black/25 backdrop-blur-sm md:flex">
+          <p className="px-5 pt-4 pb-1 font-mono text-[11px] tracking-[0.3em] text-slate-400 uppercase">
+            Conversation
+          </p>
+          <div
+            ref={transcript}
+            className="min-h-0 flex-1 overflow-y-auto px-5"
+            aria-label="Live transcript"
+            style={{ maskImage: "linear-gradient(transparent, black 6%, black 94%, transparent)" }}
           >
-            {call.muted ? "🔇" : "🎙"}
-          </button>
-          <button
-            onClick={() => void call.end()}
-            className="h-14 rounded-full bg-rose-500 px-8 text-sm font-semibold tracking-wide text-white shadow-[0_0_30px_rgba(244,63,94,0.45)] hover:bg-rose-400"
-          >
-            End call
-          </button>
-        </footer>
-      )}
+            <div className="flex flex-col gap-3 py-4">
+              {call.lines.map((l) => (
+                <div key={l.id} className={`flex ${l.who === "you" ? "justify-end" : ""}`}>
+                  <p
+                    dir="auto"
+                    className={`max-w-[88%] rounded-2xl border px-4 py-2 ${
+                      l.who === "you"
+                        ? "border-violet-300/20 bg-violet-400/10"
+                        : "border-teal-300/20 bg-teal-400/10"
+                    } ${l.final ? "" : "opacity-70"} ${l.ignored ? "opacity-40" : ""}`}
+                    title={l.ignored ? "Sounded like background noise, so he didn't reply" : undefined}
+                  >
+                    {l.text}
+                    {l.ignored && <span className="ml-2 text-xs text-slate-400">(noise?)</span>}
+                  </p>
+                </div>
+              ))}
+              {live && !call.lines.length && (
+                <p className="pt-8 text-center text-sm text-slate-400">
+                  Say hello. Speak Urdu or English; you can interrupt him any time.
+                </p>
+              )}
+              {call.status === "ended" && (
+                <p className="text-center text-sm text-slate-400">Saved in your chats.</p>
+              )}
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

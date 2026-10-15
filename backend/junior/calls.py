@@ -364,6 +364,7 @@ class CallManager:
             if _get(event, "response_id") in call.filler_ids:
                 pass  # "still looking…" isn't part of the conversation
             elif text:
+                text = await self._in_urdu_script(call, text)
                 call.answer_in_response = self._save(
                     call, "assistant", text, steps=call.pending_steps, cost=call.pending_cost
                 )
@@ -509,6 +510,27 @@ class CallManager:
             conversation_id=call.conversation_id,
         )
         return result
+
+    async def _in_urdu_script(self, call: LiveCall, text: str) -> str:
+        """If you spoke Urdu but his words came back in Latin letters (Roman Urdu),
+        rewrite them in Urdu script before saving, so the chat reads right."""
+        if call.language != "urdu" or not is_roman(text) or call.context.helpers is None:
+            return text
+        context = call.context
+        spent_before = len(context.usage)
+        try:
+            rewritten = (await context.helpers.run("urdu_script", text, context)).strip()
+        except Exception:
+            log.exception("Rewriting a call reply in Urdu script failed; keeping it as is")
+            return text
+        new_usage = context.usage[spent_before:]
+        call.pending_cost += sum(u.cost_usd for u in new_usage)
+        call.cost_usd += sum(u.cost_usd for u in new_usage)
+        with session_scope() as s:
+            from junior.chat.history import save_usage
+
+            save_usage(s, new_usage, call.conversation_id, None, mode="call")
+        return rewritten if rewritten and not is_roman(rewritten) else text
 
     async def _quick_search(self, call: LiveCall, query: str) -> str:
         """Straight to the web researcher (small model, one quick search): ~4 seconds."""
@@ -679,6 +701,15 @@ LANGUAGE_NOTES = {
         "accent above."
     ),
 }
+
+
+def is_roman(text: str) -> bool:
+    """Mostly Latin letters (e.g. Roman Urdu or English)."""
+    letters = [ch for ch in text if ch.isalpha()]
+    if not letters:
+        return False
+    latin = sum(1 for ch in letters if ch.isascii())
+    return latin / len(letters) > 0.6
 
 
 def spoken_language(text: str) -> str:

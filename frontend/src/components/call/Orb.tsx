@@ -136,5 +136,5 @@ export function Orb({
     };
   }, [mic, remote]);
 
-  return <canvas ref={canvas} className="aspect-square w-full max-w-[340px]" aria-hidden />;
+  return <canvas ref={canvas} className="size-[min(82vw,340px)] shrink-0 md:size-[min(40vw,440px)]" aria-hidden />;
 }
