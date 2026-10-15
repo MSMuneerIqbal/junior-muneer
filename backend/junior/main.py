@@ -25,6 +25,7 @@ from junior.logging_setup import setup_logging
 from junior.memories import router as memories_router
 from junior.models import get_router
 from junior.pause import router as pause_router
+from junior.profile import router as profile_router
 from junior.registry import load_registry
 from junior.scheduler import scheduler_loop
 from junior.settings_api import router as settings_router
@@ -94,6 +95,7 @@ def create_app(
     app.include_router(settings_router)
     app.include_router(voice_router)
     app.include_router(calls_router)
+    app.include_router(profile_router)
     return app
 
 

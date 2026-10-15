@@ -177,7 +177,7 @@ junior-muneer/
 
 Nothing is posted by the system in this phase: approved items are copy and paste (APIs come in phase 3).
 
-- [ ] **P2-01 Your profile**
+- [x] **P2-01 Your profile** (drafted from your portfolio and GitHub; rates, audience and voice are yours to fill)
   - A Profile page: what you do, services, skills, rates, real projects and results, who you want to reach, your writing voice, things to avoid, hashtags, platforms you use.
   - It's the only source of facts for anything written about you. You fill it in (I'll help).
   - *Done when:* the writing team gets your profile as text, and an empty profile gives a clear "fill in your profile" message.

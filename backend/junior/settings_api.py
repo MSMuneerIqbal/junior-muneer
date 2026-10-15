@@ -59,7 +59,7 @@ class SettingsUpdate(BaseModel):
 
 @router.get("/api/settings")
 def get_settings_api() -> dict:
-    return all_settings()
+    return {k: v for k, v in all_settings().items() if k != "profile"}
 
 
 @router.patch("/api/settings")
@@ -70,7 +70,7 @@ def update_settings(body: SettingsUpdate) -> dict:
         if before[key] != value:
             set_setting(key, value)
             audit("setting", key, detail={"before": before[key], "after": value})
-    return all_settings()
+    return {k: v for k, v in all_settings().items() if k != "profile"}
 
 
 @router.get("/api/voices")

@@ -29,6 +29,8 @@ DEFAULTS: dict[str, Any] = {
     # Text models (Settings -> Models). "" = the default from agents/models.toml.
     "main_model": "",
     "helper_model": "",
+    # Your profile (Profile page). Kept here, edited through /api/profile.
+    "profile": {},
 }
 # Voices that work both for spoken replies and in live calls. Marin and Cedar are
 # OpenAI's newest, most natural voices, so they come first.
