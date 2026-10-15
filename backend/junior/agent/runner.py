@@ -39,6 +39,8 @@ STEP_LABELS = {
     "forget_memory": "Forgetting a memory",
     "add_to_approvals": "Adding it to your approval queue",
     "write_draft": "Writing it with the team",
+    "social_media": "Asking the Social Media Manager",
+    "save_ideas": "Saving ideas",
 }
 
 

@@ -24,3 +24,15 @@ test("the writing team's steps show live and in Show work, and the card has the 
   await page.getByText("See the text").first().click();
   await expect(page.getByText(`(fake Writer) A short post about launch ${tag}`)).toBeVisible();
 });
+
+test("asking for ideas saves them and shows them in Show work", async ({ page }, info) => {
+  const tag = `${info.project.name}-${Date.now()}`;
+  await page.goto("/");
+  const box = page.getByRole("textbox", { name: "Message" });
+  await box.fill(`ideas ${tag}`);
+  await box.press("Enter");
+  await page.getByRole("button", { name: "▸ Show work" }).click();
+  await expect(page.getByText("Asking the Social Media Manager")).toBeVisible();
+  await expect(page.getByText("Saved 3 ideas to your list")).toBeVisible();
+  await expect(page.getByRole("listitem").filter({ hasText: `Fake idea 1: ${tag}` }).last()).toBeVisible();
+});

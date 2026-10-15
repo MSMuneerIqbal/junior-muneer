@@ -290,6 +290,25 @@ def restore_item(item_id: int) -> ApprovalOut:
     return _change(item_id, "restored", fn)
 
 
+def recent_titles(days: int = 30, limit: int = 30) -> list[str]:
+    """Social drafts made, approved or posted lately, so ideas don't repeat them."""
+    from datetime import timedelta
+
+    since = utcnow() - timedelta(days=days)
+    with session_scope() as s:
+        q = (
+            select(ApprovalItem.title, ApprovalItem.platform, ApprovalItem.status)
+            .where(
+                ApprovalItem.created_at >= since,
+                ApprovalItem.platform.in_(("linkedin", "facebook", "instagram", "x")),
+                ApprovalItem.status != "rejected",
+            )
+            .order_by(ApprovalItem.id.desc())
+            .limit(limit)
+        )
+        return [f"{t} ({p}, {st})" for t, p, st in s.execute(q)]
+
+
 def waiting_count() -> int:
     with session_scope() as s:
         return s.scalar(select(func.count()).select_from(ApprovalItem).where(ApprovalItem.status == "waiting")) or 0

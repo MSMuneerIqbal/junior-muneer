@@ -7,8 +7,9 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
 ## Where we are (update this at the end of every session)
 
 - Done: Phase 0 (text chat), Phase 1 (voice + live calls), Phase 2 tasks P2-01 to P2-06
-  (profile, playbooks, permission rules + mode menu, approval queue, Paste box, writing team).
-- **Next: P2-07 Social Media Manager**, then P2-08 to P2-12, then Phase 2b (AI-News-Agent and
+  (profile, playbooks, permission rules + mode menu, approval queue, Paste box, writing team) and P2-07
+  (Social Media Manager: ideas, writing through the team, judging pastes).
+- **Next: P2-08 Images**, then P2-09 to P2-12, then Phase 2b (AI-News-Agent and
   Social-News-Agent, official sources only, with a fact guard in code).
 - Last pushed to GitHub (`main`) on 2026-10-15.
 

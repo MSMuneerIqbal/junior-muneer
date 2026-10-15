@@ -7,8 +7,9 @@ It echoes your message, streamed in small pieces. Two tricks to see the UI work:
     real save_memory tool and its safety checks;
   - a message starting with "draft " puts the rest in the approval queue as a
     LinkedIn post (a card under the answer);
-  - a message starting with "write " runs the real writing team pipeline (with fake
-    Writer, Checker and Humanizer answers) for a LinkedIn post about the rest.
+  - a message starting with "write " goes to the Social Media Manager, who runs the
+    real writing team pipeline (fake Writer, Checker and Humanizer) for a LinkedIn post;
+  - a message starting with "ideas" makes the manager save 3 fake content ideas.
 """
 
 import asyncio
@@ -76,14 +77,25 @@ class FakeModel(Model):
                     "save_memory", {"fact": words, "your_words": words}, call_id="fake-mem"
                 )
             ], False
-        if text.lower().startswith("write ") and "write_draft" in tool_names:
+        if text.startswith("## Request from") and "save_ideas" in tool_names:
+            # The Social Media Manager: ideas, or a draft through the writing team.
+            request = text.split("\n", 2)[1]
+            if request.lower().startswith("ideas"):
+                ideas = [
+                    {"platform": "linkedin", "title": f"Fake idea {n}: {request[6:].strip()}", "angle": "A real lesson", "kind": "lesson"}
+                    for n in (1, 2, 3)
+                ]
+                return [function_call("save_ideas", {"ideas": ideas}, call_id="fake-ideas")], False
+            topic = request[len("write ") :].strip() if request.lower().startswith("write ") else request
             return [
                 function_call(
                     "write_draft",
-                    {"platform": "linkedin", "item_type": "post", "request": text[len("write ") :].strip()},
+                    {"platform": "linkedin", "item_type": "post", "request": topic},
                     call_id="fake-write",
                 )
             ], False
+        if text.lower().startswith(("write ", "ideas")) and "social_media" in tool_names:
+            return [function_call("social_media", {"request": text}, call_id="fake-social")], False
         if text.lower().startswith("draft ") and "add_to_approvals" in tool_names:
             words = text[len("draft ") :].strip()
             return [

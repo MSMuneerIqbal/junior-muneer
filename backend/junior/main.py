@@ -23,6 +23,7 @@ from junior.config import get_settings
 from junior.costs import router as costs_router
 from junior.db import init_db
 from junior.logging_setup import setup_logging
+from junior.ideas import router as ideas_router
 from junior.memories import router as memories_router
 from junior.models import get_router
 from junior.pause import router as pause_router
@@ -104,6 +105,7 @@ def create_app(
     app.include_router(playbooks_router)
     app.include_router(permissions_router)
     app.include_router(approvals_router)
+    app.include_router(ideas_router)
     return app
 
 

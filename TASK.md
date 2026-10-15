@@ -197,7 +197,7 @@ Nothing is posted by the system in this phase: approved items are copy and paste
 - [x] **P2-06 Writing team**
   - Writer, Checker (score out of 10, facts, voice, platform fit, red lines), Humanizer, plus the automatic AI-phrase checks from the prototype. Writer → Checker (sends back up to 2 times) → Humanizer → final check.
   - *Done when:* a draft comes back with a score, issues fixed, and every step visible in Show work.
-- [ ] **P2-07 Social Media Manager**
+- [x] **P2-07 Social Media Manager**
   - A subagent Junior Muneer calls for posts, comments on pasted posts, and content ideas. Drafts become approval cards.
   - *Done when:* "write a LinkedIn post about X" in chat gives an approval card with a checked draft.
 - [ ] **P2-08 Images**

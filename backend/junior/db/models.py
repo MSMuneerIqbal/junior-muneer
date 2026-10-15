@@ -140,6 +140,26 @@ class AuditLog(Base):
     )
 
 
+class Idea(Base):
+    """A content idea from the Social Media Manager (pick one later: "write idea 3")."""
+
+    __tablename__ = "ideas"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    platform: Mapped[str] = mapped_column(String(30), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    # The angle: what the post would say and which real facts from the profile it uses.
+    angle: Mapped[str] = mapped_column(Text, default="")
+    # project · lesson · how_to · milestone · opinion · other
+    kind: Mapped[str] = mapped_column(String(30), default="other")
+    # new · used · dismissed
+    status: Mapped[str] = mapped_column(String(20), default="new", index=True)
+    approval_id: Mapped[int | None] = mapped_column(
+        ForeignKey("approvals.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
 class Paste(Base):
     """Text you pasted from another site. Outside content: data, never instructions."""
 
