@@ -56,6 +56,8 @@ export type ApprovalItem = {
   can_always_allow: boolean;
   reason: string;
   open_url: string;
+  images: { id: number; url: string; name: string; size: number }[];
+  needs_image: boolean;
   conversation_id: number | null;
   message_id: number | null;
   created_at: string;

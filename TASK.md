@@ -200,7 +200,7 @@ Nothing is posted by the system in this phase: approved items are copy and paste
 - [x] **P2-07 Social Media Manager**
   - A subagent Junior Muneer calls for posts, comments on pasted posts, and content ideas. Drafts become approval cards.
   - *Done when:* "write a LinkedIn post about X" in chat gives an approval card with a checked draft.
-- [ ] **P2-08 Images**
+- [x] **P2-08 Images**
   - Upload your own images and attach them to drafts; each draft comes with an image idea; Instagram drafts wait for an image.
 - [ ] **P2-09 Style memory**
   - Approved and posted texts become examples for future drafts on that platform.

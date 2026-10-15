@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useApprovalItem } from "@/lib/approvals";
 import type { ApprovalItem, ApprovalStatus } from "@/lib/types";
+import { BACKEND_URL } from "@/lib/api";
 import { urduClass } from "@/lib/urdu";
 
 const STATUS: Record<ApprovalStatus, { label: string; style: string }> = {
@@ -28,7 +29,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
   const waiting = item.status === "waiting";
   const status = STATUS[item.status];
 
-  async function run(action: Parameters<typeof act>[0], body?: object) {
+  async function run(action: Parameters<typeof act>[0], body?: Parameters<typeof act>[1]) {
     setBusy(true);
     setError(null);
     try {
@@ -87,7 +88,37 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
             {item.text}
           </p>
         )}
+        {item.images.length > 0 && (
+          <ul aria-label="Images" className="mt-3 flex flex-wrap gap-2">
+            {item.images.map((img) => (
+              <li key={img.id} className="group relative">
+                <a href={`${BACKEND_URL}${img.url}`} target="_blank" rel="noopener noreferrer" title={`${img.name}: open full size to save it`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- served by the local backend */}
+                  <img
+                    src={`${BACKEND_URL}${img.url}`}
+                    alt={img.name}
+                    className="h-24 w-24 rounded-lg border border-line object-cover"
+                  />
+                </a>
+                {waiting && (
+                  <button
+                    type="button"
+                    aria-label={`Remove ${img.name}`}
+                    disabled={busy}
+                    onClick={() => run("remove_image", img.id)}
+                    className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border border-line bg-panel text-xs text-muted shadow hover:text-danger"
+                  >
+                    ✕
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
         {item.meta.image_idea && <p className="mt-2 text-xs text-muted">🖼 Image idea: {item.meta.image_idea}</p>}
+        {waiting && item.needs_image && (
+          <p className="mt-2 text-xs font-medium text-warn">{item.platform_label} posts need an image: add one before posting.</p>
+        )}
         {waiting && item.meta.issues && item.meta.issues.length > 0 && (
           <div className="mt-2 rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn">
             <p className="font-medium">Checker&apos;s notes</p>
@@ -152,8 +183,30 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
                 <button type="button" className={button} disabled={busy} onClick={() => setEditing(item.text)}>
                   Edit
                 </button>
+                <label className={`${button} cursor-pointer`}>
+                  🖼 Add image
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    multiple
+                    className="sr-only"
+                    aria-label="Add image"
+                    disabled={busy}
+                    onChange={async (e) => {
+                      const files = Array.from(e.target.files ?? []);
+                      e.target.value = "";
+                      for (const f of files) await run("add_image", f);
+                    }}
+                  />
+                </label>
                 {item.kind === "copy" && (
-                  <button type="button" className={button} disabled={busy} onClick={() => run("posted")}>
+                  <button
+                    type="button"
+                    className={button}
+                    disabled={busy || item.needs_image}
+                    title={item.needs_image ? "Add an image first" : undefined}
+                    onClick={() => run("posted")}
+                  >
                     Mark as posted
                   </button>
                 )}

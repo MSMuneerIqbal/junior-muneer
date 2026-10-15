@@ -8,7 +8,7 @@ Two kinds of items:
 Status: waiting · approved · rejected · posted · check_manually
 Every edit is kept (the original text and each change).
 
-    GET  /api/approvals?status=waiting|approved|rejected|posted|check_manually|all
+    GET  /api/approvals?status=waiting|approved|rejected|posted|check_manually|all&platform=linkedin
     GET  /api/approvals/count             {"waiting": n}
     GET  /api/approvals/{id}
     POST /api/approvals                   add a copy-and-paste draft (API items come only from agents)
@@ -81,6 +81,9 @@ class ApprovalOut(BaseModel):
     can_always_allow: bool
     reason: str
     open_url: str
+    images: list[dict[str, Any]] = []
+    # The platform needs an image (Instagram) and none is attached yet.
+    needs_image: bool = False
     conversation_id: int | None
     message_id: int | None
     created_at: datetime
@@ -94,7 +97,23 @@ def _open_url(item: ApprovalItem) -> str:
     return OPEN_URLS.get(item.platform, "")
 
 
-def to_out(item: ApprovalItem) -> ApprovalOut:
+def _needs_image(platform: str, item_type: str) -> bool:
+    if item_type != "post":
+        return False
+    try:
+        from junior.playbooks import load_playbooks
+
+        book = load_playbooks().get(platform)
+    except Exception:  # a broken playbook is reported at startup, not here
+        return False
+    return bool(book and book.needs_image)
+
+
+def to_out(item: ApprovalItem, images: list[dict[str, Any]] | None = None) -> ApprovalOut:
+    if images is None:
+        from junior.images import images_for
+
+        images = images_for([item.id]).get(item.id, [])
     can_always_allow = False
     if item.kind == "api" and item.status == "waiting" and item.action_type:
         can_always_allow = decide(item.action_type, from_outside=item.from_outside).can_always_allow
@@ -115,6 +134,8 @@ def to_out(item: ApprovalItem) -> ApprovalOut:
         can_always_allow=can_always_allow,
         reason=item.reason,
         open_url=_open_url(item),
+        images=images,
+        needs_image=not images and _needs_image(item.platform, item.item_type),
         conversation_id=item.conversation_id,
         message_id=item.message_id,
         created_at=item.created_at,
@@ -195,9 +216,12 @@ def items_for_messages(message_ids: list[int]) -> dict[int, list[ApprovalOut]]:
         rows = s.scalars(
             select(ApprovalItem).where(ApprovalItem.message_id.in_(message_ids)).order_by(ApprovalItem.id)
         ).all()
+        from junior.images import images_for
+
+        pictures = images_for([i.id for i in rows])
         found: dict[int, list[ApprovalOut]] = {}
         for item in rows:
-            found.setdefault(item.message_id, []).append(to_out(item))
+            found.setdefault(item.message_id, []).append(to_out(item, pictures.get(item.id, [])))
         return found
 
 
@@ -245,9 +269,17 @@ def edit_item(item_id: int, text: str) -> ApprovalOut:
     return _change(item_id, "edited", fn)
 
 
+def _need_image_if_required(item: ApprovalItem) -> None:
+    from junior.images import images_for
+
+    if _needs_image(item.platform, item.item_type) and not images_for([item.id]).get(item.id):
+        raise ApprovalError(f"{PLATFORM_LABELS.get(item.platform, item.platform)} posts need an image: add one first.")
+
+
 def approve_item(item_id: int, always_allow: bool = False) -> ApprovalOut:
     def fn(item: ApprovalItem) -> None:
         _need(item, "waiting", "api")
+        _need_image_if_required(item)
         decision = decide(item.action_type, from_outside=item.from_outside)
         if decision.rule == "deny":
             raise ApprovalError(decision.reason)
@@ -266,6 +298,7 @@ def approve_item(item_id: int, always_allow: bool = False) -> ApprovalOut:
 def mark_posted(item_id: int) -> ApprovalOut:
     def fn(item: ApprovalItem) -> None:
         _need(item, "waiting", "copy")
+        _need_image_if_required(item)
         item.status = "posted"
         item.decided_at = item.posted_at = utcnow()
 
@@ -342,14 +375,20 @@ class ApproveBody(BaseModel):
 
 
 @router.get("/api/approvals", response_model=list[ApprovalOut])
-def list_items(status: str = "waiting", limit: int = 100) -> list[ApprovalOut]:
+def list_items(status: str = "waiting", platform: str = "", limit: int = 100) -> list[ApprovalOut]:
     if status != "all" and status not in STATUSES:
         raise HTTPException(422, f"status must be 'all' or one of {list(STATUSES)}")
     with session_scope() as s:
         q = select(ApprovalItem).order_by(ApprovalItem.updated_at.desc()).limit(min(limit, 500))
         if status != "all":
             q = q.where(ApprovalItem.status == status)
-        return [to_out(i) for i in s.scalars(q)]
+        if platform:
+            q = q.where(ApprovalItem.platform == platform)
+        rows = s.scalars(q).all()
+        from junior.images import images_for
+
+        pictures = images_for([i.id for i in rows])
+        return [to_out(i, pictures.get(i.id, [])) for i in rows]
 
 
 @router.get("/api/approvals/count")
