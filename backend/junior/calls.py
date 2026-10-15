@@ -571,7 +571,7 @@ class CallManager:
 
     async def _ask_junior(self, call: LiveCall, question: str) -> str:
         """The full Junior Muneer (web search, database) answers a question for the call."""
-        from junior.agent.builder import build_agent
+        from junior.agent.builder import build_agent, chosen_model
         from junior.agent.runner import run_once
 
         if not question.strip():
@@ -580,9 +580,14 @@ class CallManager:
         context.mark_outside()  # the answer may include web results
         spent_before = len(context.usage)
         router_ = get_router()
-        agent, model_name = build_agent(
-            self.registry.get("junior_muneer"), router_, self.model_provider()
-        )
+        spec = self.registry.get("junior_muneer")
+        # Calls never wait on other providers (DeepSeek): use the OpenAI default.
+        model = router_.model_for("junior_muneer", spec.model)
+        if router_.provider_of(chosen_model(spec, router_)) == "openai":
+            model = chosen_model(spec, router_)
+        elif router_.provider_of(model) != "openai":
+            model = router_.tiers["strong"]
+        agent, model_name = build_agent(spec, router_, self.model_provider(), model_override=model)
         try:
             result = await run_once(
                 agent,

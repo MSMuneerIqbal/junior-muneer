@@ -160,3 +160,45 @@ def test_openai_is_never_cut_off_by_the_deadline(monkeypatch):
     model = ScriptedModel([chunked_answer("fine")])
     with TestClient(create_app(model_provider=lambda: (lambda n: model))) as client:
         assert chat(client, "hi")[-1]["type"] == "done"
+
+
+def test_voice_messages_use_openai_even_when_deepseek_is_chosen():
+    from junior.voice import FakeVoice
+
+    used = []
+    model = ScriptedModel([chunked_answer("Voice reply"), chunked_answer("Typed reply")])
+    app = create_app(model_provider=lambda: (lambda n: used.append(n) or model), voice=FakeVoice)
+    with TestClient(app) as client:
+        client.patch("/api/settings", json={"main_model": "deepseek:deepseek-flash"})
+        audio_id = client.post(
+            "/api/voice/transcribe",
+            files={"audio": ("v.webm", b"\x1aE\xdf\xa3" + b"\0" * 500, "audio/webm")},
+            data={"seconds": "3"},
+        ).json()["audio_id"]
+        with client.websocket_connect("/ws/chat") as ws:
+            ws.send_json({"type": "message", "conversation_id": None, "text": "hello", "audio_id": audio_id})
+            while ws.receive_json()["type"] not in ("done", "error"):
+                pass
+        chat(client, "typed hello")
+    assert used == ["gpt-6.1-sol", "deepseek:deepseek-flash"]  # voice: OpenAI; typed: DeepSeek
+
+
+def test_lookups_in_calls_use_openai_even_when_deepseek_is_chosen():
+    import asyncio as aio
+
+    from junior.calls import CallManager
+    from junior.registry import load_registry
+    from test_calls import FakeGateway, heard, tool
+
+    set_setting("main_model", "deepseek:deepseek-flash")
+    used = []
+    model = ScriptedModel([chunked_answer("Your spend is low.")])
+    FakeGateway.events = [heard("What did I spend?"), tool("ask_junior", '{"question": "Spend today?"}')]
+    manager = CallManager(FakeGateway, load_registry(), lambda: (lambda n: used.append(n) or model))
+
+    async def go():
+        call, _ = await manager.start("v=0")
+        await call.task
+
+    aio.run(go())
+    assert used == ["gpt-6.1-sol"]

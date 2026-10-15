@@ -358,8 +358,9 @@ function ModelChoices({
         )}
         {chosen?.provider === "DeepSeek" && (
           <span className="text-xs text-muted">
-            DeepSeek is very cheap. Your chats go to DeepSeek (servers in China) instead of
-            OpenAI. Web search and voice still use OpenAI.
+            DeepSeek is very cheap but can be slow when busy (after 20 s he answers with OpenAI
+            instead). Your typed chats go to DeepSeek (servers in China). Web search and all voice
+            stay on OpenAI.
           </span>
         )}
       </Field>
@@ -368,7 +369,11 @@ function ModelChoices({
   return (
     <fieldset className="flex flex-col gap-4 border-t border-line pt-4">
       <legend className="pr-2 text-sm font-semibold">Models</legend>
-      {pick("main_model", "Writes his answers in chat. Prices are $ per 1M tokens in / out.", "Chat model")}
+      {pick(
+        "main_model",
+        "Writes his answers to typed messages. Voice messages and live calls always use OpenAI. Prices are $ per 1M tokens in / out.",
+        "Chat model (typed chat)",
+      )}
       {pick("helper_model", "Summarizes long chats in the background.", "Helper model")}
     </fieldset>
   );

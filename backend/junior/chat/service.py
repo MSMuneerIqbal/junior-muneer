@@ -5,7 +5,7 @@ import logging
 from collections.abc import AsyncIterator, Callable
 from typing import Any
 
-from junior.agent.builder import ModelProvider, NoApiKeyError, build_agent
+from junior.agent.builder import ModelProvider, NoApiKeyError, build_agent, chosen_model
 from junior.agent.context import TurnContext
 from junior.agent.helpers import HelperRunner
 from junior.agent.runner import TurnResult, stream_turn
@@ -149,7 +149,18 @@ class ChatService:
             budget = budget_left(settings)
             provider = self.model_provider()
             router = get_router()
-            agent, model_name = build_agent(self.registry.get(MAIN_AGENT), router, provider)
+            spec = self.registry.get(MAIN_AGENT)
+            # Other providers (DeepSeek) are for typed chat only: a voice message is
+            # answered by the default OpenAI model, so voice never waits on them.
+            voice_override = None
+            if audio_id is not None:
+                default = router.model_for(MAIN_AGENT, spec.model)
+                voice_override = (
+                    default if router.provider_of(default) == "openai" else router.tiers["strong"]
+                )
+                if router.provider_of(chosen_model(spec, router)) == "openai":
+                    voice_override = None  # your OpenAI choice is fine for voice too
+            agent, model_name = build_agent(spec, router, provider, model_override=voice_override)
             context.helpers = HelperRunner(self.registry, provider)
             items, context.user_message_ids = build_input(conversation_id, settings["user_name"])
             result: TurnResult | None = None
