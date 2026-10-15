@@ -154,9 +154,11 @@ export function CallView({ onClose }: { onClose: (conversationId: number | null)
                   l.who === "you"
                     ? "border-violet-300/20 bg-violet-400/10"
                     : "border-teal-300/20 bg-teal-400/10"
-                } ${l.final ? "" : "opacity-70"}`}
+                } ${l.final ? "" : "opacity-70"} ${l.ignored ? "opacity-40" : ""}`}
+                title={l.ignored ? "Sounded like background noise, so he didn't reply" : undefined}
               >
                 {l.text}
+                {l.ignored && <span className="ml-2 text-xs text-slate-400">(noise?)</span>}
               </p>
             </div>
           ))}

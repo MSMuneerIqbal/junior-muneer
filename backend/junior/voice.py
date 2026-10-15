@@ -54,9 +54,10 @@ TRANSCRIBE_PROMPT = (
     "Write Urdu in Urdu script (not Hindi/Devanagari, not Roman Urdu) and English in English. "
     "If there is no speech (only breathing, coughs or background noise), write nothing."
 )
-# Average log-probability of the transcript's words. Real speech scores about -0.15
-# or better; text made up from breathing or noise scores -0.8 or worse.
-NOISE_LOGPROB = -0.5
+# Average log-probability of the transcript's words. Measured: whole sentences score
+# about -0.2 or better; short real words in a live call can score -1.1 ("Hello");
+# text made up from breathing or background noise mostly scores -2.2 to -4.1.
+NOISE_LOGPROB = -2.0
 
 
 def average_logprob(logprobs) -> float | None:

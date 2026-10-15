@@ -193,4 +193,6 @@ def test_noise_detection():
     assert is_noise(" . ", None)
     assert is_noise("ہاں", [{"logprob": -2.2}])
     assert not is_noise("آپ کیسے ہیں؟", [{"logprob": -0.05}, {"logprob": -0.2}])
+    assert not is_noise("السلام علیکم", [{"logprob": -0.43}])  # short real greeting
+    assert not is_noise("Hello.", [{"logprob": -1.13}])  # short real word, live call
     assert not is_noise("Hello", None)  # no scores (older models): keep it

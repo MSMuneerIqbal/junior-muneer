@@ -42,7 +42,7 @@ from junior.db.models import utcnow
 from junior.models import get_router
 from junior.settings_store import ACCENTS, all_settings
 from junior.timeutil import start_of_today_utc, zone
-from junior.voice import TRANSCRIBE_PROMPT, is_noise
+from junior.voice import TRANSCRIBE_PROMPT, average_logprob, is_noise
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -341,6 +341,12 @@ class CallManager:
         kind = _get(event, "type", default="")
         if kind == "conversation.item.input_audio_transcription.completed":
             text = (_get(event, "transcript", default="") or "").strip()
+            log.info(
+                "Call %s heard %r (confidence %s)",
+                call.call_id,
+                text[:60],
+                average_logprob(_get(event, "logprobs")),
+            )
             if is_noise(text, _get(event, "logprobs")):
                 # Breathing, a cough or background noise: no message, no reply.
                 log.info("Call %s: ignored noise %r", call.call_id, text[:40])

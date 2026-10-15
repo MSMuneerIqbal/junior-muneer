@@ -356,18 +356,19 @@ def noisy(text, logprob):
 def test_breathing_and_noise_are_ignored():
     call, _, gw = run_call(
         [
-            noisy("السلام علیکم", -2.3),  # made up from breathing
-            noisy("ٹھیک ہے", -0.83),
+            noisy("ٹھیک ہے", -2.3),  # made up from breathing
+            noisy("Hi", -4.1),
             noisy("", -0.01),
             noisy("آپ کیسے ہیں؟", -0.07),  # real speech
+            noisy("Hello.", -1.13),  # a short real word in a live call: kept
         ]
     )
     with session_scope() as s:
         said_by_you = s.scalars(
             select(Message.content).where(Message.conversation_id == call.conversation_id)
         ).all()
-    assert said_by_you == ["آپ کیسے ہیں؟"]
-    assert len([e for e in gw.conn.sent if e["type"] == "response.create"]) == 1  # one reply
+    assert said_by_you == ["آپ کیسے ہیں؟", "Hello."]
+    assert len([e for e in gw.conn.sent if e["type"] == "response.create"]) == 2  # two replies
 
 
 def test_quick_web_search_goes_straight_to_the_researcher():

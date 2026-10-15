@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BACKEND_URL, send } from "@/lib/api";
 
-export type CallLine = { id: string; who: "you" | "junior"; text: string; final: boolean };
+export type CallLine = {
+  id: string;
+  who: "you" | "junior";
+  text: string;
+  final: boolean;
+  ignored?: boolean; // taken as background noise, so he didn't reply
+};
 export type CallStatus = "idle" | "connecting" | "live" | "ended" | "error";
 export type Activity = "listening" | "you" | "thinking" | "speaking" | "checking";
 
@@ -30,6 +36,8 @@ export function useLiveCall() {
   const callId = useRef<string | null>(null);
   // True from a tool call until his real answer starts (fillers don't count).
   const searching = useRef(false);
+  // If no reply starts soon after you speak (it was only noise), go back to listening.
+  const replyWait = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const upsert = useCallback((id: string, who: CallLine["who"], text: string, final: boolean, append: boolean) => {
     setLines((all) => {
@@ -56,8 +64,17 @@ export function useLiveCall() {
           break;
         case "conversation.item.input_audio_transcription.completed":
           upsert(`u-${itemId}`, "you", String(e.transcript ?? ""), true, false);
+          if (replyWait.current) clearTimeout(replyWait.current);
+          replyWait.current = setTimeout(() => {
+            // Nothing came back: the backend set it aside as noise.
+            setActivity((a) => (a === "thinking" ? "listening" : a));
+            setLines((all) =>
+              all.map((l) => (l.id === `u-${itemId}` ? { ...l, ignored: true } : l)),
+            );
+          }, 4000);
           break;
         case "response.created": {
+          if (replyWait.current) clearTimeout(replyWait.current);
           const filler =
             (e.response as { metadata?: { kind?: string } } | undefined)?.metadata?.kind ===
             "filler";
