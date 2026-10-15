@@ -1,6 +1,7 @@
 "use client";
 
-import type { ElementType } from "react";
+import type { ElementType, ReactNode } from "react";
+import { textOf, urduClass } from "@/lib/urdu";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -9,9 +10,10 @@ type Props = { node?: unknown } & Record<string, unknown>;
 // Each block picks its own direction, so Urdu lines read right-to-left
 // and English lines left-to-right inside the same answer.
 function withAutoDir(Tag: ElementType) {
-  return function AutoDir({ node, ...props }: Props) {
+  return function AutoDir({ node, className, ...props }: Props) {
     void node;
-    return <Tag dir="auto" {...props} />;
+    const urdu = urduClass(textOf(props.children as ReactNode));
+    return <Tag dir="auto" className={[className, urdu].filter(Boolean).join(" ") || undefined} {...props} />;
   };
 }
 

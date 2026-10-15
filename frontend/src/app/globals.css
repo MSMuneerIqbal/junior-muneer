@@ -92,10 +92,17 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Nastaliq needs more room between lines to stay readable. */
-[dir="rtl"],
-.urdu-friendly {
+/* Urdu (Nastaliq) reads best a little larger, with room between lines.
+   Added by lib/urdu.ts wherever text contains Urdu letters. */
+.urdu {
+  /* The Urdu font first: otherwise "Geist Fallback" (Arial) draws the Urdu letters in a
+     thin Naskh style. English words inside Urdu text still use Geist. */
+  font-family: var(--font-urdu), var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 1.18em;
   line-height: 2.1;
+}
+.urdu .urdu {
+  font-size: 1em; /* an Urdu paragraph inside an Urdu list item: don't enlarge twice */
 }
 
 /* Formatted answers (lists, code, links, tables). */

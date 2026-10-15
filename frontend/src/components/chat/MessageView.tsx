@@ -2,7 +2,9 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { Markdown } from "@/components/chat/Markdown";
+import { MicIcon } from "@/components/icons";
 import { BACKEND_URL, send } from "@/lib/api";
+import { urduClass } from "@/lib/urdu";
 import { speakMessage, stopSpeaking, usePlayer } from "@/lib/player";
 import type { MemoryNote, Step } from "@/lib/types";
 
@@ -19,8 +21,13 @@ export function UserMessage({ text, audioId }: { text: string; audioId?: string 
             aria-label="Your voice message"
           />
         )}
-        <div dir="auto" className="whitespace-pre-wrap">
-          {audioId && <span aria-label="voice message">🎙 </span>}
+        <div dir="auto" className={`whitespace-pre-wrap ${urduClass(text)}`}>
+          {audioId && (
+            <MicIcon
+              className="mx-1 inline h-4 w-4 align-[-2px] text-muted"
+              title="Voice message"
+            />
+          )}
           {text}
         </div>
       </div>

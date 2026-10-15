@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useDeferredValue, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { fetcher, send } from "@/lib/api";
+import { urduClass } from "@/lib/urdu";
 import { CHATS_KEY, isChatsKey } from "@/lib/keys";
 import type { Conversation } from "@/lib/types";
 
@@ -107,7 +108,7 @@ function ChatRow({ chat, active }: { chat: Conversation; active: boolean }) {
         <Link
           href={`/?c=${chat.id}`}
           dir="auto"
-          className="min-w-0 flex-1 truncate px-3 py-1.5 text-sm"
+          className={`min-w-0 flex-1 truncate px-3 py-1.5 text-sm ${urduClass(chat.title) ? "urdu leading-normal" : ""}`}
           title={chat.title}
         >
           {chat.pinned && <span aria-label="pinned">📌 </span>}

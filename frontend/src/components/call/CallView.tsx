@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { Orb } from "@/components/call/Orb";
 import { fetcher } from "@/lib/api";
+import { urduClass } from "@/lib/urdu";
 import { isChatsKey, USAGE_KEY } from "@/lib/keys";
 import { useLiveCall, type Activity } from "@/lib/useLiveCall";
 
@@ -186,7 +187,7 @@ export function CallView({ onClose }: { onClose: (conversationId: number | null)
                       l.who === "you"
                         ? "border-violet-300/20 bg-violet-400/10"
                         : "border-teal-300/20 bg-teal-400/10"
-                    } ${l.final ? "" : "opacity-70"} ${l.ignored ? "opacity-40" : ""}`}
+                    } ${l.final ? "" : "opacity-70"} ${l.ignored ? "opacity-40" : ""} ${urduClass(l.text)}`}
                     title={l.ignored ? "Sounded like background noise, so he didn't reply" : undefined}
                   >
                     {l.text}

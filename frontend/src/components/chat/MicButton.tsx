@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { MicIcon, StopIcon } from "@/components/icons";
 import { BACKEND_URL } from "@/lib/api";
 import { useRecorder, type Recording } from "@/lib/useRecorder";
 
@@ -106,17 +107,28 @@ export function MicButton({
         aria-label={recording ? "Stop and send voice message" : "Record a voice message"}
         aria-pressed={recording}
         title="Hold to talk, or tap to start and tap again to send"
-        className={`flex h-8 w-8 shrink-0 touch-none items-center justify-center rounded-full text-base select-none ${
-          recording ? "animate-pulse bg-danger text-white" : "text-muted hover:bg-panel-2"
+        className={`relative flex h-9 w-9 shrink-0 touch-none items-center justify-center rounded-full transition select-none ${
+          recording
+            ? "bg-danger text-white shadow-[0_0_0_4px_rgba(244,63,94,0.18)]"
+            : "text-muted hover:bg-panel-2 hover:text-ink"
         } disabled:opacity-40`}
       >
-        {busy ? "…" : "🎙"}
+        {recording && (
+          <span className="absolute inset-0 animate-ping rounded-full bg-danger/40" aria-hidden />
+        )}
+        {busy ? (
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-transparent" />
+        ) : recording ? (
+          <StopIcon className="relative h-4 w-4" />
+        ) : (
+          <MicIcon className="h-5 w-5" />
+        )}
       </button>
       {(recording || busy || error) && (
         <div className="absolute -top-8 left-3 rounded-md bg-panel px-2 py-1 text-xs shadow ring-1 ring-line">
           {recording ? (
             <span className="text-danger">
-              ● {clock(elapsed)} · {tapMode ? "tap 🎙 to send" : "release to send"} · Esc
+              ● {clock(elapsed)} · {tapMode ? "tap again to send" : "release to send"} · Esc
               cancels
             </span>
           ) : busy ? (

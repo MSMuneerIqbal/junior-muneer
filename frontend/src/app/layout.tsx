@@ -1,15 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Noto_Nastaliq_Urdu } from "next/font/google";
+import { Geist, Geist_Mono, Gulzar } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
-const urdu = Noto_Nastaliq_Urdu({
-  variable: "--font-urdu",
-  subsets: ["arabic"],
-  weight: ["400", "600"],
-});
+// Gulzar: a clear Nastaliq designed in the style of Noori Nastaliq.
+const urdu = Gulzar({ variable: "--font-urdu", subsets: ["arabic"], weight: "400" });
 
 export const metadata: Metadata = {
   title: "Junior Muneer",
