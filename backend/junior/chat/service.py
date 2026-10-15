@@ -13,7 +13,7 @@ from junior.approvals import attach_to_message
 from junior.audit import audit
 from junior.chat.history import build_input, save_usage, summarize_if_long
 from junior.costs import BudgetExceeded, budget_left
-from junior.db import Conversation, Message, session_scope
+from junior.db import Conversation, Message, Paste, session_scope
 from junior.db.models import utcnow
 from junior.models import get_router
 from junior.registry import Registry
@@ -37,6 +37,31 @@ def title_from(text: str) -> str:
     return words[:TITLE_LENGTH].rsplit(" ", 1)[0] + "…"
 
 
+PASTE_PLATFORMS = ("linkedin", "facebook", "instagram", "x", "upwork", "fiverr", "email", "other")
+PASTE_KINDS = ("post", "comment", "job", "client_message", "email", "other")
+PASTE_MAX_CHARS = 20000
+PASTE_LABELS = {"client_message": "client message", "job": "job post"}
+
+
+def clean_paste(raw: object) -> dict[str, str] | None:
+    """A pasted block from the chat, checked. Raises ChatError when it's unusable."""
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise ChatError("Bad pasted content.")
+    text = str(raw.get("text", "")).strip()
+    if not text:
+        raise ChatError("The Paste box is empty.")
+    if len(text) > PASTE_MAX_CHARS:
+        raise ChatError(f"That paste is too long ({len(text)} characters; the limit is {PASTE_MAX_CHARS}).")
+    platform = raw.get("platform") if raw.get("platform") in PASTE_PLATFORMS else "other"
+    kind = raw.get("kind") if raw.get("kind") in PASTE_KINDS else "other"
+    url = str(raw.get("source_url") or "").strip()[:500]
+    if url and not url.startswith(("https://", "http://")):
+        url = ""
+    return {"text": text, "platform": platform, "kind": kind, "source_url": url}
+
+
 class ChatError(Exception):
     """A problem to show in the chat instead of an answer."""
 
@@ -55,8 +80,10 @@ class ChatService:
         text: str,
         audio_id: str | None = None,
         audio_seconds: float | None = None,
-    ) -> tuple[int, int, bool]:
-        """Save your message (creating the chat if needed). Returns ids and 'is new'."""
+        paste: dict[str, str] | None = None,
+    ) -> tuple[int, int, bool, dict | None]:
+        """Save your message, and the pasted text before it (creating the chat if needed).
+        Returns ids, 'is new' and the saved paste."""
         if audio_id is not None and audio_path(audio_id) is None:
             raise ChatError("That voice recording wasn't found. Please record it again.")
         with session_scope() as s:
@@ -65,10 +92,32 @@ class ChatService:
                 raise ChatError(f"Chat {conversation_id} doesn't exist (was it deleted?).")
             is_new = convo is None
             if convo is None:
-                convo = Conversation(title=title_from(text), kind="voice" if audio_id else "text")
+                title = text
+                if paste:
+                    what = PASTE_LABELS.get(paste["kind"], paste["kind"])
+                    title = f"Pasted {what}: {text}" if text else f"Pasted {what}"
+                convo = Conversation(title=title_from(title), kind="voice" if audio_id else "text")
                 s.add(convo)
             else:
                 convo.updated_at = utcnow()
+            saved_paste = None
+            if paste:
+                # Someone else's words: role "user" (it came from your side) but
+                # source "outside", so it can never back a memory.
+                pasted = Message(role="user", source="outside", content=paste["text"])
+                convo.messages.append(pasted)
+                s.flush()
+                row = Paste(
+                    platform=paste["platform"],
+                    kind=paste["kind"],
+                    text=paste["text"],
+                    source_url=paste["source_url"],
+                    conversation_id=convo.id,
+                    message_id=pasted.id,
+                )
+                s.add(row)
+                s.flush()
+                saved_paste = {"id": row.id, "message_id": pasted.id, **paste}
             message = Message(
                 role="user",
                 source="user",
@@ -78,7 +127,7 @@ class ChatService:
             )
             convo.messages.append(message)
             s.flush()
-            return convo.id, message.id, is_new
+            return convo.id, message.id, is_new, saved_paste
 
     def _finish(self, conversation_id: int, result: TurnResult) -> int:
         with session_scope() as s:
@@ -126,14 +175,18 @@ class ChatService:
         text: str,
         audio_id: str | None = None,
         audio_seconds: float | None = None,
+        paste: object = None,
     ) -> AsyncIterator[dict[str, Any]]:
         text = text.strip()
-        if not text:
-            yield {"type": "error", "message": "Empty message."}
-            return
         try:
-            conversation_id, user_message_id, is_new = self._start(
-                conversation_id, text, audio_id, audio_seconds
+            cleaned = clean_paste(paste)
+            if not text and cleaned:
+                text = "I pasted this. What do you think, and how should I respond?"
+            if not text:
+                yield {"type": "error", "message": "Empty message."}
+                return
+            conversation_id, user_message_id, is_new, saved_paste = self._start(
+                conversation_id, text, audio_id, audio_seconds, cleaned
             )
         except ChatError as e:
             yield {"type": "error", "message": str(e)}
@@ -142,10 +195,18 @@ class ChatService:
             with session_scope() as s:
                 title = s.get(Conversation, conversation_id).title
             yield {"type": "conversation", "id": conversation_id, "title": title}
-        yield {"type": "user_message", "id": user_message_id, "conversation_id": conversation_id}
+        if saved_paste:
+            yield {
+                "type": "paste",
+                "message_id": saved_paste["message_id"],
+                "platform": saved_paste["platform"],
+                "kind": saved_paste["kind"],
+                "source_url": saved_paste["source_url"],
+            }
+        yield {"type": "user_message", "id": user_message_id, "conversation_id": conversation_id, "text": text}
 
         settings = all_settings()
-        context = TurnContext(conversation_id=conversation_id, settings=settings)
+        context = TurnContext(conversation_id=conversation_id, settings=settings, paste=saved_paste)
         try:
             budget = budget_left(settings)
             provider = self.model_provider()
@@ -163,7 +224,11 @@ class ChatService:
                     voice_override = None  # your OpenAI choice is fine for voice too
             agent, model_name = build_agent(spec, router, provider, model_override=voice_override)
             context.helpers = HelperRunner(self.registry, provider)
-            items, context.user_message_ids = build_input(conversation_id, settings["user_name"])
+            items, context.user_message_ids, pasted = build_input(conversation_id, settings["user_name"])
+            if pasted:
+                # Pasted text is in this chat: memory changes are blocked and anything
+                # drafted from it waits for your OK (ground rules 3, 5 and 6).
+                context.mark_outside()
             result: TurnResult | None = None
             fallback_step = None
             stream = stream_turn(agent, model_name, router, items, context, budget)

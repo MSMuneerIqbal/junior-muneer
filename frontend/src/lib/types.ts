@@ -29,7 +29,10 @@ export type Message = {
   audio_seconds: number | null;
   created_at: string;
   approvals?: ApprovalItem[];
+  paste?: PasteInfo | null;
 };
+
+export type PasteInfo = { id?: number; platform: string; kind: string; source_url: string };
 
 export type ApprovalStatus = "waiting" | "approved" | "rejected" | "posted" | "check_manually";
 
@@ -71,6 +74,7 @@ export type ChatEvent =
   | ({ type: "step" } & Step)
   | ({ type: "memory" } & MemoryNote)
   | { type: "approval"; item: ApprovalItem }
+  | ({ type: "paste"; message_id: number } & PasteInfo)
   | {
       type: "done";
       conversation_id: number;

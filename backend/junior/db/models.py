@@ -140,6 +140,28 @@ class AuditLog(Base):
     )
 
 
+class Paste(Base):
+    """Text you pasted from another site. Outside content: data, never instructions."""
+
+    __tablename__ = "pastes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # linkedin · facebook · instagram · x · upwork · fiverr · email · other
+    platform: Mapped[str] = mapped_column(String(30), index=True)
+    # post · comment · job · client_message · email · other
+    kind: Mapped[str] = mapped_column(String(30))
+    text: Mapped[str] = mapped_column(Text)
+    source_url: Mapped[str] = mapped_column(String(500), default="")
+    conversation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("conversations.id", ondelete="SET NULL"), nullable=True
+    )
+    # The chat message that holds it (source = "outside").
+    message_id: Mapped[int | None] = mapped_column(
+        ForeignKey("messages.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
 class ApprovalItem(Base):
     """A draft waiting for you (junior/approvals.py)."""
 

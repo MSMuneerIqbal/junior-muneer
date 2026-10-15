@@ -1,9 +1,11 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react";
 import { MicButton, type VoiceMessage } from "@/components/chat/MicButton";
 import { ModeSelect } from "@/components/chat/ModeSelect";
-import { SendIcon } from "@/components/icons";
+import { PasteBox } from "@/components/chat/PasteBox";
+import { ClipboardIcon, SendIcon } from "@/components/icons";
+import { emptyPaste, LONG_PASTE_CHARS, type PasteDraft } from "@/lib/paste";
 import { urduClass } from "@/lib/urdu";
 
 /** The message box. Enter sends; Shift+Enter makes a new line. */
@@ -13,13 +15,18 @@ export function Composer({
   busy,
   notice,
 }: {
-  onSend: (text: string) => boolean;
+  onSend: (text: string, paste?: PasteDraft) => boolean;
   onVoice: (voice: VoiceMessage) => void;
   busy: boolean;
   notice?: string;
 }) {
   const [text, setText] = useState("");
+  const [paste, setPaste] = useState<PasteDraft | null>(null);
+  // Long text you pasted into the message box was moved to the Paste box (can be undone).
+  const [moved, setMoved] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);
+  const pasteText = paste?.text.trim() ?? "";
+  const canSend = !busy && (!!text.trim() || !!pasteText);
 
   function grow() {
     const el = box.current;
@@ -29,10 +36,11 @@ export function Composer({
   }
 
   function submit() {
-    const value = text.trim();
-    if (!value || busy) return;
-    if (onSend(value)) {
+    if (!canSend) return;
+    if (onSend(text.trim(), pasteText ? { ...paste!, text: pasteText } : undefined)) {
       setText("");
+      setPaste(null);
+      setMoved(false);
       requestAnimationFrame(grow);
     }
   }
@@ -44,9 +52,58 @@ export function Composer({
     }
   }
 
+  function onPasteText(e: ClipboardEvent<HTMLTextAreaElement>) {
+    const pasted = e.clipboardData.getData("text");
+    if (paste || text.trim() || pasted.trim().length < LONG_PASTE_CHARS) return;
+    e.preventDefault();
+    setPaste(emptyPaste(pasted.trim()));
+    setMoved(true);
+    box.current?.focus();
+  }
+
+  function keepAsMine() {
+    if (!paste) return;
+    setText(paste.text);
+    setPaste(null);
+    setMoved(false);
+    requestAnimationFrame(grow);
+  }
+
   return (
     <div className="border-t border-line bg-bg px-3 pt-3 pb-4 sm:px-6">
-      <div className="relative mx-auto flex max-w-3xl items-end gap-1.5 rounded-3xl border border-line bg-panel py-1.5 pr-1.5 pl-4 shadow-sm focus-within:border-accent">
+      {paste && (
+        <PasteBox
+          value={paste}
+          onChange={setPaste}
+          onClose={() => {
+            setPaste(null);
+            setMoved(false);
+          }}
+          hint={
+            moved ? (
+              <>
+                Long text went to the Paste box, so he treats it as someone else&apos;s words.{" "}
+                <button type="button" onClick={keepAsMine} className="font-medium text-accent hover:underline">
+                  It&apos;s my own message
+                </button>
+              </>
+            ) : undefined
+          }
+        />
+      )}
+      <div className="relative mx-auto flex max-w-3xl items-end gap-1.5 rounded-3xl border border-line bg-panel py-1.5 pr-1.5 pl-2 shadow-sm focus-within:border-accent">
+        <button
+          type="button"
+          onClick={() => (paste ? setPaste(null) : setPaste(emptyPaste()))}
+          aria-label={paste ? "Close the Paste box" : "Paste from another site"}
+          aria-pressed={!!paste}
+          title="Paste a post, job or message from another site"
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition ${
+            paste ? "bg-accent-soft text-accent" : "text-muted hover:bg-panel-2 hover:text-ink"
+          }`}
+        >
+          <ClipboardIcon className="h-5 w-5" />
+        </button>
         <textarea
           ref={box}
           rows={1}
@@ -57,14 +114,15 @@ export function Composer({
             grow();
           }}
           onKeyDown={onKeyDown}
-          placeholder="Message Junior Muneer…"
+          onPaste={onPasteText}
+          placeholder={paste ? "What should I do with it? e.g. write a short comment" : "Message Junior Muneer…"}
           aria-label="Message"
           className={`max-h-[200px] min-h-[28px] flex-1 resize-none self-center bg-transparent py-1.5 outline-none placeholder:text-muted ${urduClass(text)}`}
         />
         <MicButton onVoice={onVoice} disabled={busy} />
         <button
           onClick={submit}
-          disabled={!text.trim() || busy}
+          disabled={!canSend}
           aria-label="Send"
           title="Send (Enter)"
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-fg transition hover:brightness-110 disabled:opacity-30"

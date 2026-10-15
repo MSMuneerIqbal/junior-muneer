@@ -114,7 +114,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
                 </button>
                 {item.open_url && (
                   <a href={item.open_url} target="_blank" rel="noopener noreferrer" className={button}>
-                    Open {item.platform_label} ↗
+                    {item.open_url === item.meta.source_url ? "Open original" : `Open ${item.platform_label}`} ↗
                   </a>
                 )}
               </>

@@ -9,6 +9,7 @@ from junior.db.models import (
     Conversation,
     Memory,
     Message,
+    Paste,
     Setting,
     Usage,
 )
@@ -21,6 +22,7 @@ __all__ = [
     "Conversation",
     "Memory",
     "Message",
+    "Paste",
     "Setting",
     "Usage",
     "get_engine",

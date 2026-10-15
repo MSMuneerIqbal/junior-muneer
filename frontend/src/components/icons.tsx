@@ -48,6 +48,16 @@ export function SendIcon(p: IconProps) {
   );
 }
 
+export function ClipboardIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="6" y="4.5" width="12" height="16" rx="2.5" />
+      <path d="M9.5 4.5V4a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v.5" />
+      <path d="M9.5 10.5h5M9.5 14h5" />
+    </Svg>
+  );
+}
+
 export function SidebarLeftIcon(p: IconProps) {
   return (
     <Svg {...p}>

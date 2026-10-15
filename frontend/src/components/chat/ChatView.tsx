@@ -7,6 +7,8 @@ import { CallView } from "@/components/call/CallView";
 import { Composer } from "@/components/chat/Composer";
 import type { VoiceMessage } from "@/components/chat/MicButton";
 import { AssistantMessage, ErrorNotice, UserMessage } from "@/components/chat/MessageView";
+import { PastedMessage } from "@/components/chat/PasteBox";
+import type { PasteDraft } from "@/lib/paste";
 import { fetcher } from "@/lib/api";
 import { isApprovalsKey, isChatsKey, PAUSE_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
 import type { ApprovalItem, ChatEvent, MemoryNote, Message, Step } from "@/lib/types";
@@ -24,6 +26,8 @@ type Turn = {
   steps: Step[];
   notes: MemoryNote[];
   approvals: ApprovalItem[];
+  paste?: PasteDraft;
+  pasteMessageId?: number;
   status: "streaming" | "done" | "error";
   error?: string;
   messageId?: number;
@@ -79,6 +83,9 @@ export function ChatView() {
           setTurn((t) => t && { ...t, conversationId: event.id });
           mutateGlobal(isChatsKey);
           break;
+        case "paste":
+          setTurn((t) => t && { ...t, pasteMessageId: event.message_id });
+          break;
         case "user_message":
           setTurn((t) => t && { ...t, userMessageId: event.id });
           break;
@@ -131,9 +138,18 @@ export function ChatView() {
   const [inCall, setInCall] = useState(false);
   const busy = turn?.status === "streaming";
 
-  function onSend(text: string): boolean {
-    if (!send(conversationId, text)) return false;
-    setTurn({ conversationId, userText: text, text: "", steps: [], notes: [], approvals: [], status: "streaming" });
+  function onSend(text: string, paste?: PasteDraft): boolean {
+    if (!send(conversationId, text, paste ? { paste } : undefined)) return false;
+    setTurn({
+      conversationId,
+      userText: text || (paste ? "I pasted this. What do you think, and how should I respond?" : ""),
+      paste,
+      text: "",
+      steps: [],
+      notes: [],
+      approvals: [],
+      status: "streaming",
+    });
     return true;
   }
 
@@ -155,6 +171,7 @@ export function ChatView() {
   const liveTurn = turn && turn.conversationId === conversationId ? turn : null;
   const messages = saved ?? [];
   const showUser = liveTurn && !messages.some((m) => m.id === liveTurn.userMessageId);
+  const showPaste = liveTurn?.paste && !messages.some((m) => m.id === liveTurn.pasteMessageId);
   const showAnswer =
     liveTurn && liveTurn.status !== "error" && !messages.some((m) => m.id === liveTurn.messageId);
 
@@ -215,7 +232,15 @@ export function ChatView() {
           <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 sm:px-6">
             {loadError && <ErrorNotice message={`Couldn't load this chat: ${loadError.message}`} />}
             {messages.map((m) =>
-              m.role === "user" ? (
+              m.source === "outside" ? (
+                <PastedMessage
+                  key={m.id}
+                  text={m.content}
+                  platform={m.paste?.platform ?? "other"}
+                  kind={m.paste?.kind ?? "other"}
+                  sourceUrl={m.paste?.source_url}
+                />
+              ) : m.role === "user" ? (
                 <UserMessage key={m.id} text={m.content} audioId={m.audio_file} />
               ) : (
                 <AssistantMessage
@@ -228,6 +253,14 @@ export function ChatView() {
                   approvals={m.approvals}
                 />
               ),
+            )}
+            {showPaste && liveTurn.paste && (
+              <PastedMessage
+                text={liveTurn.paste.text}
+                platform={liveTurn.paste.platform}
+                kind={liveTurn.paste.kind}
+                sourceUrl={liveTurn.paste.source_url}
+              />
             )}
             {showUser && <UserMessage text={liveTurn.userText} audioId={liveTurn.userAudioId} />}
             {showAnswer && (

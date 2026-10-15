@@ -275,6 +275,11 @@ def add_to_approvals_for(
             title=title,
             from_outside=context.outside_content_seen,
             conversation_id=context.conversation_id,
+            meta=(
+                {"paste_id": context.paste["id"], "source_url": context.paste["source_url"]}
+                if context.paste
+                else None
+            ),
         )
     except ApprovalError as e:
         return f"NOT added: {e}"

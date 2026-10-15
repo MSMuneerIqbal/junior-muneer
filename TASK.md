@@ -191,7 +191,7 @@ Nothing is posted by the system in this phase: approved items are copy and paste
   - Approval items (copy-and-paste or API), with status: waiting · approved · rejected · posted · check manually. Edits are kept.
   - Cards inside the chat and an Approvals page: Copy · Open platform · Edit · Mark as posted · Reject (API items: Approve · Always allow · Edit · Reject). "Needs your OK" and Mode in the Today panel become real.
   - *Done when:* approving in the chat updates the Approvals page and the other way round.
-- [ ] **P2-05 Paste box**
+- [x] **P2-05 Paste box**
   - Paste text from any site (a post to comment on, a job post, a client message) with its platform and type. Saved as outside content: never followed as instructions, memory saving blocked, anything drafted from it goes to Ask.
   - *Done when:* a pasted post with hidden instructions doesn't change his behaviour, and a test proves it.
 - [ ] **P2-06 Writing team**

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { WS_URL } from "@/lib/api";
+import type { PasteDraft } from "@/lib/paste";
 import type { ChatEvent } from "@/lib/types";
 
 /**
@@ -57,13 +58,13 @@ export function useChatSocket(onEvent: (event: ChatEvent) => void) {
     (
       conversationId: number | null,
       text: string,
-      voice?: { audio_id: string; audio_seconds: number },
+      extra?: { audio_id: string; audio_seconds: number } | { paste: PasteDraft },
     ) => {
       const payload = JSON.stringify({
         type: "message",
         conversation_id: conversationId,
         text,
-        ...voice,
+        ...extra,
       });
       const ws = socket.current;
       if (ws && ws.readyState === WebSocket.OPEN) ws.send(payload);

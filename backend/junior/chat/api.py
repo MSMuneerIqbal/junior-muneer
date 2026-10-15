@@ -9,8 +9,10 @@ REST (chats):
 
 WebSocket /ws/chat:
     you send   {"type": "message", "conversation_id": 12 | null, "text": "...",
-                "audio_id": "<from /api/voice/transcribe>", "audio_seconds": 4.2}  (audio: voice only)
-    you get    conversation · user_message · delta · step · memory · approval · done · error events
+                "audio_id": "<from /api/voice/transcribe>", "audio_seconds": 4.2,  (audio: voice only)
+                "paste": {"text": "...", "platform": "linkedin", "kind": "post", "source_url": ""}}
+                (paste: text from another site, saved as outside content)
+    you get    conversation · paste · user_message · delta · step · memory · approval · done · error events
 """
 
 import logging
@@ -22,7 +24,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 
 from junior.approvals import ApprovalOut, items_for_messages
-from junior.db import Conversation, Message, Usage, session_scope
+from junior.db import Conversation, Message, Paste, Usage, session_scope
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -50,6 +52,8 @@ class MessageOut(BaseModel):
     created_at: datetime
     # Approval cards under this answer.
     approvals: list[ApprovalOut] = []
+    # Pasted text (source "outside"): where it's from.
+    paste: dict[str, Any] | None = None
 
 
 class ConversationCreate(BaseModel):
@@ -155,6 +159,10 @@ def read_messages(conversation_id: int) -> list[MessageOut]:
             select(Message).where(Message.conversation_id == conversation_id).order_by(Message.id)
         ).all()
         cards = items_for_messages([m.id for m in rows if m.role == "assistant"])
+        pastes = {
+            p.message_id: {"id": p.id, "platform": p.platform, "kind": p.kind, "source_url": p.source_url}
+            for p in s.scalars(select(Paste).where(Paste.conversation_id == conversation_id))
+        }
         return [
             MessageOut(
                 id=m.id,
@@ -167,6 +175,7 @@ def read_messages(conversation_id: int) -> list[MessageOut]:
                 audio_seconds=m.audio_seconds,
                 created_at=m.created_at,
                 approvals=cards.get(m.id, []),
+                paste=pastes.get(m.id) if m.source == "outside" else None,
             )
             for m in rows
         ]
@@ -198,6 +207,7 @@ async def chat_socket(websocket: WebSocket) -> None:
                 audio_seconds=float(audio_seconds)
                 if isinstance(audio_seconds, (int, float))
                 else None,
+                paste=data.get("paste"),
             ):
                 if gone:
                     continue
