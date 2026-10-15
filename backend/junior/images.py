@@ -9,6 +9,7 @@ download the image and add it on the platform yourself.
     GET    /api/images/{image_id}                the file
 """
 
+import logging
 import uuid
 from pathlib import Path
 
@@ -20,6 +21,7 @@ from junior.audit import audit
 from junior.config import get_settings
 from junior.db import ApprovalItem, Image, session_scope
 
+log = logging.getLogger(__name__)
 router = APIRouter()
 
 MAX_BYTES = 10 * 1024 * 1024
@@ -102,7 +104,10 @@ def remove(item_id: int, image_id: int) -> None:
             raise HTTPException(404, "That image isn't on this draft.")
         if s.get(ApprovalItem, item_id).status != "waiting":
             raise HTTPException(409, "Images can only change while the draft waits.")
-        (images_dir() / image.file).unlink(missing_ok=True)
+        try:
+            (images_dir() / image.file).unlink(missing_ok=True)
+        except OSError:  # Windows: the browser may still be loading it; the file is left behind, harmless
+            log.warning("Couldn't delete image file %s now; it is no longer attached", image.file)
         s.delete(image)
     audit("action", "image_removed", detail={"approval": item_id, "image": image_id})
 

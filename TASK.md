@@ -261,6 +261,18 @@ Read-only: these agents never post or send anything. News pages are outside cont
 
 - [x] **P3-01** API sender base: plain code (no AI), sends the exact stored approved text, Safety Guard check first, "run at most once", "check manually" on unclear results. Fake-API tests
 - [ ] **P3-02** Meta developer app (guide for you) → Facebook Page posting
+  - **Built:** the Facebook Page sender (text, one image, several images; link to the post), `connect.bat meta`, and Settings → Connections. Waiting for your Meta app to try it for real.
+  - **Your steps (about 15 minutes, free):**
+    1. **A Facebook Page.** The API can't post to a personal profile. If you don't have a Page yet: facebook.com/pages/create (for example "Muneer Iqbal – AI Engineer").
+    2. **A Meta developer account:** developers.facebook.com → Get started, with your Facebook login.
+    3. **Create an app:** My Apps → Create app → name it "Junior Muneer" → use case **"Manage everything on your Page"**. If it asks for a business portfolio, you can skip it.
+    4. **Permissions:** in the app, open that use case and make sure these are added: `pages_manage_posts`, `pages_read_engagement`, `pages_show_list` (for later: `pages_manage_engagement`, `instagram_basic`, `instagram_content_publish`, `instagram_manage_comments`). Keep the app in **Development** mode: as its admin you can use them on your own Page without Meta's review.
+    5. **App ID and secret:** App settings → Basic → copy the App ID and the App secret ("Show"). Also turn on **Require App Secret** (App settings → Advanced); Junior Muneer always sends the secret's proof.
+    6. **A token:** developers.facebook.com/tools/explorer → choose your app → "Get User Access Token" → tick the permissions above → Generate Access Token → log in, choose your Page, allow. Copy the token (it only lives an hour; the next step turns it into a lasting Page token).
+    7. **Connect:** in the project folder run `connect.bat meta` and paste the App ID, the secret and the token (the secret and token are hidden while you paste), then pick your Page.
+    8. **Restart** (`stop.bat`, `start.bat`) → Settings → Connections → Facebook Page shows **Connected** → press **Check**.
+    9. **Try it:** ask Junior Muneer "Write a short Facebook post about …" → on the card press **Approve & post** → **View post ↗**.
+  - Your secret and tokens stay in `backend/.env` (never in the browser or in Git). You can remove the app's access anytime: Facebook → Settings → Business integrations.
 - [ ] **P3-03** Instagram professional posting (pick: Facebook-linked API or Instagram Login; temporary public image host)
 - [ ] **P3-04** LinkedIn developer app (guide for you) → posts to your profile, with a 60-day reconnect warning
 - [ ] **P3-05** Read comments on Page and Instagram posts through the Meta API → workflow C (replies, always Ask). LinkedIn, X and personal-profile comments come in by paste

@@ -41,6 +41,7 @@ const SECTIONS = [
   { id: "models", title: "Models" },
   { id: "voice", title: "Voice" },
   { id: "calls", title: "Live calls" },
+  { id: "connections", title: "Connections" },
   { id: "posting", title: "Posting" },
   { id: "news", title: "News" },
   { id: "permissions", title: "Permissions" },
@@ -568,6 +569,8 @@ function SettingsForm({ initial }: { initial: Settings }) {
         </Row>
       </Section>
 
+      <ConnectionsSection />
+
       <Section id="posting" title="Posting" description="Posts that go out through the official APIs (Facebook Page, Instagram, LinkedIn).">
         <Row
           label="Posts per platform per day"
@@ -649,6 +652,62 @@ function SettingsForm({ initial }: { initial: Settings }) {
         </div>
       </div>
     </div>
+  );
+}
+
+type Platform = { key: string; label: string; how: string; ready: boolean; connected: boolean; sender: string };
+
+function ConnectionRow({ p }: { p: Platform }) {
+  const [result, setResult] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  async function check() {
+    setChecking(true);
+    try {
+      const r = await send<{ result: string }>("POST", `/api/connections/${p.key}/check`);
+      setResult(r.result);
+    } catch (e) {
+      setResult(e instanceof Error ? e.message : "Couldn't check");
+    } finally {
+      setChecking(false);
+    }
+  }
+  return (
+    <Row label={p.label}>
+      <div className="flex flex-col gap-1.5 text-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          {p.connected ? (
+            <Badge tone="ok">Connected{p.sender.includes("(fake)") ? " (fake, for trying it out)" : ""}</Badge>
+          ) : (
+            <Badge tone="muted">{p.ready ? "Not connected" : "Coming soon"}</Badge>
+          )}
+          {p.connected && (
+            <button type="button" onClick={check} disabled={checking} className="rounded-lg border border-line px-2.5 py-1 text-xs hover:bg-panel-2">
+              {checking ? "Checking…" : "Check"}
+            </button>
+          )}
+        </div>
+        {result && <p className="text-xs text-muted" role="status">{result}</p>}
+        {!p.connected && p.ready && (
+          <p className="text-xs leading-relaxed text-muted">
+            Run <code>{p.how}</code> in the project folder (the steps are in TASK.md, P3-02), then restart. Your tokens stay
+            in <code>backend/.env</code>: never in the browser or in Git.
+          </p>
+        )}
+      </div>
+    </Row>
+  );
+}
+
+function ConnectionsSection() {
+  const { data } = useSWR<Platform[]>("/api/connections", fetcher);
+  return (
+    <Section
+      id="connections"
+      title="Connections"
+      description="Platforms that post through their official API after your OK. Others stay copy and paste."
+    >
+      {data?.map((p) => <ConnectionRow key={p.key} p={p} />)}
+    </Section>
   );
 }
 

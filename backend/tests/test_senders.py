@@ -230,9 +230,11 @@ def test_drafts_become_api_items_only_for_connected_platforms():
 
 
 def test_connections_are_listed(client):
-    assert client.get("/api/connections").json() == [
-        {"label": "LinkedIn (fake)", "action_types": list(ALL), "connected": True}
-    ]
+    platforms = {p["key"]: p for p in client.get("/api/connections").json()}
+    assert platforms["linkedin"]["connected"] and platforms["facebook"]["connected"]
+    assert platforms["facebook"]["how"] == "connect.bat meta"
+    assert platforms["facebook"]["sender"] == "LinkedIn (fake)"  # the test sender handles every type
+    assert client.post("/api/connections/facebook/check").json() == {"key": "facebook", "result": "Connected."}
 
 
 def _status_error(code):

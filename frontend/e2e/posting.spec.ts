@@ -41,3 +41,12 @@ test("an unclear result asks you to check, and you say whether it posted", async
   await card.getByRole("button", { name: "It's posted" }).click();
   await expect(card.getByTestId("approval-status")).toHaveText("Posted");
 });
+
+test("Settings shows which platforms are connected and can check them", async ({ page }) => {
+  await page.goto("/settings#connections");
+  const section = page.getByRole("region", { name: "Connections" }).or(page.locator("#connections"));
+  await expect(section.getByText("Connected (fake, for trying it out)")).toBeVisible();
+  await section.getByRole("button", { name: "Check" }).click();
+  await expect(section.getByRole("status")).toHaveText("Connected.");
+  await expect(section.getByText("Coming soon").first()).toBeVisible();
+});

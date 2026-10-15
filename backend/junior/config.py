@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     # Optional: other providers' keys (see [providers] in agents/models.toml).
     deepseek_api_key: str = ""
+    # Phase 3: your Facebook Page (written by connect.bat meta; never committed).
+    meta_app_id: str = ""
+    meta_app_secret: str = ""
+    meta_page_id: str = ""
+    meta_page_token: str = ""
+    meta_ig_user_id: str = ""
+    meta_graph_version: str = "v26.0"
     # Optional: Artificial Analysis's free API key, for "who's on top" rankings in AI news.
     artificial_analysis_api_key: str = ""
     data_dir: Path = Path("data")

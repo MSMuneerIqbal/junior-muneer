@@ -50,7 +50,13 @@ log = logging.getLogger(__name__)
 def default_senders(settings) -> SenderRegistry:
     """The connected API senders. FAKE_AI: a fake Facebook Page, so posting can be tried safely."""
     registry = SenderRegistry()
-    if settings.fake_ai:
+    if settings.meta_page_id and settings.meta_page_token:
+        from junior.senders.facebook import FacebookPageSender
+
+        registry.add(
+            FacebookPageSender(settings.meta_page_id, settings.meta_page_token, settings.meta_app_secret, settings.meta_graph_version)
+        )
+    if settings.fake_ai and not registry.for_action("facebook.page.post"):
         from junior.senders.fake import FakeSender
 
         registry.add(FakeSender())

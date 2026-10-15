@@ -3,6 +3,7 @@
     POST /api/approvals/{id}/send               send an approved API item now (Safety Guard first)
     POST /api/approvals/{id}/resolve  {"posted"}  after "check manually": did it really go out?
     GET  /api/connections                        which platforms can post through their API
+    POST /api/connections/{key}/check            does the saved token still work?
 """
 
 from fastapi import APIRouter, HTTPException, Request
@@ -40,4 +41,9 @@ def post_resolve(item_id: int, body: ResolveBody) -> ApprovalOut:
 
 @router.get("/api/connections")
 def connections(request: Request) -> list[dict]:
-    return request.app.state.senders.connections()
+    return request.app.state.senders.platforms()
+
+
+@router.post("/api/connections/{key}/check")
+async def check_connection(key: str, request: Request) -> dict:
+    return {"key": key, "result": await request.app.state.senders.check(key)}

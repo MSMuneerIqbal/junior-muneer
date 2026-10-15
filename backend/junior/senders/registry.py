@@ -12,6 +12,14 @@ ACTION_FOR = {
 }
 
 
+# Platforms that can post through their official API, and how you connect each.
+PLATFORMS = [
+    {"key": "facebook", "label": "Facebook Page", "action": "facebook.page.post", "how": "connect.bat meta", "ready": True},
+    {"key": "instagram", "label": "Instagram (professional)", "action": "instagram.post", "how": "connect.bat meta", "ready": False},
+    {"key": "linkedin", "label": "LinkedIn", "action": "linkedin.post", "how": "connect.bat linkedin", "ready": False},
+]
+
+
 class SenderRegistry:
     def __init__(self, senders: list[Sender] | None = None) -> None:
         self._senders: list[Sender] = list(senders or [])
@@ -33,6 +41,23 @@ class SenderRegistry:
             {"label": s.label, "action_types": list(s.action_types), "connected": s.is_connected()}
             for s in self._senders
         ]
+
+    def platforms(self) -> list[dict]:
+        """Every platform that can post through an API, and whether it's connected."""
+        out = []
+        for p in PLATFORMS:
+            sender = self.for_action(p["action"])
+            out.append({**p, "connected": sender is not None, "sender": sender.label if sender else ""})
+        return out
+
+    async def check(self, key: str) -> str:
+        """Ask a connected platform whether the saved token still works."""
+        p = next((p for p in PLATFORMS if p["key"] == key), None)
+        sender = self.for_action(p["action"]) if p else None
+        if sender is None:
+            return "Not connected."
+        check = getattr(sender, "check", None)
+        return await check() if check else "Connected."
 
 
 # The app's registry (set at startup), so tools can tell whether a platform is connected.

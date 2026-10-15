@@ -82,3 +82,17 @@ def test_list_filters_by_platform_and_includes_images(client):
     upload(client, a.id, PNG)
     items = client.get("/api/approvals?status=all&platform=linkedin").json()
     assert [i["text"] for i in items] == ["A"] and len(items[0]["images"]) == 1
+
+
+def test_removing_an_image_still_works_when_the_file_is_locked(client, monkeypatch):
+    from pathlib import Path
+
+    item = create_item(kind="copy", platform="linkedin", item_type="post", text="Hello")
+    image = upload(client, item.id, PNG).json()
+
+    def locked(self, missing_ok=False):
+        raise PermissionError(32, "The process cannot access the file because it is being used by another process")
+
+    monkeypatch.setattr(Path, "unlink", locked)
+    assert client.delete(f"/api/approvals/{item.id}/images/{image['id']}").status_code == 204
+    assert client.get(f"/api/approvals/{item.id}").json()["images"] == []
