@@ -182,10 +182,19 @@ async def build_digest(
     return digest
 
 
+def _lock(topic: str) -> asyncio.Lock:
+    return _locks.setdefault((id(asyncio.get_running_loop()), topic), asyncio.Lock())
+
+
+async def refresh_digest(topic: str, registry, model_provider, *, on_step: Step | None = None, transport=None) -> dict:
+    """Build a new digest now (the News page's Refresh), one build at a time per topic."""
+    async with _lock(topic):
+        return await build_digest(topic, registry, model_provider, on_step=on_step, transport=transport)
+
+
 async def fresh_digest(topic: str, registry, model_provider, *, on_step: Step | None = None, transport=None) -> dict:
     """Today's digest if there is a fresh one, else build it (one build at a time per topic)."""
-    lock = _locks.setdefault((id(asyncio.get_running_loop()), topic), asyncio.Lock())
-    async with lock:
+    async with _lock(topic):
         latest = latest_digest(topic)
         if latest and datetime.fromisoformat(latest["built_at"]) > datetime.now(UTC) - FRESH_FOR:
             if on_step:
@@ -230,3 +239,47 @@ async def answer_question(topic: str, question: str, context: TurnContext, on_st
     if removed and on_step:
         on_step(f"Removed {removed} link(s) to non-official sites from the answer", None)
     return answer
+
+
+RETRY_AFTER = timedelta(minutes=30)  # a failed morning build is tried again after this
+_last_try: dict[str, datetime] = {}
+
+
+async def morning_digests(registry, provider_factory, now: datetime | None = None) -> list[str]:
+    """Scheduler job: build today's digests once the morning time has passed (local time).
+    Skipped while paused, when switched off, without an API key, or when the budget is used up."""
+    from junior.agent.builder import NoApiKeyError
+    from junior.costs import BudgetExceeded
+    from junior.timeutil import zone
+
+    settings = all_settings()
+    if not settings["news_digest_enabled"] or settings["paused"]:
+        return []
+    now = now or datetime.now(UTC)
+    tz = zone(settings["timezone"])
+    local = now.astimezone(tz)
+    hour, minute = (int(x) for x in settings["news_digest_time"].split(":"))
+    if (local.hour, local.minute) < (hour, minute):
+        return []
+    built: list[str] = []
+    for topic in TOPICS:
+        latest = latest_digest(topic)
+        if latest and datetime.fromisoformat(latest["built_at"]).astimezone(tz).date() == local.date():
+            continue
+        if topic in _last_try and now - _last_try[topic] < RETRY_AFTER:
+            continue
+        _last_try[topic] = now
+        try:
+            provider = provider_factory()
+            async with _lock(topic):
+                await build_digest(topic, registry, provider)
+            built.append(topic)
+        except NoApiKeyError:
+            log.info("Morning news skipped: no API key")
+            return built
+        except BudgetExceeded:
+            log.info("Morning news skipped: the daily budget is used up")
+            return built
+        except Exception:
+            log.exception("Morning %s digest failed; will try again in 30 minutes", topic)
+    return built

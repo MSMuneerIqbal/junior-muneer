@@ -28,6 +28,8 @@ from junior.images import router as images_router
 from junior.memories import router as memories_router
 from junior.models import get_router
 from junior.pause import router as pause_router
+from junior.news.api import router as news_router
+from junior.news.digest import morning_digests
 from junior.news.sources import load_sources
 from junior.permissions import router as permissions_router
 from junior.playbooks import load_playbooks
@@ -70,8 +72,13 @@ def create_app(
         app.state.chat = ChatService(app.state.registry, model_provider)
         app.state.voice = voice
         app.state.calls = CallManager(realtime, app.state.registry, model_provider)
+        async def news_job() -> None:
+            await morning_digests(app.state.registry, model_provider)
+
         scheduler = (
-            asyncio.create_task(scheduler_loop()) if get_settings().scheduler_enabled else None
+            asyncio.create_task(scheduler_loop(extra=[("morning news", news_job)]))
+            if get_settings().scheduler_enabled
+            else None
         )
         log.info("Junior Muneer backend %s ready", __version__)
         yield
@@ -108,6 +115,7 @@ def create_app(
     app.include_router(playbooks_router)
     app.include_router(permissions_router)
     app.include_router(approvals_router)
+    app.include_router(news_router)
     app.include_router(ideas_router)
     app.include_router(images_router)
     return app

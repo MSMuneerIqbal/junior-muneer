@@ -118,3 +118,11 @@ def test_answers_keep_only_official_links():
 
 def test_strip_links():
     assert strip_links("See https://evil.example/a now") == ("See now", 1)
+
+
+def test_brackets_in_headlines_are_kept():
+    out = run([{"key": "models", "items": [item([1], "OpenAI releases GPT-7 (preview)", "(Update) It's out for everyone.")]}])
+    [kept] = section(out, "models")["items"]
+    assert kept["headline"] == "OpenAI releases GPT-7 (preview)"
+    assert kept["summary"] == "(Update) It's out for everyone."
+    assert strip_links("Read it (https://evil.example/a).") == ("Read it .", 1)

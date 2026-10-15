@@ -43,6 +43,8 @@ def test_defaults(client):
         "mic_type": "headset",
         "main_model": "",
         "helper_model": "",
+        "news_digest_enabled": True,
+        "news_digest_time": "07:30",
     }
 
 

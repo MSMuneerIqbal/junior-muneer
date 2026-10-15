@@ -32,6 +32,9 @@ DEFAULTS: dict[str, Any] = {
     "helper_model": "",
     # Your profile (Profile page). Kept here, edited through /api/profile.
     "profile": {},
+    # News (Phase 2b): both digests are built each morning at this local time.
+    "news_digest_enabled": True,
+    "news_digest_time": "07:30",
     # Permission rules (/api/permissions): ask_all · rules, and your rule per action type.
     "permission_mode": "rules",
     "permission_rules": {},

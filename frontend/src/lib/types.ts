@@ -137,6 +137,8 @@ export type Settings = {
   mic_type: "headset" | "laptop" | "off";
   main_model: string;
   helper_model: string;
+  news_digest_enabled: boolean;
+  news_digest_time: string;
 };
 
 export type ChatSummary = {

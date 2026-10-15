@@ -58,7 +58,8 @@ class DigestIn(BaseModel):
 
 # ---- checks ------------------------------------------------------------------------
 
-_URL = re.compile(r"(https?://|www\.)\S+", re.IGNORECASE)
+# A bare link; it ends before brackets, quotes and the punctuation after it.
+_URL = re.compile(r"(?:https?://|www\.)[^\s<>()\[\]\"']*[^\s<>()\[\]\"'.,;:!?]", re.IGNORECASE)
 _MD_LINK = re.compile(r"\[([^\]]+)\]\((https?://[^)\s]+)\)")
 _NUMBER = re.compile(r"\d+(?:[.,]\d+)*")
 
@@ -72,7 +73,10 @@ def strip_links(text: str) -> tuple[str, int]:
     """Remove links the AI wrote into a headline or summary (links only ever come from articles)."""
     text, n1 = _MD_LINK.subn(r"\1", text)
     text, n2 = _URL.subn("", text)
-    return re.sub(r"\s{2,}", " ", text).strip(" ()-–:"), n1 + n2
+    if not n1 + n2:
+        return text, 0
+    text = re.sub(r"\(\s*\)", "", text)  # "()" left where a link was
+    return re.sub(r"\s{2,}", " ", text).strip().rstrip(":–-").strip(), n1 + n2
 
 
 def _allowed_numbers(articles: list[Article]) -> set[str]:

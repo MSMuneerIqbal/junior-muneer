@@ -41,6 +41,7 @@ const SECTIONS = [
   { id: "models", title: "Models" },
   { id: "voice", title: "Voice" },
   { id: "calls", title: "Live calls" },
+  { id: "news", title: "News" },
   { id: "permissions", title: "Permissions" },
   { id: "advanced", title: "Advanced" },
 ] as const;
@@ -562,6 +563,32 @@ function SettingsForm({ initial }: { initial: Settings }) {
               aria-label="Live-call minutes per day"
             />
             <span className="pr-3.5 text-xs whitespace-nowrap text-muted">minutes</span>
+          </div>
+        </Row>
+      </Section>
+
+      <Section id="news" title="News" description="The AI-News-Agent and the Social-News-Agent (official sources only).">
+        <Row
+          label="Morning digests"
+          hint="Both digests are built each morning, so news questions are answered in seconds. Skipped while paused or when the daily cap is reached."
+        >
+          <div className="flex flex-wrap items-center gap-3">
+            <Toggle
+              checked={form.news_digest_enabled}
+              onChange={(v) => set("news_digest_enabled", v)}
+              label="Build the news digests every morning"
+            />
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-muted">at</span>
+              <input
+                type="time"
+                value={form.news_digest_time}
+                disabled={!form.news_digest_enabled}
+                onChange={(e) => set("news_digest_time", e.target.value)}
+                className={`${input} w-32 disabled:opacity-50`}
+                aria-label="Morning digest time"
+              />
+            </label>
           </div>
         </Row>
       </Section>

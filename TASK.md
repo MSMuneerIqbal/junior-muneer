@@ -243,7 +243,7 @@ Read-only: these agents never post or send anything. News pages are outside cont
 - [x] **P2b-04 Junior Muneer sends news questions to them**
   - Tools `ai_news` and `pakistan_news` in chat and live calls, chosen from the agents' descriptions. Each step shows in Show work; outside-content rules apply (no memory saving, no instructions followed).
   - *Done when:* "which AI model is best for coding right now?" goes to the AI News Agent and "what's trending in Pakistan?" to the Social News Agent, and a test proves a feed with hidden instructions changes nothing.
-- [ ] **P2b-05 Daily digest + News page**
+- [x] **P2b-05 Daily digest + News page**
   - The scheduler builds both digests each morning (on/off and time in Settings; skipped while paused or over the budget). A News page with AI and Pakistan tabs, a Refresh button, the date of each digest and its cost.
 - [ ] **P2b-06 Tests + your acceptance test + push**
 
