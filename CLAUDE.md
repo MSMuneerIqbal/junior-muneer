@@ -9,8 +9,8 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
 - Done: Phase 0 (text chat), Phase 1 (voice + live calls), Phase 2 tasks P2-01 to P2-06
   (profile, playbooks, permission rules + mode menu, approval queue, Paste box, writing team), P2-07
   (Social Media Manager), P2-08 (images), P2-09 (style memory), P2-10 (Social page), P2-11 (planned posts).
-- Phase 2 accepted (P2-12). **Now: Phase 2b** (AI-News-Agent and Social-News-Agent, official
-  sources only, with a fact guard in code), then Phase 3 (official social APIs).
+- Phase 2 accepted (P2-12). Phase 2b (news agents) built: P2b-01 to P2b-05 done.
+  **Next: P2b-06, Muneer's acceptance test** (checklist in TASK.md), then Phase 3 (official social APIs).
 - Last pushed to GitHub (`main`) on 2026-10-15.
 
 ## Safety rules (never break)

@@ -181,9 +181,13 @@ Two read-only subagents that keep you in touch with the market and your country.
 "what's new in AI?", "which model is best for coding now?", "what happened with GPT and Gemini this week?" go to the **AI News Agent**;
 "what's going on in Pakistan?", "what's trending today?" go to the **Social News Agent**. Other news questions still use his normal web search.
 
-- **Where the news comes from:** the sources' own pages. AI: the official blogs and newsrooms of OpenAI, Anthropic, Google DeepMind / Google AI,
-  Meta AI, Microsoft, NVIDIA, Apple, Amazon, Mistral, xAI, DeepSeek, Alibaba Qwen, Hugging Face, plus official leaderboards (LMArena, Artificial Analysis).
-  Pakistan: RSS feeds of Dawn, Geo, The Express Tribune, The News, ARY, Business Recorder and ProPakistani, plus Google Trends (Pakistan) for what's trending.
+- **Where the news comes from:** the sources' own pages (all checked live on 2026-10-15). AI: the official blogs and newsrooms of OpenAI, Anthropic,
+  Google DeepMind, Google AI, Google Research, Meta AI and Meta's newsroom, Microsoft, NVIDIA, Apple, Amazon and AWS, Mistral, DeepSeek, Hugging Face
+  and Arena (LMArena). Not readable without a browser, so not used: xAI (blocks automated readers, no feed), Qwen (app-only site), Arena's leaderboard page.
+  Rankings ("who's on top" in coding, reasoning, math, voice, image, video) come from **Artificial Analysis's official API**, copied by code exactly as
+  published; it needs a free key (`ARTIFICIAL_ANALYSIS_API_KEY`), and without it the digest says rankings are off.
+  Pakistan: Dawn, Geo, The Express Tribune, ARY, Business Recorder and ProPakistani, plus Google Trends (Pakistan) for what's trending.
+  (The News was dropped: its feeds stopped updating in 2025.)
   Read with plain HTTP (RSS, Atom or the page itself), the same way a feed reader does: **no browser bots, no logins**.
   The list lives in one editable file, `news/sources.toml`, so you can add or remove sources.
 - **Only real news from official sources (no fakes, no rumours):**
@@ -198,8 +202,12 @@ Two read-only subagents that keep you in touch with the market and your country.
 - **What you get:** a short summary in sections (AI: new models and releases · benchmarks and who's on top, by field · agents and tools · business moves;
   Pakistan: top stories · trending online · tech, internet and freelancing · economy that affects you), each item with its date and a link to the source.
   Facts only from the sources; when sources disagree, both are given. In English, or Urdu if you ask.
-- **Fast and cheap:** each agent builds one digest a day (morning, by the scheduler) with the small model and keeps it. Questions are answered from that digest,
-  so asking is quick and costs almost nothing. "Refresh" fetches again. News pages are **outside content**: never followed as instructions, never saved to memory.
+- **Fast and cheap:** each agent builds one digest a day (07:30 by default; on/off and time in Settings) with the small model and keeps it
+  (about $0.003 and 40 seconds a digest). The AI agent's articles are grouped by company so every company's news is seen; news sites' feeds only carry their
+  latest stories, so each digest also keeps the important stories of earlier digests in the 15 days. Questions are answered from the digest in seconds;
+  if a question isn't covered, web search may only search the official sites (`[search]` in `news/sources.toml`). "Refresh" fetches again.
+  News pages are **outside content**: never followed as instructions, never saved to memory. Switching the news agents to the strong model gives richer
+  digests for about $0.06 each (one line in `agents/models.toml`).
 - **Where you see it:** in the chat and live calls (Junior Muneer reads you the summary), and on a **News** page with two tabs (AI · Pakistan).
 
 ### 6.5 Adding new subagents later
@@ -486,6 +494,9 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 
 ## 18. Change log
 
+- **v7.6 (2026-10-16):** Phase 2b built: news agents with 26 verified official sources, a code fact guard (links and dates from real articles only; invented
+  items, old stories and made-up numbers removed), rankings from Artificial Analysis's API (optional free key), morning digests, a News page, and news
+  questions in chat and live calls. xAI, Qwen and Arena's leaderboard can't be read without a browser, so they're not used.
 - **v7.5 (2026-10-15):** Phase 2 built: Social Media Manager with an idea list, images on drafts (Instagram waits for one), style memory,
   the Social page and planned posts (the scheduler now checks every minute, so reminders are on time).
 - **v7.4 (2026-10-15):** mode menu like Claude's (section 8): Auto, Manual and a new Plan mode, with Pause everything in the same menu.

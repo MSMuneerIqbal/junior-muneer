@@ -246,6 +246,14 @@ Read-only: these agents never post or send anything. News pages are outside cont
 - [x] **P2b-05 Daily digest + News page**
   - The scheduler builds both digests each morning (on/off and time in Settings; skipped while paused or over the budget). A News page with AI and Pakistan tabs, a Refresh button, the date of each digest and its cost.
 - [ ] **P2b-06 Tests + your acceptance test + push**
+  - Automated tests all pass (backend, and 36 end-to-end tests on desktop and phone).
+  - **Your acceptance test** (about 10 minutes, a few cents). Start the app with `start.bat`, then:
+    1. Open **News**: the AI and Pakistan digests should already be there (built at 07:30, or press "Build it now"). Open a few source links: each must go to the real article on the official site.
+    2. In the chat ask **"What's new in AI?"** and **"Which AI model is best for coding right now?"** Open **Show work**: it should say "Asking the AI-News-Agent".
+    3. Ask **"What's happening in Pakistan?"** and **"What's trending in Pakistan today?"**: answers name their sources (Dawn, Geo…) and stay neutral.
+    4. In a **live call**, ask one AI and one Pakistan news question.
+    5. Optional: get a free key at artificialanalysis.ai, add it to `backend/.env` as `ARTIFICIAL_ANALYSIS_API_KEY=...`, restart, and press Refresh on the AI tab to see live rankings.
+  - Tell me anything wrong or missing; we fix it, then push and start Phase 3.
 
 ## Phase 3: Official social APIs (Meta + LinkedIn)
 

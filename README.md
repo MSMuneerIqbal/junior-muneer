@@ -21,6 +21,9 @@ The full design is in [PLAN.md](PLAN.md); progress is tracked in [TASK.md](TASK.
   **writing team** (Writer, Checker, Humanizer): "Write a LinkedIn post about…" gives a checked, scored draft;
   the **Social Media Manager** (ideas, "write idea 3", should I comment on this?); images on drafts; style
   memory from what you post; the **Social** page; and **planned posts** with a reminder when it's time.
+- **Phase 2b (news):** the **AI-News-Agent** and the **Social-News-Agent** (Pakistan): the last 15 days from official
+  sources only, checked by a fact guard in code, on a **News** page and in chat and calls ("What's new in AI?",
+  "What's trending in Pakistan?"). Optional live AI rankings with a free Artificial Analysis key (see `backend/.env.example`).
 
 ## Start it
 
