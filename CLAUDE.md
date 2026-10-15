@@ -37,6 +37,10 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
 
 ## How to work
 
+Project skills in `.claude/skills/`: **next-task** (the whole task flow), **run-tests**, **restart-app**,
+**new-agent** (P2-07, news agents, later subagents) and **live-check** (real key, throwaway data).
+
+
 - One task at a time: build it, write its tests (safety tests go with the task), run everything, tick it in
   TASK.md, commit. **Push only when Muneer asks** or at phase acceptance.
 - Tests: `backend\.venv\Scripts\python -m pytest -q` (in `backend/`); `npx playwright test` (in
