@@ -245,7 +245,7 @@ Read-only: these agents never post or send anything. News pages are outside cont
   - *Done when:* "which AI model is best for coding right now?" goes to the AI News Agent and "what's trending in Pakistan?" to the Social News Agent, and a test proves a feed with hidden instructions changes nothing.
 - [x] **P2b-05 Daily digest + News page**
   - The scheduler builds both digests each morning (on/off and time in Settings; skipped while paused or over the budget). A News page with AI and Pakistan tabs, a Refresh button, the date of each digest and its cost.
-- [ ] **P2b-06 Tests + your acceptance test + push**
+- [x] **P2b-06 Tests + your acceptance test + push** (accepted 2026-10-16)
   - Automated tests all pass (backend, and 36 end-to-end tests on desktop and phone).
   - **Your acceptance test** (about 10 minutes, a few cents). Start the app with `start.bat`, then:
     1. Open **News**: the AI and Pakistan digests should already be there (built at 07:30, or press "Build it now"). Open a few source links: each must go to the real article on the official site.
