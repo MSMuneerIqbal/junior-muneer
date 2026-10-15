@@ -1,0 +1,195 @@
+# Official news sources for the news agents (PLAN.md section 6.4). ONLY these are read.
+# You can add or remove sources. A broken entry stops the backend from starting, with a clear message.
+#
+# Each source:
+#   name      shown in the digest ("OpenAI says ...")
+#   topic     "ai" or "pakistan"
+#   kind      "rss"    an RSS or Atom feed
+#             "page"   a news page; links starting with `link_prefix` are the articles, and each
+#                      article's date and title come from the article page (or the link text)
+#             "trends" Google Trends' trending searches feed
+#   url       the feed or page address (https)
+# Optional:
+#   domains     other sites its articles may live on (the url's own site is always allowed);
+#               links anywhere else are dropped, and redirects anywhere else are refused
+#   link_prefix for "page": the path articles start with, e.g. "/news/"
+#   keywords    only keep items that mention one of these words (for broad company feeds)
+#   max_items   how many of the newest items to keep (default 30)
+#
+# All addresses below were checked on 2026-10-15. Not readable then (so not listed):
+#   xAI (x.ai blocks automated readers and has no feed), Qwen (qwen.ai is app-only; its old
+#   GitHub blog stopped in 2025), LMArena's leaderboard (blocks automated readers; its blog is
+#   below), The News (its feeds stopped updating in 2025).
+# Rankings ("who's on top") come from the Artificial Analysis API when ARTIFICIAL_ANALYSIS_API_KEY
+# is set in backend/.env (free key: artificialanalysis.ai).
+
+# ---------- AI: the companies' own sites ----------
+
+[[source]]
+name = "OpenAI"
+topic = "ai"
+kind = "rss"
+url = "https://openai.com/news/rss.xml"
+
+[[source]]
+name = "Anthropic"
+topic = "ai"
+kind = "page"
+url = "https://www.anthropic.com/news"
+link_prefix = "/news/"
+
+[[source]]
+name = "Google DeepMind"
+topic = "ai"
+kind = "rss"
+url = "https://deepmind.google/blog/rss.xml"
+
+[[source]]
+name = "Google AI blog"
+topic = "ai"
+kind = "rss"
+url = "https://blog.google/technology/ai/rss/"
+
+[[source]]
+name = "Google Research"
+topic = "ai"
+kind = "rss"
+url = "https://research.google/blog/rss/"
+max_items = 15
+
+[[source]]
+name = "Meta AI"
+topic = "ai"
+kind = "page"
+url = "https://ai.meta.com/blog/"
+link_prefix = "/blog/"
+
+[[source]]
+name = "Meta newsroom"
+topic = "ai"
+kind = "rss"
+url = "https://about.fb.com/news/feed/"
+keywords = ["AI", "Llama", "Muse", "model", "models", "superintelligence"]
+
+[[source]]
+name = "Microsoft"
+topic = "ai"
+kind = "rss"
+url = "https://news.microsoft.com/source/topics/ai/feed/"
+domains = ["microsoft.com"]
+
+[[source]]
+name = "NVIDIA"
+topic = "ai"
+kind = "rss"
+url = "https://blogs.nvidia.com/feed/"
+domains = ["nvidia.com"]
+
+[[source]]
+name = "Apple Machine Learning"
+topic = "ai"
+kind = "rss"
+url = "https://machinelearning.apple.com/rss.xml"
+
+[[source]]
+name = "Amazon"
+topic = "ai"
+kind = "rss"
+url = "https://www.aboutamazon.com/news/innovation-at-amazon/rss"
+keywords = ["AI", "Alexa", "Nova", "model", "models", "agent", "agents", "Bedrock"]
+
+[[source]]
+name = "AWS Machine Learning"
+topic = "ai"
+kind = "rss"
+url = "https://aws.amazon.com/blogs/machine-learning/feed/"
+max_items = 10
+
+[[source]]
+name = "Mistral AI"
+topic = "ai"
+kind = "rss"
+url = "https://mistral.ai/news/rss"
+
+[[source]]
+name = "DeepSeek"
+topic = "ai"
+kind = "page"
+url = "https://api-docs.deepseek.com/news/news260910"
+link_prefix = "/news/news"
+
+[[source]]
+name = "Hugging Face"
+topic = "ai"
+kind = "rss"
+url = "https://huggingface.co/blog/feed.xml"
+max_items = 20
+
+[[source]]
+name = "LMArena (Arena) blog"
+topic = "ai"
+kind = "page"
+url = "https://arena.ai/blog"
+link_prefix = "/blog/"
+
+# ---------- Pakistan: established news organisations ----------
+
+[[source]]
+name = "Dawn"
+topic = "pakistan"
+kind = "rss"
+url = "https://www.dawn.com/feeds/pakistan"
+
+[[source]]
+name = "Dawn Business"
+topic = "pakistan"
+kind = "rss"
+url = "https://www.dawn.com/feeds/business"
+
+[[source]]
+name = "Geo News"
+topic = "pakistan"
+kind = "rss"
+url = "https://www.geo.tv/rss/1/1"
+
+[[source]]
+name = "The Express Tribune"
+topic = "pakistan"
+kind = "rss"
+url = "https://tribune.com.pk/feed/pakistan"
+
+[[source]]
+name = "The Express Tribune Business"
+topic = "pakistan"
+kind = "rss"
+url = "https://tribune.com.pk/feed/business"
+
+[[source]]
+name = "The Express Tribune Technology"
+topic = "pakistan"
+kind = "rss"
+url = "https://tribune.com.pk/feed/technology"
+
+[[source]]
+name = "ARY News"
+topic = "pakistan"
+kind = "rss"
+url = "https://arynews.tv/category/pakistan/feed/"
+
+[[source]]
+name = "Business Recorder"
+topic = "pakistan"
+kind = "rss"
+url = "https://www.brecorder.com/feeds/latest-news"
+
+[[source]]
+name = "ProPakistani"
+topic = "pakistan"
+kind = "rss"
+url = "https://propakistani.pk/feed/"
+
+[[source]]
+name = "Google Trends Pakistan"
+topic = "pakistan"
+kind = "trends"
+url = "https://trends.google.com/trending/rss?geo=PK"

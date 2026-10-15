@@ -9,8 +9,8 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
 - Done: Phase 0 (text chat), Phase 1 (voice + live calls), Phase 2 tasks P2-01 to P2-06
   (profile, playbooks, permission rules + mode menu, approval queue, Paste box, writing team), P2-07
   (Social Media Manager), P2-08 (images), P2-09 (style memory), P2-10 (Social page), P2-11 (planned posts).
-- Phase 2 accepted (P2-12). **Now: Phase 2b**, then Phase 2b (AI-News-Agent and
-  Social-News-Agent, official sources only, with a fact guard in code).
+- Phase 2 accepted (P2-12). **Now: Phase 2b** (AI-News-Agent and Social-News-Agent, official
+  sources only, with a fact guard in code), then Phase 3 (official social APIs).
 - Last pushed to GitHub (`main`) on 2026-10-15.
 
 ## Safety rules (never break)
@@ -30,9 +30,10 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
   `agents/models.toml` holds model tiers and prices. Writing team: `writer.md`, `checker.md` (strong model),
   `humanizer.md`.
 - `playbooks/*.md`: one per platform, checked at startup.
+- `news/sources.toml`: the only news sources the news agents read (checked at startup).
 - `backend/` (FastAPI, SQLAlchemy + Alembic on SQLite in `data/junior.db`, OpenAI Agents SDK):
   `junior/chat/` (WebSocket chat), `junior/agent/` (builder, runner, tools, fake AI), `junior/writing/`
-  (team pipeline + style checks), `approvals.py`, `permissions.py`, `profile.py`, `voice.py`, `calls.py`.
+  (team pipeline + style checks), `junior/news/` (sources, reader, fact guard, digests), `approvals.py`, `permissions.py`, `profile.py`, `voice.py`, `calls.py`.
 - `frontend/` (Next.js 16, SWR, Tailwind 4): read `frontend/AGENTS.md` and
   `node_modules/next/dist/docs/` before writing Next.js code; this Next.js differs from older versions.
 

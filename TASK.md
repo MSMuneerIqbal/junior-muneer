@@ -225,7 +225,7 @@ Nothing is posted by the system in this phase: approved items are copy and paste
 
 Read-only: these agents never post or send anything. News pages are outside content.
 
-- [ ] **P2b-01 News sources + reader**
+- [x] **P2b-01 News sources + reader**
   - `news/sources.toml`: each source's name, feed or page address, and topic (AI or Pakistan). You can edit it.
   - A plain-HTTP reader for RSS, Atom and simple pages (time limits, size limits, no logins, no browser), keeping only the last 15 days and dropping duplicates.
   - Official sources only: the allowed list is the only thing read, and redirects to other sites are refused.

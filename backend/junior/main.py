@@ -28,6 +28,7 @@ from junior.images import router as images_router
 from junior.memories import router as memories_router
 from junior.models import get_router
 from junior.pause import router as pause_router
+from junior.news.sources import load_sources
 from junior.permissions import router as permissions_router
 from junior.playbooks import load_playbooks
 from junior.playbooks import router as playbooks_router
@@ -61,10 +62,11 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         init_db()
-        # A broken agents/models.toml, agent file or playbook stops startup with a clear error.
+        # A broken agents/models.toml, agent file, playbook or news/sources.toml stops startup with a clear error.
         get_router()
         app.state.registry = load_registry()
         app.state.playbooks = load_playbooks()
+        app.state.news_sources = load_sources()
         app.state.chat = ChatService(app.state.registry, model_provider)
         app.state.voice = voice
         app.state.calls = CallManager(realtime, app.state.registry, model_provider)

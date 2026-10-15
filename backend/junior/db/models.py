@@ -177,6 +177,23 @@ class Image(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
+class NewsArticle(Base):
+    """An article read from an official news source (junior/news). Outside content."""
+
+    __tablename__ = "news_articles"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # ai · pakistan
+    topic: Mapped[str] = mapped_column(String(20), index=True)
+    source: Mapped[str] = mapped_column(String(100))
+    title: Mapped[str] = mapped_column(String(300))
+    url: Mapped[str] = mapped_column(String(1000), unique=True)
+    published_at: Mapped[datetime] = mapped_column(UTCDateTime(), index=True)
+    summary: Mapped[str] = mapped_column(Text, default="")
+    extra: Mapped[dict[str, Any]] = mapped_column(default=dict)
+    fetched_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
 class Paste(Base):
     """Text you pasted from another site. Outside content: data, never instructions."""
 
