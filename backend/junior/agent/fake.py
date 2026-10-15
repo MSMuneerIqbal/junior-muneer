@@ -6,7 +6,9 @@ It echoes your message, streamed in small pieces. Two tricks to see the UI work:
   - a message starting with "remember " saves the rest as a memory, through the
     real save_memory tool and its safety checks;
   - a message starting with "draft " puts the rest in the approval queue as a
-    LinkedIn post (a card under the answer).
+    LinkedIn post (a card under the answer);
+  - a message starting with "write " runs the real writing team pipeline (with fake
+    Writer, Checker and Humanizer answers) for a LinkedIn post about the rest.
 """
 
 import asyncio
@@ -74,6 +76,14 @@ class FakeModel(Model):
                     "save_memory", {"fact": words, "your_words": words}, call_id="fake-mem"
                 )
             ], False
+        if text.lower().startswith("write ") and "write_draft" in tool_names:
+            return [
+                function_call(
+                    "write_draft",
+                    {"platform": "linkedin", "item_type": "post", "request": text[len("write ") :].strip()},
+                    call_id="fake-write",
+                )
+            ], False
         if text.lower().startswith("draft ") and "add_to_approvals" in tool_names:
             words = text[len("draft ") :].strip()
             return [
@@ -91,6 +101,11 @@ class FakeModel(Model):
         return [assistant_message(reply)], False
 
     async def get_response(self, system_instructions, input, model_settings, tools, output_schema, handoffs, tracing, **kwargs) -> ModelResponse:  # noqa: E501
+        if output_schema is not None and not output_schema.is_plain_text():
+            answer = _team_answer(output_schema.name(), _last_user_text(input))
+            await asyncio.sleep(0.4)  # long enough to watch the steps arrive
+            output = [assistant_message(json.dumps(answer))]
+            return ModelResponse(output=output, usage=_usage(str(input), str(output)), response_id="fake")
         output, _ = self._plan(input, tools)
         return ModelResponse(output=output, usage=_usage(str(input), str(output)), response_id="fake")
 
@@ -126,6 +141,26 @@ class FakeModel(Model):
                 if isinstance(event, ResponseOutputItemDoneEvent) and with_search:
                     await asyncio.sleep(0.6)  # long enough to see "Searching the web…"
                 yield event
+
+
+def _team_answer(schema: str, prompt: str) -> dict:
+    """Fake Writer, Checker and Humanizer answers (structured, like the real ones)."""
+    request = next((line[len("Request: "):] for line in prompt.splitlines() if line.startswith("Request: ")), "")
+    if "Draft" in schema:
+        who = "(fake Writer, revised)" if "## The Checker sent it back" in prompt else "(fake Writer)"
+        return {
+            "text": f"{who} A short post about {request}. Here's what I built and one thing I learned.\n\n#AI #MCP #Python",
+            "image_idea": "A screenshot of the app",
+            "missing_facts": [],
+        }
+    if "Review" in schema:
+        draft = prompt.split("<draft>\n", 1)[-1]
+        if "revised" in draft or "Humanizer" in draft:
+            return {"score": 9, "passes": True, "invented_facts": [], "issues": []}
+        return {"score": 6, "passes": False, "invented_facts": [], "issues": ["Make the first line about the result."]}
+    draft = prompt.split("<draft>\n", 1)[-1].split("\n</draft>", 1)[0]
+    text = draft.replace("(fake Writer, revised)", "(fake Humanizer)").replace("(fake Writer)", "(fake Humanizer)")
+    return {"text": text, "changes": ["Simpler words"]}
 
 
 def fake_model_provider():

@@ -194,7 +194,7 @@ Nothing is posted by the system in this phase: approved items are copy and paste
 - [x] **P2-05 Paste box**
   - Paste text from any site (a post to comment on, a job post, a client message) with its platform and type. Saved as outside content: never followed as instructions, memory saving blocked, anything drafted from it goes to Ask.
   - *Done when:* a pasted post with hidden instructions doesn't change his behaviour, and a test proves it.
-- [ ] **P2-06 Writing team**
+- [x] **P2-06 Writing team**
   - Writer, Checker (score out of 10, facts, voice, platform fit, red lines), Humanizer, plus the automatic AI-phrase checks from the prototype. Writer → Checker (sends back up to 2 times) → Humanizer → final check.
   - *Done when:* a draft comes back with a score, issues fixed, and every step visible in Show work.
 - [ ] **P2-07 Social Media Manager**

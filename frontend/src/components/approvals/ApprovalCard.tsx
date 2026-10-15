@@ -88,6 +88,16 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
           </p>
         )}
         {item.meta.image_idea && <p className="mt-2 text-xs text-muted">🖼 Image idea: {item.meta.image_idea}</p>}
+        {waiting && item.meta.issues && item.meta.issues.length > 0 && (
+          <div className="mt-2 rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn">
+            <p className="font-medium">Checker&apos;s notes</p>
+            <ul className="mt-0.5 list-disc pl-4">
+              {item.meta.issues.map((i, n) => (
+                <li key={n}>{i}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         <p className="mt-2 text-xs text-muted">
           {item.kind === "copy" ? "You send this yourself. " : ""}
           {item.from_outside && "Made from outside content, so it always waits for you. "}

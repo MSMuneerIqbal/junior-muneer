@@ -12,10 +12,13 @@ export type Conversation = {
 
 export type Step = {
   id: string;
-  kind: "web_search" | "tool";
+  kind: "web_search" | "tool" | "team";
   name?: string;
   label: string;
   status: "running" | "done";
+  // Writing team steps: the text at that step, and the Checker's or Humanizer's notes.
+  detail?: string;
+  notes?: string[];
 };
 
 export type Message = {

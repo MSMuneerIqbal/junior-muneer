@@ -1,5 +1,6 @@
 """What an agent knows about the current turn (passed to every tool)."""
 
+import asyncio
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -38,5 +39,13 @@ class TurnContext:
     # Runs helper agents for tools (a junior.agent.helpers.HelperRunner).
     helpers: Any = None
 
+    # Set when a tool emits an event, so the chat shows it at once (even mid-tool).
+    wake: asyncio.Event = field(default_factory=asyncio.Event)
+
     def mark_outside(self) -> None:
         self.outside_content_seen = True
+
+    def emit(self, event: dict[str, Any]) -> None:
+        """Send an event to the chat now, while a long tool (e.g. the writing team) runs."""
+        self.pending_events.append(event)
+        self.wake.set()

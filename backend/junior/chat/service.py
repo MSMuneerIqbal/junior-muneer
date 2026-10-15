@@ -117,7 +117,7 @@ class ChatService:
                 )
                 s.add(row)
                 s.flush()
-                saved_paste = {"id": row.id, "message_id": pasted.id, **paste}
+                saved_paste = {"id": row.id, "message_id": pasted.id, **paste}  # includes "text"
             message = Message(
                 role="user",
                 source="user",

@@ -117,8 +117,9 @@ def build_agent(
     router: ModelRouter,
     model_provider: ModelProvider,
     model_override: str | None = None,
+    output_type: type | None = None,
 ) -> tuple[Agent[TurnContext], str]:
-    """The SDK agent and the model name it uses."""
+    """The SDK agent and the model name it uses (with a structured answer if output_type is set)."""
     model_name = model_override or chosen_model(spec, router)
 
     def instructions(ctx: RunContextWrapper[TurnContext], _agent: Agent[TurnContext]) -> str:
@@ -129,5 +130,6 @@ def build_agent(
         instructions=instructions,
         model=model_provider(model_name),
         tools=build_tools(spec.tools),
+        output_type=output_type,
     )
     return agent, model_name

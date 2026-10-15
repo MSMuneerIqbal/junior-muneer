@@ -36,16 +36,34 @@ export function UserMessage({ text, audioId }: { text: string; audioId?: string 
   );
 }
 
-function StepLine({ step }: { step: Step }) {
+function StepLine({ step, full = false }: { step: Step; full?: boolean }) {
+  const team = step.kind === "team";
   return (
-    <li className="flex items-center gap-2 text-sm text-muted">
-      <span aria-hidden className={step.status === "running" ? "animate-pulse" : "text-ok"}>
-        {step.status === "running" ? "●" : "✓"}
+    <li className={`flex flex-col text-sm text-muted ${team ? "pl-5" : ""}`}>
+      <span className="flex items-center gap-2">
+        <span aria-hidden className={step.status === "running" ? "animate-pulse" : "text-ok"}>
+          {step.status === "running" ? "●" : team ? "↳" : "✓"}
+        </span>
+        <span>
+          {step.label}
+          {step.status === "running" ? "…" : ""}
+        </span>
       </span>
-      <span>
-        {step.label}
-        {step.status === "running" ? "…" : ""}
-      </span>
+      {full && step.notes && step.notes.length > 0 && (
+        <ul className="mt-0.5 ml-6 list-disc text-xs">
+          {step.notes.map((n, i) => (
+            <li key={i}>{n}</li>
+          ))}
+        </ul>
+      )}
+      {full && step.detail && (
+        <details className="mt-0.5 ml-6 text-xs">
+          <summary className="cursor-pointer hover:text-ink">See the text</summary>
+          <p dir="auto" className={`mt-1 whitespace-pre-wrap rounded-md bg-panel px-2 py-1.5 text-ink ${urduClass(step.detail)}`}>
+            {step.detail}
+          </p>
+        </details>
+      )}
     </li>
   );
 }
@@ -66,7 +84,7 @@ function ShowWork({ steps, cost }: { steps: Step[]; cost: number }) {
           {steps.length ? (
             <ul className="flex flex-col gap-1">
               {steps.map((s) => (
-                <StepLine key={s.id} step={s} />
+                <StepLine key={s.id} step={s} full />
               ))}
             </ul>
           ) : (

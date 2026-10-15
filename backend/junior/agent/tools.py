@@ -261,7 +261,12 @@ TOOL_FACTORIES["memory"] = lambda: list(MEMORY_TOOLS)
 
 
 def add_to_approvals_for(
-    context: TurnContext, platform: str, item_type: str, text: str, title: str = ""
+    context: TurnContext,
+    platform: str,
+    item_type: str,
+    text: str,
+    title: str = "",
+    meta: dict | None = None,
 ) -> str:
     """Queue a copy-and-paste draft. Nothing is ever sent by the system."""
     from junior.approvals import ApprovalError, create_item
@@ -278,11 +283,14 @@ def add_to_approvals_for(
             title=title,
             from_outside=context.outside_content_seen,
             conversation_id=context.conversation_id,
-            meta=(
-                {"paste_id": context.paste["id"], "source_url": context.paste["source_url"]}
-                if context.paste
-                else None
-            ),
+            meta={
+                **(
+                    {"paste_id": context.paste["id"], "source_url": context.paste["source_url"]}
+                    if context.paste
+                    else {}
+                ),
+                **(meta or {}),
+            },
         )
     except ApprovalError as e:
         return f"NOT added: {e}"
@@ -317,3 +325,93 @@ def add_to_approvals(
 
 
 TOOL_FACTORIES["approvals"] = lambda: [add_to_approvals]
+
+
+# ---- writing team ----------------------------------------------------------------
+
+
+async def write_draft_for(
+    context: TurnContext, platform: str, item_type: str, request: str, notes: str = ""
+) -> str:
+    """Write with the team (Writer -> Checker -> Humanizer -> final check) and queue the result."""
+    from junior.permissions import plan_mode_refusal
+    from junior.playbooks import PlaybookError, load_playbooks
+    from junior.profile import ProfileMissing
+    from junior.writing.team import Brief, WritingTeam
+
+    if refusal := plan_mode_refusal():
+        return refusal
+    if context.helpers is None:
+        return "NOT written: the writing team isn't available here."
+    try:
+        playbook = load_playbooks().get(platform)
+    except PlaybookError as e:
+        return f"NOT written: {e}"
+    if playbook is None:
+        return f"NOT written: there's no playbook for {platform} yet (playbooks/{platform}.md)."
+    their_text = ""
+    if context.paste and item_type in ("comment", "reply", "proposal"):
+        their_text = context.paste["text"]
+
+    async def ask(agent_name, prompt, output_type):
+        return await context.helpers.run_structured(agent_name, prompt, context, output_type)
+
+    team = WritingTeam(ask, context, step_prefix=f"team-{len(context.approval_ids) + 1}")
+    brief = Brief(playbook=playbook, item_type=item_type, request=request, notes=notes, their_text=their_text)
+    try:
+        result = await team.write(brief)
+    except ProfileMissing as e:
+        return f"NOT written: {e}"
+
+    # The score and the Checker's notes go on the card.
+    queued = add_to_approvals_for(
+        context,
+        platform,
+        item_type,
+        result.text,
+        title=request[:80],
+        meta={
+            "score": result.score,
+            "issues": result.issues,
+            "image_idea": result.image_idea,
+            "missing_facts": result.missing_facts,
+        },
+    )
+    if queued.startswith("NOT"):
+        return queued
+    verdict = "ready to post" if result.passed else "the Checker still has notes, shown on the card"
+    missing = (
+        f" Facts the Writer needed but your profile doesn't have: {', '.join(result.missing_facts)}."
+        if result.missing_facts
+        else ""
+    )
+    return (
+        f"Written by the team and queued as a card under your answer. Score {result.score}/10, "
+        f"{verdict}.{missing} Don't repeat the full text; tell them briefly what it says and the score."
+    )
+
+
+@function_tool
+async def write_draft(
+    ctx: Ctx,
+    platform: Literal["linkedin", "facebook", "instagram", "x"],
+    item_type: Literal["post", "comment", "reply", "message"],
+    request: str,
+    notes: str = "",
+) -> str:
+    """Write a post, comment, reply or message with the writing team and put it in the approval queue.
+
+    The team (Writer, Checker, Humanizer) uses the user's profile and the platform's
+    playbook, checks facts and voice, and scores it out of 10. For a comment or reply to
+    something the user pasted, set item_type to comment or reply: the team sees the paste.
+
+    Args:
+        platform: Where it will be posted.
+        item_type: post, comment, reply or message.
+        request: What to write, in the user's words, e.g. "a post about my MCP server launch".
+        notes: Extra details the user gave (tone, length, points to include).
+    """
+    return await write_draft_for(ctx.context, platform, item_type, request, notes)
+
+
+TOOL_FACTORIES["writing"] = lambda: [write_draft]

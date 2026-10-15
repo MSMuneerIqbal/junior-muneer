@@ -5,6 +5,7 @@ the daily cap still applies, and its web searches are logged like any other.
 """
 
 from dataclasses import dataclass
+from typing import TypeVar
 
 from junior.agent.builder import ModelProvider, build_agent
 from junior.agent.context import TurnContext
@@ -13,6 +14,8 @@ from junior.costs import budget_left
 from junior.models import get_router
 from junior.registry import Registry
 
+T = TypeVar("T")
+
 
 @dataclass
 class HelperRunner:
@@ -20,11 +23,21 @@ class HelperRunner:
     model_provider: ModelProvider
 
     async def run(self, agent_name: str, prompt: str, context: TurnContext) -> str:
+        return (await self._run(agent_name, prompt, context)).text
+
+    async def run_structured(
+        self, agent_name: str, prompt: str, context: TurnContext, output_type: type[T]
+    ) -> T:
+        """Run a helper whose answer is a structured object (e.g. the writing team)."""
+        return (await self._run(agent_name, prompt, context, output_type)).output
+
+    async def _run(self, agent_name: str, prompt: str, context: TurnContext, output_type=None):
         router = get_router()
-        agent, model_name = build_agent(self.registry.get(agent_name), router, self.model_provider)
+        agent, model_name = build_agent(
+            self.registry.get(agent_name), router, self.model_provider, output_type=output_type
+        )
         spent_this_turn = sum(u.cost_usd for u in context.usage)
         budget = budget_left(context.settings) - spent_this_turn
-        result = await run_once(
+        return await run_once(
             agent, model_name, router, [{"role": "user", "content": prompt}], context, budget
         )
-        return result.text

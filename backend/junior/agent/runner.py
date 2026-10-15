@@ -7,6 +7,7 @@ Events (plain dicts, sent to the dashboard as they happen):
 Tools may add their own events through TurnContext.pending_events.
 """
 
+import asyncio
 import json
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
@@ -37,6 +38,7 @@ STEP_LABELS = {
     "save_memory": "Saving a memory",
     "forget_memory": "Forgetting a memory",
     "add_to_approvals": "Adding it to your approval queue",
+    "write_draft": "Writing it with the team",
 }
 
 
@@ -45,6 +47,8 @@ class TurnResult:
     text: str
     usage: list[ModelUsage] = field(default_factory=list)
     steps: list[dict[str, Any]] = field(default_factory=list)
+    # A helper's structured answer (an agent with an output type).
+    output: Any = None
 
     @property
     def cost_usd(self) -> float:
@@ -171,7 +175,20 @@ async def stream_turn(
     steps: dict[str, dict[str, Any]] = {}
     text_parts: list[str] = []
 
-    async for event in result.stream_events():
+    def pending() -> list[dict[str, Any]]:
+        out = []
+        while context.pending_events:
+            event = context.pending_events.pop(0)
+            if event.get("type") == "step":  # steps from inside a tool are kept for Show work
+                steps[event["id"]] = {k: v for k, v in event.items() if k != "type"}
+            out.append(event)
+        return out
+
+    async for event in _with_tool_events(result.stream_events(), context):
+        if event is None:  # a tool emitted something mid-run
+            for e in pending():
+                yield e
+            continue
         if isinstance(event, RawResponsesStreamEvent):
             data = event.data
             if data.type == "response.output_text.delta" and data.delta:
@@ -195,8 +212,8 @@ async def stream_turn(
                 if call_id in steps:
                     steps[call_id]["status"] = "done"
                     yield {"type": "step", **steps[call_id]}
-        while context.pending_events:
-            yield context.pending_events.pop(0)
+        for e in pending():
+            yield e
 
     final = result.final_output
     text = final if isinstance(final, str) and final else "".join(text_parts)
@@ -204,6 +221,35 @@ async def stream_turn(
         "type": "final",
         "result": TurnResult(text=text, usage=context.usage, steps=list(steps.values())),
     }
+
+
+async def _with_tool_events(stream: AsyncIterator[Any], context: TurnContext) -> AsyncIterator[Any]:
+    """The SDK's events, plus None whenever a tool emits an event, so long tools show progress."""
+    iterator = stream.__aiter__()
+    next_event: asyncio.Task | None = None
+    try:
+        while True:
+            if next_event is None:
+                next_event = asyncio.ensure_future(iterator.__anext__())
+            context.wake.clear()
+            if context.pending_events:
+                yield None
+            woke = asyncio.ensure_future(context.wake.wait())
+            done, _ = await asyncio.wait({next_event, woke}, return_when=asyncio.FIRST_COMPLETED)
+            if woke not in done:
+                woke.cancel()
+            if next_event in done:
+                try:
+                    event = next_event.result()
+                except StopAsyncIteration:
+                    return
+                next_event = None
+                yield event
+            else:
+                yield None
+    finally:
+        if next_event is not None and not next_event.done():
+            next_event.cancel()
 
 
 async def run_once(
@@ -220,4 +266,4 @@ async def run_once(
         agent, input_items, context=context, hooks=hooks, max_turns=MAX_TURNS
     )
     text = result.final_output if isinstance(result.final_output, str) else ""
-    return TurnResult(text=text, usage=context.usage)
+    return TurnResult(text=text, usage=context.usage, output=result.final_output)
