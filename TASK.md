@@ -175,18 +175,40 @@ junior-muneer/
 
 **Phase done when:** you approve 5 posts you'd really publish, and draft one comment from a pasted post.
 
-- [ ] **P2-01** `my_profile`: fill in your real skills, services, rates, projects and results (together with you)
-- [ ] **P2-02** Playbooks: LinkedIn, Facebook, Instagram, X
-- [ ] **P2-03** Permission system: action types, Ask / Auto / Deny, locked types, the "outside content → Ask" rule (with "always allow" hidden on those items), "run at most once". **Strict tests written in this task.**
-- [ ] **P2-04** Approval queue: backend, cards inside the chat, Approvals page, Mode switch in the Today panel. Two card kinds: **API items** (Approve · Always allow · Edit · Reject) and **copy-and-paste items** (Copy · Open platform · Edit · Mark as posted · Reject)
-- [ ] **P2-05** **Paste box**: paste text in the chat or on its own page, pick (or let him guess) platform and type; saved as outside content (`source = outside`), so memory saving is blocked and anything drafted from it goes to Ask. Tests included
-- [ ] **P2-06** Writing team: Writer, Checker, Humanizer, plus the AI-phrase checks (ported from `prototype/`)
-- [ ] **P2-07** Social Media Manager subagent: content ideas and planning, comments from pasted posts (workflow B), called by Junior Muneer
-- [ ] **P2-08** Image upload and attaching images to drafts (Instagram drafts wait until an image is attached)
-- [ ] **P2-09** Style memory: approved and "marked as posted" texts become style examples
-- [ ] **P2-10** Social page: drafts, ideas, scheduled and posted items per account
-- [ ] **P2-11** Scheduler for planned posts (reminders for copy-and-paste items; real posting comes in phase 3)
-- [ ] **P2-12** Tests + your acceptance test + push
+Nothing is posted by the system in this phase: approved items are copy and paste (APIs come in phase 3).
+
+- [ ] **P2-01 Your profile**
+  - A Profile page: what you do, services, skills, rates, real projects and results, who you want to reach, your writing voice, things to avoid, hashtags, platforms you use.
+  - It's the only source of facts for anything written about you. You fill it in (I'll help).
+  - *Done when:* the writing team gets your profile as text, and an empty profile gives a clear "fill in your profile" message.
+- [ ] **P2-02 Playbooks**
+  - `playbooks/linkedin.md`, `facebook.md`, `instagram.md`, `x.md`: structure, length, hashtags, tone, red lines. You can edit them.
+  - *Done when:* each is loaded and checked at startup, and a broken one gives a clear error.
+- [ ] **P2-03 Permission rules**
+  - Action types (e.g. `linkedin.post`, `facebook.page.post`, `gmail.send`), each Ask / Auto / Deny; locked types; "outside content always Ask"; a global mode (ask everything · use my rules · pause); "run at most once".
+  - *Done when:* strict tests cover every rule, including locked types and outside content.
+- [ ] **P2-04 Approval queue**
+  - Approval items (copy-and-paste or API), with status: waiting · approved · rejected · posted · check manually. Edits are kept.
+  - Cards inside the chat and an Approvals page: Copy · Open platform · Edit · Mark as posted · Reject (API items: Approve · Always allow · Edit · Reject). "Needs your OK" and Mode in the Today panel become real.
+  - *Done when:* approving in the chat updates the Approvals page and the other way round.
+- [ ] **P2-05 Paste box**
+  - Paste text from any site (a post to comment on, a job post, a client message) with its platform and type. Saved as outside content: never followed as instructions, memory saving blocked, anything drafted from it goes to Ask.
+  - *Done when:* a pasted post with hidden instructions doesn't change his behaviour, and a test proves it.
+- [ ] **P2-06 Writing team**
+  - Writer, Checker (score out of 10, facts, voice, platform fit, red lines), Humanizer, plus the automatic AI-phrase checks from the prototype. Writer → Checker (sends back up to 2 times) → Humanizer → final check.
+  - *Done when:* a draft comes back with a score, issues fixed, and every step visible in Show work.
+- [ ] **P2-07 Social Media Manager**
+  - A subagent Junior Muneer calls for posts, comments on pasted posts, and content ideas. Drafts become approval cards.
+  - *Done when:* "write a LinkedIn post about X" in chat gives an approval card with a checked draft.
+- [ ] **P2-08 Images**
+  - Upload your own images and attach them to drafts; each draft comes with an image idea; Instagram drafts wait for an image.
+- [ ] **P2-09 Style memory**
+  - Approved and posted texts become examples for future drafts on that platform.
+- [ ] **P2-10 Social page**
+  - Drafts, ideas, planned and posted items per platform.
+- [ ] **P2-11 Planned posts**
+  - Pick a day and time for a draft; the scheduler reminds you then (real posting comes in phase 3).
+- [ ] **P2-12 Tests + your acceptance test + push**
 
 ## Phase 3: Official social APIs (Meta + LinkedIn)
 
