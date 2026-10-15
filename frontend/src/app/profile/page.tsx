@@ -19,6 +19,7 @@ type Profile = {
   platforms: string[];
   links: string[];
   email: string;
+  phone: string;
   location: string;
   languages: string[];
 };
@@ -155,6 +156,9 @@ function ProfileForm({ initial }: { initial: Profile }) {
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Email">
             <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className={input} />
+          </Field>
+          <Field label="Phone">
+            <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} className={input} maxLength={50} />
           </Field>
           <Field label="Location">
             <input value={form.location} onChange={(e) => set("location", e.target.value)} className={input} />

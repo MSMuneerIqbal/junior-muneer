@@ -50,7 +50,7 @@ def test_junior_muneer_knows_your_profile_in_chat(client):
     client.put(
         "/api/profile",
         json={"headline": "Agentic AI Engineer", "proof": ["MS Data Science (in progress)"],
-              "email": "me@example.com", "location": "Lahore, Pakistan", "languages": ["English", "Urdu"]},
+              "email": "me@example.com", "phone": "+92 300 0000000", "location": "Lahore, Pakistan", "languages": ["English", "Urdu"]},
     )
     model = ScriptedModel([chunked_answer("Sure!")])
     with TestClient(create_app(model_provider=lambda: (lambda n: model))) as c:
@@ -63,6 +63,7 @@ def test_junior_muneer_knows_your_profile_in_chat(client):
     assert "What I do: Agentic AI Engineer" in prompt and "MS Data Science" in prompt
     assert "Location: Lahore, Pakistan" in prompt and "Languages: English, Urdu" in prompt
     assert "me@example.com" not in prompt  # contact details stay out of prompts
+    assert "+92 300 0000000" not in prompt
 
 
 def test_without_a_profile_he_suggests_filling_it(client):

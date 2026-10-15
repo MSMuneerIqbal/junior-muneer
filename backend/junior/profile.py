@@ -29,6 +29,7 @@ class Profile(BaseModel):
     platforms: list[str] = Field(default_factory=list)  # where you post
     links: list[str] = Field(default_factory=list)  # portfolio, GitHub, Upwork...
     email: str = Field(default="", max_length=200)  # your own address (used from the email phase)
+    phone: str = Field(default="", max_length=50)  # kept for later; never put into prompts
     location: str = Field(default="", max_length=200)
     languages: list[str] = Field(default_factory=list)
 
