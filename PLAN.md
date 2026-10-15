@@ -121,8 +121,9 @@ ORCHESTRATOR        │ JUNIOR MUNEER  │  • Answers simple questions himself
                     └───────┬────────┘    (memory, web search, database: chats, queue, stats, logs)
                             │ calls subagents only when needed (several at once if useful)
      ┌───────────────┬──────┴────────┬───────────────┬──────────────────┐
-LEVEL 2  SOCIAL MEDIA    FREELANCE       EMAIL AGENT     DEVELOPER AGENT     + future subagents
-         MANAGER         MANAGER                         (GitHub, terminal)  (research, invoices...)
+LEVEL 2  SOCIAL MEDIA    FREELANCE       EMAIL AGENT     DEVELOPER AGENT     NEWS AGENTS
+         MANAGER         MANAGER                         (GitHub, terminal)  (AI news, Pakistan news)
+                                                                             + future subagents
      └───────────────┴──────┬────────┴───────────────┴──────────────────┘
 LEVEL 3  SHARED WORKERS:  Writing team (Writer → Checker → Humanizer)
                           API senders: Gmail · Meta · LinkedIn (code, approved items only)
@@ -158,6 +159,8 @@ and posts the result in the chat when it's ready.
 | **Social Media Manager** | Plans content, picks pasted posts worth commenting on, handles comments on your posts | Meta API (read), pasted content | No, drafts only |
 | **Freelance Manager** | Scores Upwork jobs from alert emails and pastes, tracks Fiverr orders and deadlines, drafts client replies | Email (read), pasted content | No, drafts only |
 | **Email Agent** | Reads, sorts and summarizes your inbox; drafts replies; turns Upwork/Fiverr alerts into tasks | Gmail API (read) | No, drafts only |
+| **AI News Agent** | The last 15 days of AI news, straight from the big companies' own pages: new models, how they work, benchmarks and who is on top in each field (coding, reasoning, agents, voice, image and video, open models), plus big business moves. Gives you a short, sourced summary | Official RSS feeds and newsroom pages (plain HTTP reads, no browser bots), official leaderboards, web search as a fallback | No, read and summarize only |
+| **Social News Agent** | Pakistan only: what is happening in the country and what people are talking about online, in the last 15 days (newest first). Neutral, no political opinions | RSS feeds of big Pakistani news sites, Google Trends for Pakistan, web search as a fallback | No, read and summarize only |
 | **Developer Agent** | Your GitHub helper: lists repos, summarizes issues, PRs and commits, reviews code, drafts issues, PR descriptions and commit messages. Later it proposes terminal commands | GitHub MCP (read-only tools) | No, it drafts and plans; the Dev Executor runs approved actions |
 | **Dev Executor** | Runs **one approved** GitHub action (create an issue, push a branch...) or terminal command, exactly as approved | GitHub MCP (write tools), terminal (later) | **Yes, approved items only** |
 | **Writer** | Writes posts, comments, proposals, messages and emails, using the platform's playbook | None | No |
@@ -172,7 +175,25 @@ and posts the result in the chat when it's ready.
 2. **You paste** something (a job post, a client message, a post to comment on).
 3. **Triggers:** schedules, new emails and new API comments go **straight to the right manager**. The results land in the dashboard, and Junior Muneer tells you about them when you ask, or greets you with them ("3 things need your OK").
 
-### 6.4 Adding new subagents later
+### 6.4 The news agents
+
+Two read-only subagents that keep you in touch with the market and your country. Junior Muneer sends them every news question:
+"what's new in AI?", "which model is best for coding now?", "what happened with GPT and Gemini this week?" go to the **AI News Agent**;
+"what's going on in Pakistan?", "what's trending today?" go to the **Social News Agent**. Other news questions still use his normal web search.
+
+- **Where the news comes from:** the sources' own pages. AI: the official blogs and newsrooms of OpenAI, Anthropic, Google DeepMind / Google AI,
+  Meta AI, Microsoft, NVIDIA, Apple, Amazon, Mistral, xAI, DeepSeek, Alibaba Qwen, Hugging Face, plus official leaderboards (LMArena, Artificial Analysis).
+  Pakistan: RSS feeds of Dawn, Geo, The Express Tribune, The News, ARY, Business Recorder and ProPakistani, plus Google Trends (Pakistan) for what's trending.
+  Read with plain HTTP (RSS, Atom or the page itself), the same way a feed reader does: **no browser bots, no logins**.
+  The list lives in one editable file, `news/sources.toml`, so you can add or remove sources.
+- **What you get:** a short summary in sections (AI: new models and releases · benchmarks and who's on top, by field · agents and tools · business moves;
+  Pakistan: top stories · trending online · tech, internet and freelancing · economy that affects you), each item with its date and a link to the source.
+  Facts only from the sources; when sources disagree, both are given. In English, or Urdu if you ask.
+- **Fast and cheap:** each agent builds one digest a day (morning, by the scheduler) with the small model and keeps it. Questions are answered from that digest,
+  so asking is quick and costs almost nothing. "Refresh" fetches again. News pages are **outside content**: never followed as instructions, never saved to memory.
+- **Where you see it:** in the chat and live calls (Junior Muneer reads you the summary), and on a **News** page with two tabs (AI · Pakistan).
+
+### 6.5 Adding new subagents later
 
 Every subagent is **one file** in `agents/`, the same idea as Claude Code subagents: name, description (Junior Muneer reads it to decide when to call),
 instructions, model, tools, and action types (each follows the Ask / Auto / Deny rules).
@@ -364,6 +385,7 @@ Each phase ends with you testing it. We only move on when it works for you.
 | **0. Foundation + text chat** | Git repo, FastAPI backend, Next.js dashboard shell, OpenAI Agents SDK, model router, agent registry, **Junior Muneer text chat with live streaming**, chat history, memory, web search, audit log, cost tracking, $5/day cap, Pause, daily backups | You chat with Junior Muneer like a friend; the chats are saved and show in the sidebar |
 | **1. Voice** | Voice messages (speak, and he answers aloud) + **live call** mode + transcripts saved in history, in English and Urdu | You hold a 5-minute live call in English and one in Urdu, and both show in the chat history |
 | **2. Writing team, approvals + Paste** | Social Media Manager (planner), Writer, Checker, Humanizer, playbooks, **permission rules (Ask/Auto/Deny), approval queue, approval cards in chat**, **Paste box**, **copy-and-paste items**, image upload | You approve 5 posts you'd really publish, and draft one comment from a pasted post |
+| **2b. News agents** | **AI News Agent** (last 15 days of AI news from the big companies' own pages, benchmarks and who's on top) and **Social News Agent** (Pakistan news and what's trending), a daily digest, a News page, used in chat and calls | "What's new in AI?" and "What's happening in Pakistan?" give correct, sourced summaries of the last 15 days |
 | **3. Official social APIs** | Facebook Page and Instagram professional (Meta), LinkedIn posts; comments on Page/IG posts through the API | An approved post goes live through the API, and a reply to a real comment is sent |
 | **4. Email** | Email Agent: inbox summary, sorting, reply drafts, sending | You answer a real email from the dashboard |
 | **5. Freelance** | Upwork job scoring from alert emails and pastes, proposals, Fiverr orders and messages, client replies: all copy and paste | A real proposal, drafted from a real job alert, is ready for you to paste into Upwork |
@@ -446,6 +468,7 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 
 ## 18. Change log
 
+- **v7.3 (2026-10-15):** added phase 2b, the news agents (section 6.4): the AI News Agent and the Social News Agent (Pakistan), reading official RSS feeds and pages, with a daily digest.
 - **v7.2 (2026-10-15):** voice: gpt-4o-transcribe for speech-to-text after the Urdu test (section 14b); spoken replies stream.
 - **v7.1 (2026-10-14):** web search moved to a small web-researcher helper after live testing showed the built-in tool adds ~4,400 tokens to every message (a hello cost $0.011; now $0.0023).
 - **v7:** safe workflow (section 2): all browser automation removed (Browser Reader, Browser Executor, agent Chrome profile, Playwright). Added the Paste box and copy-and-paste items.

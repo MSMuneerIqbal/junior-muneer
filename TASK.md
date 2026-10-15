@@ -210,6 +210,30 @@ Nothing is posted by the system in this phase: approved items are copy and paste
   - Pick a day and time for a draft; the scheduler reminds you then (real posting comes in phase 3).
 - [ ] **P2-12 Tests + your acceptance test + push**
 
+## Phase 2b: News agents (AI news + Pakistan news)
+
+**Phase done when:** "What's new in AI?" and "What's happening in Pakistan?" give correct, sourced summaries of the last 15 days, in chat and in a call.
+
+Read-only: these agents never post or send anything. News pages are outside content.
+
+- [ ] **P2b-01 News sources + reader**
+  - `news/sources.toml`: each source's name, feed or page address, and topic (AI or Pakistan). You can edit it.
+  - A plain-HTTP reader for RSS, Atom and simple pages (time limits, size limits, no logins, no browser), keeping only the last 15 days and dropping duplicates.
+  - *Done when:* the sources file is checked at startup (a broken one gives a clear error), and tests with saved sample feeds pass without the internet.
+- [ ] **P2b-02 AI News Agent** (`agents/ai_news_agent.md`)
+  - Builds the digest: new models and releases · benchmarks and who's on top, by field (coding, reasoning, agents, voice, image and video, open models) · agents and tools · business moves. Every item has a date and a source link.
+  - Answers questions from the digest; web search only for what the digest doesn't cover, and only from official sites first.
+  - *Done when:* a digest from sample feeds has the right sections and links, and nothing older than 15 days.
+- [ ] **P2b-03 Social News Agent** (`agents/social_news_agent.md`)
+  - Pakistan only: top stories · trending online (Google Trends Pakistan) · tech, internet and freelancing · economy that affects you. Newest first, neutral, no political opinions.
+  - *Done when:* a digest from sample feeds has the right sections and links, and news from other countries is left out.
+- [ ] **P2b-04 Junior Muneer sends news questions to them**
+  - Tools `ai_news` and `pakistan_news` in chat and live calls, chosen from the agents' descriptions. Each step shows in Show work; outside-content rules apply (no memory saving, no instructions followed).
+  - *Done when:* "which AI model is best for coding right now?" goes to the AI News Agent and "what's trending in Pakistan?" to the Social News Agent, and a test proves a feed with hidden instructions changes nothing.
+- [ ] **P2b-05 Daily digest + News page**
+  - The scheduler builds both digests each morning (on/off and time in Settings; skipped while paused or over the budget). A News page with AI and Pakistan tabs, a Refresh button, the date of each digest and its cost.
+- [ ] **P2b-06 Tests + your acceptance test + push**
+
 ## Phase 3: Official social APIs (Meta + LinkedIn)
 
 **Phase done when:** an approved post goes live through the API, and a reply to a real comment is sent.
