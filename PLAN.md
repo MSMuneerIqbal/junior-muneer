@@ -186,6 +186,15 @@ Two read-only subagents that keep you in touch with the market and your country.
   Pakistan: RSS feeds of Dawn, Geo, The Express Tribune, The News, ARY, Business Recorder and ProPakistani, plus Google Trends (Pakistan) for what's trending.
   Read with plain HTTP (RSS, Atom or the page itself), the same way a feed reader does: **no browser bots, no logins**.
   The list lives in one editable file, `news/sources.toml`, so you can add or remove sources.
+- **Only real news from official sources (no fakes, no rumours):**
+  - Only sources on the allowed list in `news/sources.toml` are read: the companies' own sites for AI news, and the official leaderboards for rankings.
+    Pakistan news comes only from established news organisations, never from social media posts, blogs or forwarded messages.
+  - Every item in a digest must point to an article that was actually fetched from an allowed source. **Code checks this, not the AI:**
+    an item whose link isn't in the fetched list, or whose date is outside the 15 days, is dropped before you see it.
+  - The AI only summarizes what the article says. No guessing, no "reportedly", no numbers that aren't in the source.
+    Benchmark scores and rankings are quoted from the official leaderboard or the company's own release, with the source named ("OpenAI says…", "LMArena shows…").
+  - A claim only one source makes is shown as that source's claim. Web search is used only to find an official page, and its result must also be on the allowed list.
+  - If a source can't be read, the digest says so ("Anthropic's news page couldn't be read today") instead of filling the gap.
 - **What you get:** a short summary in sections (AI: new models and releases · benchmarks and who's on top, by field · agents and tools · business moves;
   Pakistan: top stories · trending online · tech, internet and freelancing · economy that affects you), each item with its date and a link to the source.
   Facts only from the sources; when sources disagree, both are given. In English, or Urdu if you ask.
