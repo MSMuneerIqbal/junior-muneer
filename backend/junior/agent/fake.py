@@ -13,6 +13,7 @@ It echoes your message, streamed in small pieces. Two tricks to see the UI work:
 """
 
 import asyncio
+import re
 import copy
 import json
 from collections.abc import AsyncIterator
@@ -87,13 +88,11 @@ class FakeModel(Model):
                 ]
                 return [function_call("save_ideas", {"ideas": ideas}, call_id="fake-ideas")], False
             topic = request[len("write ") :].strip() if request.lower().startswith("write ") else request
-            return [
-                function_call(
-                    "write_draft",
-                    {"platform": "linkedin", "item_type": "post", "request": topic},
-                    call_id="fake-write",
-                )
-            ], False
+            args = {"platform": "linkedin", "item_type": "post", "request": topic}
+            idea = re.match(r"idea (\d+)$", topic, re.IGNORECASE)
+            if idea:
+                args["idea_id"] = int(idea.group(1))
+            return [function_call("write_draft", args, call_id="fake-write")], False
         if text.lower().startswith(("write ", "ideas")) and "social_media" in tool_names:
             return [function_call("social_media", {"request": text}, call_id="fake-social")], False
         if text.lower().startswith("draft ") and "add_to_approvals" in tool_names:

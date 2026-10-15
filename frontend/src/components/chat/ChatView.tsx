@@ -282,6 +282,8 @@ export function ChatView() {
         </div>
       )}
       <Composer
+        key={params.get("ask") ?? ""}
+        initialText={params.get("ask") ?? ""}
         onSend={onSend}
         onVoice={onVoice}
         busy={busy}

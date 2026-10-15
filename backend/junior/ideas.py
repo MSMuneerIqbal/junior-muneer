@@ -1,6 +1,6 @@
 """Content ideas from the Social Media Manager.
 
-    GET  /api/ideas?status=new|used|dismissed|all
+    GET  /api/ideas?status=new|used|dismissed|all&platform=linkedin
     POST /api/ideas/{id}/dismiss
     POST /api/ideas/{id}/restore
 """
@@ -86,13 +86,15 @@ def _set_status(idea_id: int, status: str) -> IdeaOut:
 
 
 @router.get("/api/ideas", response_model=list[IdeaOut])
-def list_ideas(status: str = "new", limit: int = 100) -> list[IdeaOut]:
+def list_ideas(status: str = "new", platform: str = "", limit: int = 100) -> list[IdeaOut]:
     if status != "all" and status not in STATUSES:
         raise HTTPException(422, f"status must be 'all' or one of {list(STATUSES)}")
     with session_scope() as s:
         q = select(Idea).order_by(Idea.id.desc()).limit(min(limit, 500))
         if status != "all":
             q = q.where(Idea.status == status)
+        if platform:
+            q = q.where(Idea.platform == platform)
         return [_out(i) for i in s.scalars(q)]
 
 

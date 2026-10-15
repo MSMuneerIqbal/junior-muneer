@@ -17,6 +17,10 @@ Every edit is kept (the original text and each change).
     POST /api/approvals/{id}/posted       copy items: you posted it
     POST /api/approvals/{id}/reject
     POST /api/approvals/{id}/restore      undo a reject
+    PUT  /api/approvals/{id}/plan  {"planned_at": "2026-10-17T09:00:00+05:00" | null}
+    GET  /api/approvals/due               planned items whose time has come
+
+Planned posts: you pick a time; the scheduler reminds you then (real posting comes in phase 3).
 """
 
 from datetime import datetime
@@ -84,6 +88,10 @@ class ApprovalOut(BaseModel):
     images: list[dict[str, Any]] = []
     # The platform needs an image (Instagram) and none is attached yet.
     needs_image: bool = False
+    planned_at: datetime | None = None
+    reminded_at: datetime | None = None
+    # Planned, still waiting or approved, and its time has come.
+    due: bool = False
     conversation_id: int | None
     message_id: int | None
     created_at: datetime
@@ -107,6 +115,13 @@ def _needs_image(platform: str, item_type: str) -> bool:
     except Exception:  # a broken playbook is reported at startup, not here
         return False
     return bool(book and book.needs_image)
+
+
+PLANNABLE = ("waiting", "approved")
+
+
+def _is_due(item: ApprovalItem) -> bool:
+    return item.planned_at is not None and item.status in PLANNABLE and item.planned_at <= utcnow()
 
 
 def to_out(item: ApprovalItem, images: list[dict[str, Any]] | None = None) -> ApprovalOut:
@@ -136,6 +151,9 @@ def to_out(item: ApprovalItem, images: list[dict[str, Any]] | None = None) -> Ap
         open_url=_open_url(item),
         images=images,
         needs_image=not images and _needs_image(item.platform, item.item_type),
+        planned_at=item.planned_at,
+        reminded_at=item.reminded_at,
+        due=_is_due(item),
         conversation_id=item.conversation_id,
         message_id=item.message_id,
         created_at=item.created_at,
@@ -359,6 +377,46 @@ def style_examples(platform: str, item_type: str, limit: int = 3) -> list[str]:
         return list(s.scalars(q))
 
 
+def plan_item(item_id: int, planned_at: datetime | None) -> ApprovalOut:
+    from datetime import timedelta
+
+    if planned_at is not None:
+        if planned_at.tzinfo is None:
+            raise ApprovalError("Give the time with its time zone.")
+        if planned_at < utcnow() - timedelta(minutes=1):
+            raise ApprovalError("That time has already passed. Pick a time in the future.")
+
+    def fn(item: ApprovalItem) -> None:
+        if item.status not in PLANNABLE:
+            raise ApprovalError(f"This item is {item.status.replace('_', ' ')}; only waiting or approved items can be planned.")
+        item.planned_at = planned_at
+        item.reminded_at = None
+
+    return _change(item_id, "planned" if planned_at else "unplanned", fn)
+
+
+def remind_due() -> int:
+    """Scheduler job: mark planned items whose time has come (the dashboard shows them)."""
+    from junior.pause import is_paused
+
+    if is_paused():
+        return 0
+    with session_scope() as s:
+        due = s.scalars(
+            select(ApprovalItem).where(
+                ApprovalItem.planned_at <= utcnow(),
+                ApprovalItem.reminded_at.is_(None),
+                ApprovalItem.status.in_(PLANNABLE),
+            )
+        ).all()
+        for item in due:
+            item.reminded_at = utcnow()
+        found = [(i.id, i.title, i.platform) for i in due]
+    for item_id, title, platform in found:
+        audit("action", "post_reminder", detail={"id": item_id, "title": title, "platform": platform})
+    return len(found)
+
+
 def waiting_count() -> int:
     with session_scope() as s:
         return s.scalar(select(func.count()).select_from(ApprovalItem).where(ApprovalItem.status == "waiting")) or 0
@@ -391,8 +449,14 @@ class ApproveBody(BaseModel):
     always_allow: bool = False
 
 
+class PlanBody(BaseModel):
+    planned_at: datetime | None
+
+
 @router.get("/api/approvals", response_model=list[ApprovalOut])
-def list_items(status: str = "waiting", platform: str = "", limit: int = 100) -> list[ApprovalOut]:
+def list_items(
+    status: str = "waiting", platform: str = "", planned: bool = False, limit: int = 100
+) -> list[ApprovalOut]:
     if status != "all" and status not in STATUSES:
         raise HTTPException(422, f"status must be 'all' or one of {list(STATUSES)}")
     with session_scope() as s:
@@ -401,11 +465,24 @@ def list_items(status: str = "waiting", platform: str = "", limit: int = 100) ->
             q = q.where(ApprovalItem.status == status)
         if platform:
             q = q.where(ApprovalItem.platform == platform)
+        if planned:  # planned items, soonest first
+            q = q.where(ApprovalItem.planned_at.is_not(None)).order_by(None).order_by(ApprovalItem.planned_at)
         rows = s.scalars(q).all()
         from junior.images import images_for
 
         pictures = images_for([i.id for i in rows])
         return [to_out(i, pictures.get(i.id, [])) for i in rows]
+
+
+@router.get("/api/approvals/due", response_model=list[ApprovalOut])
+def due_items() -> list[ApprovalOut]:
+    with session_scope() as s:
+        rows = s.scalars(
+            select(ApprovalItem)
+            .where(ApprovalItem.planned_at <= utcnow(), ApprovalItem.status.in_(PLANNABLE))
+            .order_by(ApprovalItem.planned_at)
+        ).all()
+        return [to_out(i) for i in rows]
 
 
 @router.get("/api/approvals/count")
@@ -453,3 +530,8 @@ def post_reject(item_id: int) -> ApprovalOut:
 @router.post("/api/approvals/{item_id}/restore", response_model=ApprovalOut)
 def post_restore(item_id: int) -> ApprovalOut:
     return _call(restore_item, item_id)
+
+
+@router.put("/api/approvals/{item_id}/plan", response_model=ApprovalOut)
+def put_plan(item_id: int, body: PlanBody) -> ApprovalOut:
+    return _call(plan_item, item_id, body.planned_at)

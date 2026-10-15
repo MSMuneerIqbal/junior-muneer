@@ -6,7 +6,7 @@ import useSWR, { useSWRConfig } from "swr";
 import { fetcher, send } from "@/lib/api";
 import { useWaitingCount } from "@/lib/approvals";
 import { PAUSE_KEY, PERMISSIONS_KEY, USAGE_KEY } from "@/lib/keys";
-import type { UsageToday } from "@/lib/types";
+import type { ApprovalItem, UsageToday } from "@/lib/types";
 
 function money(n: number) {
   return n < 0.01 && n > 0 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`;
@@ -119,6 +119,25 @@ function CallMinutes() {
   );
 }
 
+function TimeToPost() {
+  const { data } = useSWR<ApprovalItem[]>("/api/approvals/due", fetcher, { refreshInterval: 60_000 });
+  if (!data?.length) return null;
+  return (
+    <section aria-label="Time to post" className="rounded-lg bg-danger-soft px-3 py-2">
+      <p className="text-sm font-medium text-danger">⏰ Time to post</p>
+      <ul className="mt-1 flex flex-col gap-0.5 text-xs">
+        {data.map((i) => (
+          <li key={i.id}>
+            <Link href="/approvals" className="hover:underline">
+              {i.platform_label}: {i.title}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function NeedsYourOk() {
   const waiting = useWaitingCount();
   return (
@@ -144,6 +163,7 @@ export function TodayPanel() {
       <PauseButton />
       <Spend />
       <CallMinutes />
+      <TimeToPost />
       <NeedsYourOk />
     </div>
   );

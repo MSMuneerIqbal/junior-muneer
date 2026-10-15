@@ -58,6 +58,9 @@ export type ApprovalItem = {
   open_url: string;
   images: { id: number; url: string; name: string; size: number }[];
   needs_image: boolean;
+  planned_at: string | null;
+  reminded_at: string | null;
+  due: boolean;
   conversation_id: number | null;
   message_id: number | null;
   created_at: string;

@@ -14,13 +14,16 @@ export function Composer({
   onVoice,
   busy,
   notice,
+  initialText = "",
 }: {
   onSend: (text: string, paste?: PasteDraft) => boolean;
   onVoice: (voice: VoiceMessage) => void;
   busy: boolean;
   notice?: string;
+  // Text to start with, e.g. "Write idea 3" from the Social page (you still press Send).
+  initialText?: string;
 }) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   const [paste, setPaste] = useState<PasteDraft | null>(null);
   // Long text you pasted into the message box was moved to the Paste box (can be undone).
   const [moved, setMoved] = useState(false);

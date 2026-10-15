@@ -146,3 +146,10 @@ def test_manager_is_registered_with_only_its_tools():
     assert manager.tools == ("writing", "ideas") and manager.action_types == ()
     assert "social" in registry.get("junior_muneer").tools
     assert "writing" not in registry.get("junior_muneer").tools  # he goes through the manager
+
+
+def test_ideas_filter_by_platform(client):
+    from junior.ideas import add_ideas
+
+    add_ideas([{"platform": "linkedin", "title": "A"}, {"platform": "x", "title": "B"}])
+    assert [i["title"] for i in client.get("/api/ideas?platform=x").json()] == ["B"]

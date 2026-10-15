@@ -231,6 +231,9 @@ class ApprovalItem(Base):
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, index=True)
     decided_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     posted_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    # Planned posts (P2-11): when you want to post it, and when you were reminded.
+    planned_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True, index=True)
+    reminded_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
 
 
 class ActionRun(Base):

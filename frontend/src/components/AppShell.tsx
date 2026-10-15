@@ -13,6 +13,7 @@ import { setHidden, useHidden } from "@/lib/layoutPrefs";
 const NAV = [
   { href: "/", label: "Chat", icon: "💬" },
   { href: "/approvals", label: "Approvals", icon: "✅" },
+  { href: "/social", label: "Social", icon: "📣" },
   { href: "/profile", label: "Profile", icon: "👤" },
   { href: "/memory", label: "Memory", icon: "🧠" },
   { href: "/activity", label: "Activity", icon: "📜" },

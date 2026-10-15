@@ -1,20 +1,24 @@
 """The built-in scheduler: checks every few minutes and runs what is due.
 
-Phase 0 has one job: the daily backup. Later phases add scheduled posts and reminders.
+Jobs: the daily backup, and reminders for planned posts (P2-11).
 """
 
 import asyncio
 import logging
 from collections.abc import Callable
 
+from junior.approvals import remind_due
 from junior.backup import backup_if_due
 
 log = logging.getLogger(__name__)
 
-CHECK_EVERY_SECONDS = 5 * 60
+CHECK_EVERY_SECONDS = 60  # often enough for post reminders; each job is cheap when nothing is due
 
 # (name, job). A job runs in a worker thread and must decide itself whether it's due.
-JOBS: list[tuple[str, Callable[[], object]]] = [("daily backup", backup_if_due)]
+JOBS: list[tuple[str, Callable[[], object]]] = [
+    ("daily backup", backup_if_due),
+    ("post reminders", remind_due),
+]
 
 
 async def run_due_jobs() -> None:

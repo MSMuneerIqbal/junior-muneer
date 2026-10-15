@@ -204,9 +204,9 @@ Nothing is posted by the system in this phase: approved items are copy and paste
   - Upload your own images and attach them to drafts; each draft comes with an image idea; Instagram drafts wait for an image.
 - [x] **P2-09 Style memory**
   - Approved and posted texts become examples for future drafts on that platform.
-- [ ] **P2-10 Social page**
+- [x] **P2-10 Social page**
   - Drafts, ideas, planned and posted items per platform.
-- [ ] **P2-11 Planned posts**
+- [x] **P2-11 Planned posts**
   - Pick a day and time for a draft; the scheduler reminds you then (real posting comes in phase 3).
 - [ ] **P2-12 Tests + your acceptance test + push**
 

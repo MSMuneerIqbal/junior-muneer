@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useApprovalItem } from "@/lib/approvals";
+import { toLocalInput, useApprovalItem, whenText } from "@/lib/approvals";
 import type { ApprovalItem, ApprovalStatus } from "@/lib/types";
 import { BACKEND_URL } from "@/lib/api";
 import { urduClass } from "@/lib/urdu";
@@ -23,6 +23,7 @@ const primary =
 export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
   const { item, act } = useApprovalItem(initial);
   const [editing, setEditing] = useState<string | null>(null);
+  const [planning, setPlanning] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +36,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
     try {
       await act(action, body);
       if (action === "edit") setEditing(null);
+      if (action === "plan") setPlanning(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "That didn't work");
     } finally {
@@ -65,7 +67,16 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
             · {item.meta.score}/10
           </span>
         )}
-        <span className={`ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium ${status.style}`} data-testid="approval-status">
+        {item.due ? (
+          <span className="ml-auto rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-medium text-danger" data-testid="planned">
+            ⏰ Time to post
+          </span>
+        ) : item.planned_at && (item.status === "waiting" || item.status === "approved") ? (
+          <span className="ml-auto rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent" data-testid="planned">
+            📅 {whenText(item.planned_at)}
+          </span>
+        ) : null}
+        <span className={`${item.planned_at && (item.status === "waiting" || item.status === "approved") ? "" : "ml-auto"} rounded-full px-2 py-0.5 text-[11px] font-medium ${status.style}`} data-testid="approval-status">
           {status.label}
         </span>
       </header>
@@ -136,6 +147,38 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
         </p>
       </div>
 
+      {planning !== null && (
+        <div className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-2.5 text-sm">
+          <label className="flex items-center gap-2">
+            <span className="text-muted">Post on</span>
+            <input
+              type="datetime-local"
+              aria-label="Planned time"
+              value={planning}
+              onChange={(e) => setPlanning(e.target.value)}
+              className="rounded-lg border border-line bg-bg px-2 py-1 outline-none focus:border-accent"
+            />
+          </label>
+          <button
+            type="button"
+            className={primary}
+            disabled={busy || !planning}
+            onClick={() => run("plan", { planned_at: new Date(planning).toISOString() })}
+          >
+            Save
+          </button>
+          {item.planned_at && (
+            <button type="button" className={button} disabled={busy} onClick={() => run("plan", { planned_at: null })}>
+              Clear
+            </button>
+          )}
+          <button type="button" className={button} onClick={() => setPlanning(null)}>
+            Cancel
+          </button>
+          <span className="w-full text-xs text-muted">You get a reminder then. Real auto-posting comes in phase 3.</span>
+        </div>
+      )}
+
       <footer className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-2.5">
         {editing !== null ? (
           <>
@@ -182,6 +225,14 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
               <>
                 <button type="button" className={button} disabled={busy} onClick={() => setEditing(item.text)}>
                   Edit
+                </button>
+                <button
+                  type="button"
+                  className={button}
+                  disabled={busy}
+                  onClick={() => setPlanning(toLocalInput(item.planned_at))}
+                >
+                  📅 {item.planned_at ? "Change time" : "Plan"}
                 </button>
                 <label className={`${button} cursor-pointer`}>
                   🖼 Add image

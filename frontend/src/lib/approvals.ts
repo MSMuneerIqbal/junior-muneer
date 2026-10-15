@@ -17,7 +17,7 @@ export function useApprovalItem(initial: ApprovalItem) {
   const item = data ?? initial;
 
   async function act(
-    action: "approve" | "posted" | "reject" | "restore" | "edit" | "add_image" | "remove_image",
+    action: "approve" | "posted" | "reject" | "restore" | "edit" | "add_image" | "remove_image" | "plan",
     body?: object | File | number,
   ) {
     let updated: ApprovalItem;
@@ -30,6 +30,8 @@ export function useApprovalItem(initial: ApprovalItem) {
     } else if (action === "remove_image") {
       await api(`${itemKey(item.id)}/images/${body as number}`, { method: "DELETE" });
       updated = await api<ApprovalItem>(itemKey(item.id));
+    } else if (action === "plan") {
+      updated = await send<ApprovalItem>("PUT", `${itemKey(item.id)}/plan`, body);
     } else {
       updated =
         action === "edit"
@@ -43,6 +45,24 @@ export function useApprovalItem(initial: ApprovalItem) {
   }
 
   return { item, act };
+}
+
+/** "Fri 17 Oct, 09:00" in your own time zone. */
+export function whenText(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** For a datetime-local input: local time, minutes precision. */
+export function toLocalInput(iso: string | null): string {
+  const d = iso ? new Date(iso) : new Date(Date.now() + 60 * 60 * 1000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export function useWaitingCount() {
