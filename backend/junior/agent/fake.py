@@ -63,6 +63,10 @@ class FakeModel(Model):
         hosted_search = any(isinstance(t, WebSearchTool) for t in tools)
         tool_names = {getattr(t, "name", "") for t in tools if not isinstance(t, WebSearchTool)}
         text = _last_user_text(input)
+        if text.startswith("## Question from"):
+            # A news agent answering from the digest: quote its first item with its link.
+            first = next((line[2:] for line in text.splitlines() if line.startswith("- ")), "")
+            return [assistant_message(f"(fake news agent) From today's digest: {first or 'nothing yet.'}")], False
         if hosted_search:
             # The web researcher: pretend to search, then report.
             return [assistant_message(f"- (fake search result for: {text})")], True
@@ -93,6 +97,11 @@ class FakeModel(Model):
             if idea:
                 args["idea_id"] = int(idea.group(1))
             return [function_call("write_draft", args, call_id="fake-write")], False
+        lowered = text.lower()
+        if "ai news" in lowered and "ai_news" in tool_names:
+            return [function_call("ai_news", {"question": text}, call_id="fake-ai-news")], False
+        if "pakistan" in lowered and ("news" in lowered or "trending" in lowered) and "pakistan_news" in tool_names:
+            return [function_call("pakistan_news", {"question": text}, call_id="fake-pk-news")], False
         if text.lower().startswith(("write ", "ideas")) and "social_media" in tool_names:
             return [function_call("social_media", {"request": text}, call_id="fake-social")], False
         if text.lower().startswith("draft ") and "add_to_approvals" in tool_names:
@@ -157,6 +166,8 @@ class FakeModel(Model):
 def _team_answer(schema: str, prompt: str) -> dict:
     """Fake Writer, Checker and Humanizer answers (structured, like the real ones)."""
     request = next((line[len("Request: "):] for line in prompt.splitlines() if line.startswith("Request: ")), "")
+    if "DigestIn" in schema:
+        return _fake_digest(prompt)
     if "Draft" in schema:
         who = "(fake Writer, revised)" if "## The Checker sent it back" in prompt else "(fake Writer)"
         return {
@@ -172,6 +183,27 @@ def _team_answer(schema: str, prompt: str) -> dict:
     draft = prompt.split("<draft>\n", 1)[-1].split("\n</draft>", 1)[0]
     text = draft.replace("(fake Writer, revised)", "(fake Humanizer)").replace("(fake Writer)", "(fake Humanizer)")
     return {"text": text, "changes": ["Simpler words"]}
+
+
+def _fake_digest(prompt: str) -> dict:
+    """A fake news digest made from the real numbered article list (so the fact guard passes it)."""
+    keys = re.findall(r"^- `(\w+)`:", prompt, re.MULTILINE)
+    sections: dict[str, list[dict]] = {k: [] for k in keys}
+    source = ""
+    n = 0
+    for line in prompt.splitlines():
+        header = re.match(r"^### (.+) \(\d+\)$", line)
+        if header:
+            source = header.group(1)
+            continue
+        m = re.match(r"^\[(\d+)\] \d{4}-\d\d-\d\d · (.+)$", line)
+        if not m or not keys:
+            continue
+        key = "trending" if "Trends" in source and "trending" in sections else keys[n % len(keys)]
+        n += 1
+        if len(sections[key]) < 3:
+            sections[key].append({"article_ids": [int(m.group(1))], "headline": m.group(2), "summary": f"(fake digest) From {source}."})
+    return {"sections": [{"key": k, "items": v} for k, v in sections.items()]}
 
 
 def fake_model_provider():

@@ -17,6 +17,7 @@ from junior.agent.context import TurnContext
 from junior.agent.helpers import HelperRunner
 from junior.audit import audit
 from junior.chat.history import save_usage
+from junior.config import get_settings
 from junior.costs import budget_left
 from junior.db import NewsArticle, NewsDigest, session_scope
 from junior.news.guard import SECTIONS, DigestIn, guard_digest
@@ -118,6 +119,10 @@ async def build_digest(
     settings = all_settings()
     budget_left(settings)  # stop before spending anything if the cap is reached
     now = now or datetime.now(UTC)
+    if transport is None and get_settings().fake_ai:
+        from junior.news.fake import sample_transport
+
+        transport = sample_transport()  # FAKE_AI: sample news, no network
     fetched = await fetch_topic(topic, load_sources(), now=now, transport=transport)
     total = len(fetched.read) + len(fetched.failed)
     step(

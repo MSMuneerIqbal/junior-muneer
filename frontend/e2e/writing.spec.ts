@@ -13,7 +13,7 @@ test("the writing team's steps show live and in Show work, and the card has the 
   // Live: the team's steps arrive one by one while it works.
   await expect(page.getByText("Checker: 6/10, sent back")).toBeVisible();
   const card = page.getByRole("article", { name: new RegExp(`launch ${tag}`) });
-  await expect(card).toContainText("9/10");
+  await expect(card).toContainText("9/10", { timeout: 20_000 }); // the whole writing team runs first
   await expect(card).toContainText("(fake Humanizer)");
 
   await page.getByRole("button", { name: "▸ Show work" }).click();

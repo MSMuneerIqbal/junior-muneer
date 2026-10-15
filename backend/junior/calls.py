@@ -60,6 +60,34 @@ WEB_SEARCH_TOOL = {
         "required": ["query"],
     },
 }
+AI_NEWS_TOOL = {
+    "type": "function",
+    "name": "ai_news",
+    "description": (
+        "The AI-News-Agent: AI news of the last 15 days from the big AI companies' own sites: new "
+        "models, benchmarks and which model is best, agents and tools, business moves. Use it for "
+        "any AI news question. Returns an answer with sources for you to say briefly."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {"question": {"type": "string", "description": "The question, clearly."}},
+        "required": ["question"],
+    },
+}
+PAKISTAN_NEWS_TOOL = {
+    "type": "function",
+    "name": "pakistan_news",
+    "description": (
+        "The Social-News-Agent: news in Pakistan of the last 15 days from established Pakistani news "
+        "organisations, what's trending in Pakistan, prices and the economy. Use it for any question "
+        "about what's happening in Pakistan. Returns an answer with sources for you to say briefly."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {"question": {"type": "string", "description": "The question, clearly."}},
+        "required": ["question"],
+    },
+}
 ASK_JUNIOR_TOOL = {
     "type": "function",
     "name": "ask_junior",
@@ -257,7 +285,14 @@ class CallManager:
                 },
                 "output": {"voice": settings["tts_voice"], "speed": float(settings["tts_speed"])},
             },
-            "tools": [WEB_SEARCH_TOOL, ASK_JUNIOR_TOOL, SAVE_MEMORY_TOOL, FORGET_MEMORY_TOOL],
+            "tools": [
+                WEB_SEARCH_TOOL,
+                AI_NEWS_TOOL,
+                PAKISTAN_NEWS_TOOL,
+                ASK_JUNIOR_TOOL,
+                SAVE_MEMORY_TOOL,
+                FORGET_MEMORY_TOOL,
+            ],
             "tool_choice": "auto",
             # How sure the transcription is of each word: used to ignore breathing and noise.
             "include": ["item.input_audio_transcription.logprobs"],
@@ -501,19 +536,23 @@ class CallManager:
             result = forget_memory_for(context, int(args.get("memory_id", 0)))
         elif name == "ask_junior":
             result = await self._ask_junior(call, str(args.get("question", "")))
+        elif name in ("ai_news", "pakistan_news"):
+            result = await self._news(call, "ai" if name == "ai_news" else "pakistan", str(args.get("question", "")))
         else:
             result = f"Unknown tool {name!r}."
         context.pending_events.clear()
         label = {
             "web_search": f"Searching the web: {args.get('query', '')}",
             "ask_junior": f"Checking: {args.get('question', '')}",
+            "ai_news": f"Asking the AI-News-Agent: {args.get('question', '')}",
+            "pakistan_news": f"Asking the Social-News-Agent: {args.get('question', '')}",
             "save_memory": "Saving a memory",
             "forget_memory": "Forgetting a memory",
         }.get(name or "", f"Using {name}")
         call.pending_steps.append(
             {
                 "id": f"call-tool-{len(call.pending_steps)}-{name}",
-                "kind": "web_search" if name in ("web_search", "ask_junior") else "tool",
+                "kind": "web_search" if name in ("web_search", "ask_junior", "ai_news", "pakistan_news") else "tool",
                 "name": name,
                 "label": label,
                 "status": "done",
@@ -568,6 +607,26 @@ class CallManager:
 
             save_usage(s, new_usage, call.conversation_id, None, mode="call")
         return text or "Nothing reliable found."
+
+    async def _news(self, call: LiveCall, topic: str, question: str) -> str:
+        """The news agents answer from today's digest (official sources only)."""
+        from junior.news.digest import answer_question
+
+        context = call.context
+        context.mark_outside()  # news: no memory saving this turn
+        spent_before = len(context.usage)
+        try:
+            text = await answer_question(topic, question.strip() or "What's new?", context)
+        except BudgetExceeded as e:
+            return f"Can't check the news: {e}"
+        new_usage = context.usage[spent_before:]
+        call.pending_cost += sum(u.cost_usd for u in new_usage)
+        call.cost_usd += sum(u.cost_usd for u in new_usage)
+        with session_scope() as s:
+            from junior.chat.history import save_usage
+
+            save_usage(s, new_usage, call.conversation_id, None, mode="call")
+        return text or "Nothing in the news about that."
 
     async def _ask_junior(self, call: LiveCall, question: str) -> str:
         """The full Junior Muneer (web search, database) answers a question for the call."""

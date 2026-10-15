@@ -240,7 +240,7 @@ Read-only: these agents never post or send anything. News pages are outside cont
 - [x] **P2b-03 Social News Agent** (`agents/social_news_agent.md`)
   - Pakistan only: top stories · trending online (Google Trends Pakistan) · tech, internet and freelancing · economy that affects you. Newest first, neutral, no political opinions.
   - *Done when:* a digest from sample feeds has the right sections and links, and news from other countries is left out.
-- [ ] **P2b-04 Junior Muneer sends news questions to them**
+- [x] **P2b-04 Junior Muneer sends news questions to them**
   - Tools `ai_news` and `pakistan_news` in chat and live calls, chosen from the agents' descriptions. Each step shows in Show work; outside-content rules apply (no memory saving, no instructions followed).
   - *Done when:* "which AI model is best for coding right now?" goes to the AI News Agent and "what's trending in Pakistan?" to the Social News Agent, and a test proves a feed with hidden instructions changes nothing.
 - [ ] **P2b-05 Daily digest + News page**

@@ -26,7 +26,7 @@ test("ideas to draft to planned, all from the Social page", async ({ page, reque
   await expect(page.getByRole("textbox", { name: "Message" })).toHaveValue(/^Write idea \d+$/);
   await page.getByRole("textbox", { name: "Message" }).press("Enter");
   const card = page.getByRole("article").filter({ hasText: "(fake Humanizer)" }).last();
-  await expect(card).toContainText("9/10");
+  await expect(card).toContainText("9/10", { timeout: 20_000 }); // the whole writing team runs first
 
   // Plan it for tomorrow 09:00.
   await card.getByRole("button", { name: "📅 Plan" }).click();

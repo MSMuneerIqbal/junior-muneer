@@ -563,3 +563,71 @@ async def social_media(ctx: Ctx, request: str) -> str:
 
 
 TOOL_FACTORIES["social"] = lambda: [social_media]
+
+
+# ---- news agents (Phase 2b) -------------------------------------------------------------
+
+
+NEWS_AGENT_LABELS = {"ai": "Asking the AI-News-Agent", "pakistan": "Asking the Social-News-Agent"}
+
+
+async def news_for(context: TurnContext, topic: str, question: str, call_id: str | None = None) -> str:
+    """Ask the AI-News-Agent or the Social-News-Agent; their answer comes from official sources only."""
+    import uuid
+
+    from junior.costs import BudgetExceeded
+    from junior.news.digest import answer_question
+
+    if context.helpers is None:
+        return "NOT available: the news agents can't be reached here."
+    context.mark_outside()  # news is outside content: no memory saving this turn
+    if call_id:  # show this tool's step first, so the agent's progress appears under it
+        context.emit(
+            {"type": "step", "id": call_id, "kind": "tool", "name": f"{topic}_news",
+             "label": NEWS_AGENT_LABELS[topic], "status": "running"}
+        )
+
+    def on_step(label: str, notes: list[str] | None) -> None:
+        step = {"type": "step", "id": f"news-{uuid.uuid4().hex[:8]}", "kind": "team", "label": label, "status": "done"}
+        if notes:
+            step["notes"] = notes
+        context.emit(step)
+
+    try:
+        answer = await answer_question(topic, question.strip() or "What's new?", context, on_step)
+    except BudgetExceeded as e:
+        return f"NOT done: {e}"
+    return (
+        f"{answer}\n\n(From official sources only. Answer briefly in your own words, keep the source "
+        "names and links, and don't add anything they don't say.)"
+    )
+
+
+@function_tool
+async def ai_news(ctx: Ctx, question: str) -> str:
+    """Ask the AI-News-Agent: the last 15 days of AI news from the big AI companies' own sites.
+
+    New models and releases, benchmarks and who's on top by field (coding, reasoning, voice,
+    image, video), agents and tools, business moves. Use it for ANY question about AI news,
+    AI models, AI companies or which model is best at something.
+
+    Args:
+        question: The user's question, in their words.
+    """
+    return await news_for(ctx.context, "ai", question, getattr(ctx, "tool_call_id", None))
+
+
+@function_tool
+async def pakistan_news(ctx: Ctx, question: str) -> str:
+    """Ask the Social-News-Agent: the last 15 days of news in Pakistan from established Pakistani news organisations.
+
+    Top stories, what's trending in Pakistan, prices and the economy, tech, internet and
+    freelancing. Use it for ANY question about what's happening in Pakistan.
+
+    Args:
+        question: The user's question, in their words.
+    """
+    return await news_for(ctx.context, "pakistan", question, getattr(ctx, "tool_call_id", None))
+
+
+TOOL_FACTORIES["news"] = lambda: [ai_news, pakistan_news]

@@ -40,6 +40,8 @@ STEP_LABELS = {
     "add_to_approvals": "Adding it to your approval queue",
     "write_draft": "Writing it with the team",
     "social_media": "Asking the Social Media Manager",
+    "ai_news": "Asking the AI-News-Agent",
+    "pakistan_news": "Asking the Social-News-Agent",
     "save_ideas": "Saving ideas",
 }
 

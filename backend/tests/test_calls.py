@@ -126,6 +126,8 @@ def test_session_has_his_personality_voice_tools_and_urdu_transcription():
     assert turn["create_response"] is True  # answers right away, no waiting for the transcript
     assert {t["name"] for t in session["tools"]} == {
         "web_search",
+        "ai_news",
+        "pakistan_news",
         "ask_junior",
         "save_memory",
         "forget_memory",
