@@ -26,7 +26,10 @@ class Settings(BaseSettings):
     meta_page_token: str = ""
     meta_ig_user_id: str = ""
     meta_graph_version: str = "v26.0"
-    # Phase 6: your GitHub fine-grained token (written by connect.bat github; never committed).
+    # Phase 6: the app's GitHub OAuth App (public client ID, device flow on): people connect their
+    # own GitHub in the app. Not a secret.
+    github_client_id: str = ""
+    # Or, for the owner's machine: a token from connect.bat github (never committed).
     github_token: str = ""
     # Or use your GitHub CLI login (gh): the token stays in Windows' own store, asked from gh when needed.
     github_auth: str = ""  # "gh" to use the GitHub CLI login

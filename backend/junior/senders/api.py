@@ -40,11 +40,15 @@ def post_resolve(item_id: int, body: ResolveBody) -> ApprovalOut:
 
 
 def _github() -> dict:
-    from junior.github.connection import is_connected
+    from junior.config import get_settings
+    from junior.github.connection import source
+    from junior.github.oauth import stored_account
 
-    connected = is_connected()
+    where = source()
     return {"key": "github", "label": "GitHub (read-only for now)", "action": "", "how": "connect.bat github", "ready": True,
-            "connected": connected, "sender": "GitHub MCP" if connected else ""}
+            "connected": bool(where), "sender": "GitHub MCP" if where else "",
+            # Connect GitHub in the app (device login), when the app is registered with GitHub.
+            "connect": "device" if get_settings().github_client_id else "", "source": where, "account": stored_account()}
 
 
 @router.get("/api/connections")

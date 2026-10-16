@@ -262,6 +262,20 @@ class Order(Base):
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
+class Connection(Base):
+    """An account you connected in the app (GitHub). The token is encrypted (junior/secrets.py)."""
+
+    __tablename__ = "connections"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    provider: Mapped[str] = mapped_column(String(30), unique=True)
+    account: Mapped[str] = mapped_column(String(100), default="")
+    token_enc: Mapped[str] = mapped_column(Text)
+    scopes: Mapped[str] = mapped_column(String(200), default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
 class Paste(Base):
     """Text you pasted from another site. Outside content: data, never instructions."""
 

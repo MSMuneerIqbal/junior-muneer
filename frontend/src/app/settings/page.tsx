@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import useSWR, { useSWRConfig } from "swr";
+import { GitHubConnect } from "@/components/GitHubConnect";
 import { BACKEND_URL, fetcher, send } from "@/lib/api";
 import { PERMISSIONS_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
 import type { Settings } from "@/lib/types";
@@ -655,9 +656,20 @@ function SettingsForm({ initial }: { initial: Settings }) {
   );
 }
 
-type Platform = { key: string; label: string; how: string; ready: boolean; connected: boolean; sender: string };
+type Platform = {
+  key: string;
+  label: string;
+  how: string;
+  ready: boolean;
+  connected: boolean;
+  sender: string;
+  connect?: string; // "device": connect in the app (GitHub)
+  source?: string; // GitHub: app · gh · env
+  account?: string;
+};
 
 function ConnectionRow({ p }: { p: Platform }) {
+  const { mutate } = useSWRConfig();
   const [result, setResult] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   async function check() {
@@ -671,12 +683,27 @@ function ConnectionRow({ p }: { p: Platform }) {
       setChecking(false);
     }
   }
+  async function disconnect() {
+    try {
+      const r = await send<{ message: string }>("DELETE", "/api/github/connection");
+      setResult(r.message);
+    } catch (e) {
+      setResult(e instanceof Error ? e.message : "Couldn't disconnect");
+    }
+    void mutate("/api/connections");
+  }
+  const inApp = p.source === "app";
   return (
     <Row label={p.label}>
       <div className="flex flex-col gap-1.5 text-sm">
         <div className="flex flex-wrap items-center gap-2">
           {p.connected ? (
-            <Badge tone="ok">Connected{p.sender.includes("(fake)") ? " (fake, for trying it out)" : ""}</Badge>
+            <Badge tone="ok">
+              Connected
+              {inApp && p.account ? ` as @${p.account}` : ""}
+              {p.source === "gh" ? " (GitHub CLI login)" : p.source === "env" ? " (token in backend/.env)" : ""}
+              {p.sender.includes("(fake)") ? " (fake, for trying it out)" : ""}
+            </Badge>
           ) : (
             <Badge tone="muted">{p.ready ? "Not connected" : "Coming soon"}</Badge>
           )}
@@ -685,9 +712,22 @@ function ConnectionRow({ p }: { p: Platform }) {
               {checking ? "Checking…" : "Check"}
             </button>
           )}
+          {inApp && (
+            <button type="button" onClick={disconnect} className="rounded-lg border border-line px-2.5 py-1 text-xs text-muted hover:bg-panel-2 hover:text-ink">
+              Disconnect
+            </button>
+          )}
         </div>
+        {p.connect === "device" && !inApp && (
+          <GitHubConnect
+            onConnected={() => {
+              setResult(null);
+              void mutate("/api/connections");
+            }}
+          />
+        )}
         {result && <p className="text-xs text-muted" role="status">{result}</p>}
-        {!p.connected && p.ready && (
+        {!p.connected && p.ready && p.connect !== "device" && (
           <p className="text-xs leading-relaxed text-muted">
             Run <code>{p.how}</code> in the project folder (the steps are in TASK.md), then restart. Your tokens stay
             in <code>backend/.env</code>: never in the browser or in Git.

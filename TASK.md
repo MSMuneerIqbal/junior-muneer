@@ -322,6 +322,16 @@ Read-only: these agents never post or send anything. News pages are outside cont
     Windows' store and is asked from `gh` when needed; `.env` only says `GITHUB_AUTH=gh`. Live: GitHub's read-only
     MCP server answered as @MSMuneerIqbal and listed your commits; 25 reading tools get through, nothing that writes.
     (A fine-grained token, below, is the other way, and safer: it can be limited to read-only.)
+  - **Connect GitHub in the app (for everyone who uses it):** Settings → Connections → GitHub → **Connect GitHub**:
+    the app shows a code, you approve on github.com, done. Each person's token is encrypted in the database (key in
+    `data/secret.key`), never sent to the browser, and **Disconnect** forgets it. Read-only stays enforced by our code.
+    **Your one-time step as the app's owner (2 minutes, free):**
+    1. github.com → your picture → **Settings** → **Developer settings** → **OAuth Apps** → **New OAuth App**.
+    2. Application name `Junior Muneer`; Homepage URL `http://localhost:3000`; Authorization callback URL
+       `http://localhost:3000` (device login doesn't use it, but GitHub asks for one).
+    3. **Register application**, then tick **Enable Device Flow** and press **Update application**.
+    4. Copy the **Client ID** (not a secret; no client secret is needed) and send it to me, or add
+       `GITHUB_CLIENT_ID=...` to `backend/.env` and restart.
   - **Built:** `connect.bat github` (checks the token with GitHub before saving it in `backend/.env`), GitHub in
     Settings → Connections with a Check button, and the read-only GitHub MCP server for the Developer Agent (GitHub's
     `/readonly` endpoint, plus code that only lets through tools that read). Waiting for your token to try it for real.

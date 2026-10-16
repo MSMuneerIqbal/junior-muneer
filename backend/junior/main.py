@@ -25,6 +25,7 @@ from junior.db import init_db
 from junior.logging_setup import setup_logging
 from junior.freelance.jobs import router as jobs_router
 from junior.freelance.orders import router as orders_router
+from junior.github.oauth import router as github_router
 from junior.ideas import router as ideas_router
 from junior.images import router as images_router
 from junior.memories import router as memories_router
@@ -145,6 +146,7 @@ def create_app(
     app.include_router(ideas_router)
     app.include_router(jobs_router)
     app.include_router(orders_router)
+    app.include_router(github_router)
     app.include_router(images_router)
     return app
 

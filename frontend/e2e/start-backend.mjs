@@ -23,6 +23,7 @@ const child = spawn(python, ["-m", "uvicorn", "junior.main:app", "--port", "8100
     ARTIFICIAL_ANALYSIS_API_KEY: "",
     META_APP_ID: "",
     GITHUB_TOKEN: "",
+    GITHUB_CLIENT_ID: "fake", // a pretend GitHub for the Connect GitHub test
     GITHUB_AUTH: "",
     GITHUB_USER: "",
     META_APP_SECRET: "",

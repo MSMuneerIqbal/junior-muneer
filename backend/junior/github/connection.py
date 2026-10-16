@@ -48,10 +48,24 @@ def gh_login() -> str:
     return out.stdout.strip() if out.returncode == 0 else ""
 
 
-def saved_token() -> str:
-    """Your GitHub token: from the GitHub CLI if you chose that, else the one in backend/.env."""
+def source() -> str:
+    """Where the GitHub token comes from: 'app' (connected in the app), 'gh', 'env' or '' (not connected)."""
     from junior.config import get_settings
+    from junior.github.oauth import stored_account
 
+    if stored_account():
+        return "app"
+    s = get_settings()
+    return "gh" if s.github_auth == "gh" else "env" if s.github_token else ""
+
+
+def saved_token() -> str:
+    """Your GitHub token: the account connected in the app first, then the GitHub CLI or backend/.env."""
+    from junior.config import get_settings
+    from junior.github.oauth import stored_token
+
+    if token := stored_token():
+        return token
     s = get_settings()
     if s.github_auth == "gh":
         return gh_token(s.github_user)
@@ -59,10 +73,7 @@ def saved_token() -> str:
 
 
 def is_connected() -> bool:
-    from junior.config import get_settings
-
-    s = get_settings()
-    return bool(s.github_token or s.github_auth == "gh")
+    return bool(source())
 
 
 def is_read_tool(name: str) -> bool:
@@ -97,7 +108,7 @@ def github_mcp(token: str) -> MCPServerStreamableHttp:
 async def check_token(token: str, transport: httpx.AsyncBaseTransport | None = None) -> str:
     """Whether the saved token works, and who it belongs to, in plain words."""
     if not token:
-        return "Not connected (or the GitHub CLI isn't logged in). Run connect.bat github."
+        return "Not connected. Use Connect GitHub."
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
     try:
         async with httpx.AsyncClient(base_url=API, headers=headers, timeout=15, transport=transport) as client:

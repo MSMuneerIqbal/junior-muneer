@@ -10,6 +10,7 @@ python-multipart==0.0.32
 httpx==0.28.1  # reads the news sources
 PyYAML==6.0.3
 tzdata==2026.5
+cryptography==50.0.2  # encrypts the accounts you connect (GitHub)
 
 # Tests
 pytest==9.1.1
