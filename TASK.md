@@ -311,7 +311,7 @@ Read-only: these agents never post or send anything. News pages are outside cont
 - [x] **P5-08** Fiverr orders: deadlines, revisions, reminders, delivery message drafts
 - [~] **P5-09** Clients and contacts store *(skipped: Muneer doesn't need a clients list)*
 - [x] **P5-10** Freelance page
-- [ ] **P5-11** Tests + your acceptance test + push
+- [x] **P5-11** Tests + your acceptance test + push *(accepted 2026-10-16; P5-01 and P5-03 wait for Gmail)*
 
 ## Phase 6: Developer Agent (GitHub + terminal)
 
