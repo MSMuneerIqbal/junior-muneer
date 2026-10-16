@@ -315,6 +315,9 @@ Read-only: these agents never post or send anything. News pages are outside cont
 
 ## Phase 6: Developer Agent (GitHub + terminal)
 
+> **Paused by Muneer (2026-10-17):** "skip github and continue with phase 7". P6-01 is done; the in-app Connect GitHub
+> waits for the OAuth App Client ID. P6-02 to P6-06 come later.
+
 **Phase done when:** "What changed in my repo this week?" gets a correct answer, and an approved issue gets created.
 
 - [x] **P6-01** GitHub fine-grained token (guide for you) + the GitHub MCP server in read-only mode
@@ -354,7 +357,7 @@ Read-only: these agents never post or send anything. News pages are outside cont
 
 **Phase done when:** "What happened today?" gives a full, correct summary.
 
-- [ ] **P7-01** Multi-step tasks across several subagents, with progress shown in the chat
+- [x] **P7-01** Multi-step tasks across several subagents, with progress shown in the chat *(a live checklist, like Claude's to-do list; parts run together)*
 - [ ] **P7-02** Long tasks run in the background and post their results to the chat
 - [ ] **P7-03** Daily briefing and "what happened today" reports
 - [ ] **P7-04** Smarter memory: better recall, automatic tidy-up of old memories

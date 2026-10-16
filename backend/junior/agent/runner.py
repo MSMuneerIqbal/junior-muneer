@@ -28,7 +28,7 @@ from junior.audit import audit
 from junior.costs import BudgetExceeded
 from junior.models import ModelRouter
 
-MAX_TURNS = 8
+MAX_TURNS = 12  # a request with several parts: a checklist, the parts, checklist updates, the answer
 
 STEP_LABELS = {
     "web_search_call": "Searching the web",
@@ -153,6 +153,8 @@ def _function_step(raw: Any) -> dict[str, Any] | None:
     if _get(raw, "type") != "function_call":
         return None
     name = _get(raw, "name")
+    if name == "update_plan":  # shown as the checklist itself, not as a step
+        return None
     label = STEP_LABELS.get(name, f"Using {name}")
     if name == "web_search":
         try:

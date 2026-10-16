@@ -68,6 +68,29 @@ function StepLine({ step, full = false }: { step: Step; full?: boolean }) {
   );
 }
 
+const PLAN_MARK = { pending: "○", doing: "◐", done: "✓", skipped: "–" } as const;
+
+/** The live checklist for a request with several parts (like a to-do list). */
+function PlanChecklist({ plan }: { plan: Step }) {
+  const items = plan.items ?? [];
+  return (
+    <section aria-label="Plan" className="mb-2 rounded-xl border border-line bg-panel px-3 py-2">
+      <p className="text-xs font-medium text-muted">{plan.label}</p>
+      <ul className="mt-1 flex flex-col gap-0.5 text-sm">
+        {items.map((i, n) => (
+          <li key={n} className="flex items-baseline gap-2" data-status={i.status}>
+            <span aria-hidden className={i.status === "done" ? "text-accent" : i.status === "doing" ? "text-warn" : "text-muted"}>
+              {PLAN_MARK[i.status]}
+            </span>
+            <span className={i.status === "done" ? "text-muted line-through" : i.status === "skipped" ? "text-muted" : ""}>{i.text}</span>
+            <span className="sr-only">({i.status})</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function ShowWork({ steps, cost }: { steps: Step[]; cost: number }) {
   const [open, setOpen] = useState(false);
   return (
@@ -182,9 +205,12 @@ export function AssistantMessage({
   approvals?: ApprovalItem[];
   streaming?: boolean;
 }) {
+  const plan = steps.find((s) => s.kind === "plan");
+  steps = steps.filter((s) => s.kind !== "plan");
   return (
     <div className="flex flex-col">
       <div className="mb-1 text-xs font-medium text-muted">Junior Muneer</div>
+      {plan && <PlanChecklist plan={plan} />}
       {streaming && steps.length > 0 && (
         <ul className="mb-2 flex flex-col gap-1">
           {steps.map((s) => (
@@ -193,7 +219,7 @@ export function AssistantMessage({
         </ul>
       )}
       <div className={`prose-chat ${streaming ? "stream-cursor" : ""}`}>
-        {text ? <Markdown text={text} /> : streaming && !steps.length ? <span className="text-muted">Thinking</span> : null}
+        {text ? <Markdown text={text} /> : streaming && !steps.length && !plan ? <span className="text-muted">Thinking</span> : null}
       </div>
       {notes.map((n) => (
         <MemoryNoteLine key={`${n.action}-${n.id}`} note={n} />

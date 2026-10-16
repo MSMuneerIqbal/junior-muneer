@@ -128,6 +128,17 @@ class FakeModel(Model):
         if text.startswith("## Request from") and "score_job" in tool_names:
             return self._fake_freelance(input, text), False
         last = input[-1] if isinstance(input, list) and input else None
+        if text.lower().startswith("do these:") and "update_plan" in tool_names:
+            # A request with several parts: show the checklist, then tick every part off.
+            parts = [p.strip() for p in text[len("do these:"):].split(";") if p.strip()]
+            said = last.get("output", "") if isinstance(last, dict) and last.get("type") == "function_call_output" else ""
+            if not said:
+                items = [{"text": p, "status": "pending"} for p in parts]
+                return [function_call("update_plan", {"items": items}, call_id="fake-plan-1")], False
+            if said.startswith("Checklist shown: 0 of"):
+                items = [{"text": p, "status": "done"} for p in parts]
+                return [function_call("update_plan", {"items": items}, call_id="fake-plan-2")], False
+            return [assistant_message(f"(fake AI) All {len(parts)} parts done.")], False
         if isinstance(last, dict) and last.get("type") == "function_call_output":
             return [assistant_message(f"(fake AI) Tool said: {last.get('output')}")], False
         if "search" in text.lower() and "web_search" in tool_names:

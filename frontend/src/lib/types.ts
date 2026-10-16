@@ -12,13 +12,15 @@ export type Conversation = {
 
 export type Step = {
   id: string;
-  kind: "web_search" | "tool" | "team";
+  kind: "web_search" | "tool" | "team" | "plan";
   name?: string;
   label: string;
   status: "running" | "done";
   // Writing team steps: the text at that step, and the Checker's or Humanizer's notes.
   detail?: string;
   notes?: string[];
+  // The checklist for a request with several parts (kind "plan").
+  items?: { text: string; status: "pending" | "doing" | "done" | "skipped" }[];
 };
 
 export type Message = {

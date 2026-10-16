@@ -912,3 +912,47 @@ async def freelance(ctx: Ctx, request: str) -> str:
 
 
 TOOL_FACTORIES["freelance"] = lambda: [freelance]
+
+
+# ---- Multi-step tasks: a live checklist (P7-01) -------------------------------------
+
+
+class PlanItem(BaseModel):
+    text: str
+    status: Literal["pending", "doing", "done", "skipped"] = "pending"
+
+
+def update_plan_for(context: TurnContext, items: list[PlanItem]) -> str:
+    """Show (or update) the checklist for a request with several parts; it's saved with the answer."""
+    items = [i for i in items if i.text.strip()][:10]
+    if not items:
+        return "NOT shown: give at least one item."
+    done = sum(i.status in ("done", "skipped") for i in items)
+    context.emit(
+        {
+            "type": "step",
+            "id": "plan",
+            "kind": "plan",
+            "label": f"Plan: {done} of {len(items)} done",
+            "status": "done" if done == len(items) else "running",
+            "items": [{"text": i.text.strip()[:120], "status": i.status} for i in items],
+        }
+    )
+    left = len(items) - done
+    return f"Checklist shown: {done} of {len(items)} done." + (" Update it as parts finish." if left else "")
+
+
+@function_tool
+def update_plan(ctx: Ctx, items: list[PlanItem]) -> str:
+    """Show the user a live checklist for a request with several separate parts, and update it as each part finishes.
+
+    Call it first with every part "pending" (or "doing"), then again with the new statuses
+    after the tools for a part come back. The whole list is sent every time.
+
+    Args:
+        items: Each part in a few words ("LinkedIn post about the MCP server"), with its status.
+    """
+    return update_plan_for(ctx.context, items)
+
+
+TOOL_FACTORIES["plan"] = lambda: [update_plan]

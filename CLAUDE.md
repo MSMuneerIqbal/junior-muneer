@@ -15,7 +15,8 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
   (Freelance Manager, job scoring + scam signs, one proposal card per job with screening answers in their own boxes,
   client replies with warning signs, Fiverr orders with due-time reminders, the Freelance page). **Now: Phase 6 (Developer Agent)**: P6-01 done (read-only GitHub MCP in `junior/github/`;
   people connect GitHub in the app with GitHub's device login, `oauth.py`; needs his OAuth App client ID in
-  `GITHUB_CLIENT_ID`); next P6-02 (Developer Agent, with a Connect GitHub card in the chat when not connected).
+  `GITHUB_CLIENT_ID`); Phase 6 **paused by Muneer** after P6-01.
+- **Now: Phase 7 (full power)**: P7-01 checklist done; next P7-02 (background tasks).
 - Last pushed to GitHub (`main`) on 2026-10-16 (Phase 5 accepted).
 
 ## Safety rules (never break)
