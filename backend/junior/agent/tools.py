@@ -370,7 +370,7 @@ async def write_draft_for(
     if playbook is None:
         return f"NOT written: there's no playbook for {platform} yet (playbooks/{platform}.md)."
     their_text = ""
-    if context.paste and item_type in ("comment", "reply", "proposal"):
+    if context.paste and item_type in ("comment", "reply", "proposal", "delivery"):
         their_text = context.paste["text"]
     if idea_id is not None:
         from junior.ideas import get_idea
@@ -447,13 +447,13 @@ async def write_draft_for(
 @function_tool
 async def write_draft(
     ctx: Ctx,
-    platform: Literal["linkedin", "facebook", "instagram", "x"],
-    item_type: Literal["post", "comment", "reply", "message"],
+    platform: Literal["linkedin", "facebook", "instagram", "x", "upwork", "fiverr"],
+    item_type: Literal["post", "comment", "reply", "message", "proposal", "delivery"],
     request: str,
     notes: str = "",
     idea_id: int | None = None,
 ) -> str:
-    """Write a post, comment, reply or message with the writing team and put it in the approval queue.
+    """Write a post, comment, reply, message, proposal or delivery message with the writing team and put it in the approval queue.
 
     The team (Writer, Checker, Humanizer) uses the user's profile and the platform's
     playbook, checks facts and voice, and scores it out of 10. For a comment or reply to

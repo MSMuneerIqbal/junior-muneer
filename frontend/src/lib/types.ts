@@ -62,6 +62,7 @@ export type ApprovalItem = {
   reminded_at: string | null;
   due: boolean;
   can_send: boolean;
+  red_lines: string[];
   conversation_id: number | null;
   message_id: number | null;
   created_at: string;

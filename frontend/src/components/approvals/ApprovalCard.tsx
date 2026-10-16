@@ -14,6 +14,10 @@ const STATUS: Record<ApprovalStatus, { label: string; style: string }> = {
   check_manually: { label: "Check manually", style: "bg-danger-soft text-danger" },
 };
 
+// Proposals and messages are "sent"; posts are "posted".
+const SENT_KINDS = new Set(["proposal", "message", "reply", "delivery", "email"]);
+const isSent = (item: ApprovalItem) => SENT_KINDS.has(item.item_type) || item.platform === "upwork" || item.platform === "fiverr";
+
 const button =
   "rounded-lg border border-line px-3 py-1.5 text-sm font-medium transition hover:bg-panel-2 disabled:opacity-50";
 const primary =
@@ -124,7 +128,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
           </span>
         ) : null}
         <span className={`${item.planned_at && (item.status === "waiting" || item.status === "approved") ? "" : "ml-auto"} rounded-full px-2 py-0.5 text-[11px] font-medium ${status.style}`} data-testid="approval-status">
-          {status.label}
+          {item.status === "posted" && isSent(item) ? "Sent" : status.label}
         </span>
       </header>
 
@@ -196,6 +200,17 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
 
       {item.kind === "api" && <SendState item={item} busy={busy} onResolve={(posted) => run("resolve", { posted })} />}
 
+      {item.red_lines.length > 0 && item.status !== "posted" && item.status !== "rejected" && (
+        <div role="alert" aria-label={`${item.platform_label}'s rules`} className="mx-4 mb-3 rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">
+          <p className="font-medium">⚠ This breaks {item.platform_label}&apos;s rules. Fix it before you send it:</p>
+          <ul className="mt-0.5 list-disc pl-4">
+            {item.red_lines.map((r, n) => (
+              <li key={n}>{r}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {planning !== null && (
         <div className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-2.5 text-sm">
           <label className="flex items-center gap-2">
@@ -243,11 +258,16 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
             {(item.kind === "copy" || item.status !== "posted") && (
               <>
                 <button type="button" className={waiting && item.kind === "copy" ? primary : button} onClick={copy}>
-                  {copied ? "Copied ✓" : "Copy"}
+                  {copied ? "Copied ✓" : item.red_lines.length > 0 ? "Copy anyway" : "Copy"}
                 </button>
                 {item.open_url && (
                   <a href={item.open_url} target="_blank" rel="noopener noreferrer" className={button}>
-                    {item.open_url === item.meta.source_url ? "Open original" : `Open ${item.platform_label}`} ↗
+                    {item.open_url === item.meta.source_url
+                      ? item.item_type === "proposal"
+                        ? "Open the job"
+                        : "Open original"
+                      : `Open ${item.platform_label}`}{" "}
+                    ↗
                   </a>
                 )}
               </>
@@ -321,7 +341,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
                     title={item.needs_image ? "Add an image first" : undefined}
                     onClick={() => run("posted")}
                   >
-                    Mark as posted
+                    {isSent(item) ? "Mark as sent" : "Mark as posted"}
                   </button>
                 )}
                 <button

@@ -302,7 +302,7 @@ Read-only: these agents never post or send anything. News pages are outside cont
 > Built now by paste (no setup). The email parts (P5-01, P5-03) come after Gmail (Phase 4).
 
 - [ ] **P5-01** You set up Upwork saved-search alerts and Fiverr email notifications to your Gmail (guide for you) *(after Phase 4)*
-- [ ] **P5-02** Upwork and Fiverr playbooks + red lines in the Checker and Safety Guard
+- [x] **P5-02** Upwork and Fiverr playbooks + red lines in the Checker and Safety Guard
 - [ ] **P5-03** Email parsers for Upwork job alerts and Fiverr order/message emails (raw email shown when parsing is unsure) *(after Phase 4)*
 - [ ] **P5-04** Freelance Manager subagent
 - [ ] **P5-05** Job scoring from alert emails and pasted job posts (skill match, budget, client quality, scam signs)

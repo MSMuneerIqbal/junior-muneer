@@ -34,6 +34,7 @@ from junior.audit import audit
 from junior.db import ApprovalItem, session_scope
 from junior.db.models import utcnow
 from junior.permissions import decide, set_rule
+from junior.writing.redlines import red_lines
 
 router = APIRouter()
 
@@ -94,6 +95,8 @@ class ApprovalOut(BaseModel):
     due: bool = False
     # An API item whose platform is connected, so it can be posted from here.
     can_send: bool = False
+    # Upwork/Fiverr rules this text breaks (checked by code on the current text).
+    red_lines: list[str] = []
     conversation_id: int | None
     message_id: int | None
     created_at: datetime
@@ -165,6 +168,7 @@ def to_out(item: ApprovalItem, images: list[dict[str, Any]] | None = None) -> Ap
         reminded_at=item.reminded_at,
         due=_is_due(item),
         can_send=_can_send(item),
+        red_lines=red_lines(item.text, item.platform),
         conversation_id=item.conversation_id,
         message_id=item.message_id,
         created_at=item.created_at,

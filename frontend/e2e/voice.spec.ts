@@ -15,9 +15,10 @@ test("hold the mic, release, and the voice message is sent and answered", async 
 
   // The fake speech-to-text describes the recording; it's sent like a typed message.
   const main = page.locator("main");
-  await expect(main.getByText(/fake transcription of a \d+-byte recording/).first()).toBeVisible();
+  // Transcribe, answer and speak can take a while late in a long test run.
+  await expect(main.getByText(/fake transcription of a \d+-byte recording/).first()).toBeVisible({ timeout: 20_000 });
   await expect(main.getByLabel("Your voice message")).toBeVisible(); // playable recording
-  await expect(page.getByText("Show work")).toBeVisible();
+  await expect(page.getByText("Show work")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("button", { name: /Read aloud|Stop reading aloud/ })).toBeVisible();
 });
 

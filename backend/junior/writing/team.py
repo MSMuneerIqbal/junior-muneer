@@ -16,6 +16,8 @@ from pydantic import BaseModel, Field
 from junior.agent.context import TurnContext
 from junior.playbooks import Playbook
 from junior.profile import profile_text
+from junior.settings_store import get_setting
+from junior.writing.redlines import red_lines
 from junior.writing.style import lint, too_long
 
 MAX_REVISIONS = 2
@@ -25,8 +27,9 @@ KIND_WORDS = {
     "post": "a post",
     "comment": "a comment on the post below",
     "reply": "a reply to the message below",
-    "proposal": "a proposal for the job below",
+    "proposal": "a proposal (cover letter) for the job below",
     "message": "a message",
+    "delivery": "a delivery message for the order below",
 }
 
 
@@ -82,7 +85,8 @@ class Brief:
             "## About me (BACKGROUND ONLY: use it just where it fits the topic above; don't bring in "
             "projects or achievements the topic doesn't need, and never invent anything beyond it)\n"
             + profile_text(),
-            f"## {self.playbook.label} playbook\n{self.playbook.text}",
+            f"## {self.playbook.label} playbook\n"
+            + self.playbook.text.replace("{{user_name}}", get_setting("user_name")),
         ]
         if self.their_text:
             fence = "=" * 10
@@ -143,9 +147,10 @@ class WritingTeam:
             Review,
         )
         issues = [f"Not backed by your profile: {f}" for f in review.invented_facts] + review.issues
-        hard = too_long(text, brief.playbook)
-        if hard and hard not in issues:
-            issues.append(hard)
+        hard = [p for p in [too_long(text, brief.playbook)] if p] + red_lines(text, brief.playbook.platform)
+        for problem in hard:
+            if problem not in issues:
+                issues.append(problem)
         score = max(1, min(10, review.score))
         passed = review.passes and score >= PASS_SCORE and not review.invented_facts and not hard
         label = f"{'Final check' if final else 'Checker'}: {score}/10"

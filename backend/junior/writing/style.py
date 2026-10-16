@@ -7,6 +7,7 @@ also stop a draft from passing on their own.
 import re
 
 from junior.playbooks import Playbook
+from junior.writing.redlines import red_lines
 
 # Words and phrases that make a post read as AI-written.
 AI_PHRASES = [
@@ -43,6 +44,7 @@ def lint(text: str, playbook: Playbook, item_type: str = "post") -> list[str]:
         issues = [p for p in [too_long(text, playbook)] if p]
         if item_type in SHORT_KINDS and len(_HASHTAG.findall(text)) > MAX_SHORT_HASHTAGS:
             issues.append(f"A {item_type} doesn't need hashtags; use at most {MAX_SHORT_HASHTAGS}.")
+    issues.extend(red_lines(text, playbook.platform))
     if "—" in text or "–" in text:
         issues.append("Uses long dashes. Most people don't type these; use a comma or a full stop.")
     found = [p for p in AI_PHRASES if re.search(rf"\b{re.escape(p)}\b", text, re.IGNORECASE)]
