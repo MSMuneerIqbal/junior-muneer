@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     meta_graph_version: str = "v26.0"
     # Phase 6: your GitHub fine-grained token (written by connect.bat github; never committed).
     github_token: str = ""
+    # Or use your GitHub CLI login (gh): the token stays in Windows' own store, asked from gh when needed.
+    github_auth: str = ""  # "gh" to use the GitHub CLI login
+    github_user: str = ""
     # Optional: Artificial Analysis's free API key, for "who's on top" rankings in AI news.
     artificial_analysis_api_key: str = ""
     data_dir: Path = Path("data")

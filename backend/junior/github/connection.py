@@ -1,11 +1,15 @@
 """Your GitHub connection (P6-01): GitHub's official MCP server, read-only, with your fine-grained token.
 
-The token is saved in backend/.env by `connect.bat github` (never in the browser or in Git).
+`connect.bat github` connects it: either your GitHub CLI login (gh; the token stays in Windows'
+own store and is asked from gh when needed) or a pasted token saved in backend/.env. Never in
+the browser or in Git.
 Two locks keep it read-only: GitHub's read-only endpoint, and a code filter that lets through
-only tools that read (get_, list_, search_). Write actions come later through the Dev Executor,
+only tools that read (get_, list_, search_, and *_read). Write actions come later through the Dev Executor,
 always after your OK.
 """
 
+import shutil
+import subprocess
 from typing import Any
 
 import httpx
@@ -16,10 +20,53 @@ MCP_READONLY_URL = "https://api.githubcopilot.com/mcp/readonly"
 # context: who you are; repos: files, commits, branches; issues; pull_requests.
 TOOLSETS = "context,repos,issues,pull_requests"
 READ_PREFIXES = ("get_", "list_", "search_")
+READ_SUFFIXES = ("_read",)  # GitHub's issue_read, pull_request_read
+
+
+def gh_token(user: str = "") -> str:
+    """The GitHub CLI's token for this account ('' if gh isn't installed or logged in)."""
+    gh = shutil.which("gh")
+    if not gh:
+        return ""
+    args = [gh, "auth", "token"] + (["--user", user] if user else [])
+    try:
+        out = subprocess.run(args, capture_output=True, text=True, timeout=15, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return out.stdout.strip() if out.returncode == 0 else ""
+
+
+def gh_login() -> str:
+    """The account the GitHub CLI is logged in as ('' if none)."""
+    gh = shutil.which("gh")
+    if not gh:
+        return ""
+    try:
+        out = subprocess.run([gh, "api", "user", "--jq", ".login"], capture_output=True, text=True, timeout=20, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return out.stdout.strip() if out.returncode == 0 else ""
+
+
+def saved_token() -> str:
+    """Your GitHub token: from the GitHub CLI if you chose that, else the one in backend/.env."""
+    from junior.config import get_settings
+
+    s = get_settings()
+    if s.github_auth == "gh":
+        return gh_token(s.github_user)
+    return s.github_token
+
+
+def is_connected() -> bool:
+    from junior.config import get_settings
+
+    s = get_settings()
+    return bool(s.github_token or s.github_auth == "gh")
 
 
 def is_read_tool(name: str) -> bool:
-    return name.startswith(READ_PREFIXES)
+    return name.startswith(READ_PREFIXES) or name.endswith(READ_SUFFIXES)
 
 
 def _only_reads(_context: Any, tool: Any) -> bool:
@@ -50,7 +97,7 @@ def github_mcp(token: str) -> MCPServerStreamableHttp:
 async def check_token(token: str, transport: httpx.AsyncBaseTransport | None = None) -> str:
     """Whether the saved token works, and who it belongs to, in plain words."""
     if not token:
-        return "Not connected. Run connect.bat github."
+        return "Not connected (or the GitHub CLI isn't logged in). Run connect.bat github."
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
     try:
         async with httpx.AsyncClient(base_url=API, headers=headers, timeout=15, transport=transport) as client:

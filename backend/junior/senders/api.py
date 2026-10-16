@@ -10,7 +10,6 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from junior.approvals import ApprovalError, ApprovalOut
-from junior.config import get_settings
 from junior.senders.dispatch import SendError, resolve_unclear, send_item
 
 router = APIRouter()
@@ -41,7 +40,9 @@ def post_resolve(item_id: int, body: ResolveBody) -> ApprovalOut:
 
 
 def _github() -> dict:
-    connected = bool(get_settings().github_token)
+    from junior.github.connection import is_connected
+
+    connected = is_connected()
     return {"key": "github", "label": "GitHub (read-only for now)", "action": "", "how": "connect.bat github", "ready": True,
             "connected": connected, "sender": "GitHub MCP" if connected else ""}
 
@@ -54,7 +55,10 @@ def connections(request: Request) -> list[dict]:
 @router.post("/api/connections/{key}/check")
 async def check_connection(key: str, request: Request) -> dict:
     if key == "github":
-        from junior.github.connection import check_token
+        import asyncio
 
-        return {"key": key, "result": await check_token(get_settings().github_token)}
+        from junior.github import connection
+
+        token = await asyncio.to_thread(connection.saved_token)
+        return {"key": key, "result": await connection.check_token(token)}
     return {"key": key, "result": await request.app.state.senders.check(key)}

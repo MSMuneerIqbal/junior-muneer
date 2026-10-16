@@ -13,8 +13,8 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
   Phase 3 (social APIs) and Phase 4 (Gmail) are **paused by Muneer**: posting stays copy and paste for now (P3-01 sender base
   and the P3-02 Facebook code are ready for later). Phase 5 (Freelance, by paste) **accepted**: P5-02, P5-04 to P5-08 and P5-10 done (P5-09 skipped; P5-01/P5-03 wait for Gmail)
   (Freelance Manager, job scoring + scam signs, one proposal card per job with screening answers in their own boxes,
-  client replies with warning signs, Fiverr orders with due-time reminders, the Freelance page). **Now: Phase 6 (Developer Agent)**: P6-01 code done (`connect.bat github`,
-  read-only GitHub MCP in `junior/github/`); waiting for Muneer's fine-grained token, then P6-02.
+  client replies with warning signs, Fiverr orders with due-time reminders, the Freelance page). **Now: Phase 6 (Developer Agent)**: P6-01 done (connected with his GitHub CLI login;
+  read-only GitHub MCP in `junior/github/`); next P6-02 (Developer Agent).
 - Last pushed to GitHub (`main`) on 2026-10-16 (Phase 5 accepted).
 
 ## Safety rules (never break)

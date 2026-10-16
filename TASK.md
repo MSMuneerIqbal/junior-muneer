@@ -317,7 +317,11 @@ Read-only: these agents never post or send anything. News pages are outside cont
 
 **Phase done when:** "What changed in my repo this week?" gets a correct answer, and an approved issue gets created.
 
-- [ ] **P6-01** GitHub fine-grained token (guide for you) + the GitHub MCP server in read-only mode
+- [x] **P6-01** GitHub fine-grained token (guide for you) + the GitHub MCP server in read-only mode
+  - **Done 2026-10-17 with your GitHub CLI login** (`connect.bat github` → "Use that login? Y"): the token stays in
+    Windows' store and is asked from `gh` when needed; `.env` only says `GITHUB_AUTH=gh`. Live: GitHub's read-only
+    MCP server answered as @MSMuneerIqbal and listed your commits; 25 reading tools get through, nothing that writes.
+    (A fine-grained token, below, is the other way, and safer: it can be limited to read-only.)
   - **Built:** `connect.bat github` (checks the token with GitHub before saving it in `backend/.env`), GitHub in
     Settings → Connections with a Check button, and the read-only GitHub MCP server for the Developer Agent (GitHub's
     `/readonly` endpoint, plus code that only lets through tools that read). Waiting for your token to try it for real.

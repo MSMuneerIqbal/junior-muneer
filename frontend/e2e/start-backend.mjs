@@ -23,6 +23,8 @@ const child = spawn(python, ["-m", "uvicorn", "junior.main:app", "--port", "8100
     ARTIFICIAL_ANALYSIS_API_KEY: "",
     META_APP_ID: "",
     GITHUB_TOKEN: "",
+    GITHUB_AUTH: "",
+    GITHUB_USER: "",
     META_APP_SECRET: "",
     META_PAGE_ID: "",
     META_PAGE_TOKEN: "",

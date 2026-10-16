@@ -36,6 +36,11 @@ def test_the_mcp_server_is_read_only_with_your_token():
         ("list_commits", True),
         ("search_issues", True),
         ("get_pull_request_diff", True),
+        ("issue_read", True),
+        ("pull_request_read", True),
+        ("issue_write", False),
+        ("pull_request_review_write", False),
+        ("ui_get", False),
         ("create_issue", False),
         ("update_issue", False),
         ("merge_pull_request", False),
@@ -71,7 +76,7 @@ def test_checking_the_token():
         raise httpx.ConnectError("no internet")
 
     assert asyncio.run(check_token(TOKEN, github(down))).startswith("Couldn't reach GitHub")
-    assert asyncio.run(check_token("")) == "Not connected. Run connect.bat github."
+    assert asyncio.run(check_token("")).startswith("Not connected")
 
 
 def test_github_shows_in_connections(monkeypatch):
@@ -97,6 +102,7 @@ def test_connect_github_saves_only_a_working_token(monkeypatch, tmp_path):
     env = tmp_path / ".env"
     env.write_text("OPENAI_API_KEY=sk-keep\n", encoding="utf-8")
     monkeypatch.setattr(connect, "ENV_FILE", env)
+    monkeypatch.setattr(connect, "gh_login", lambda: "")  # no GitHub CLI: paste a token
 
     monkeypatch.setattr(connect.getpass, "getpass", lambda prompt="": "not-a-token")
     with pytest.raises(SystemExit, match="doesn't look like a GitHub token"):
@@ -120,3 +126,44 @@ def test_connect_github_saves_only_a_working_token(monkeypatch, tmp_path):
     text = env.read_text(encoding="utf-8")
     assert f"GITHUB_TOKEN={TOKEN}" in text and "OPENAI_API_KEY=sk-keep" in text
     assert "# GitHub (written by connect.bat github)" in text
+
+
+def test_connect_with_the_github_cli_login(monkeypatch, tmp_path):
+    """You're logged in with gh: the token stays in gh's store; .env only says to use it."""
+    env = tmp_path / ".env"
+    env.write_text("GITHUB_TOKEN=old\n", encoding="utf-8")
+    monkeypatch.setattr(connect, "ENV_FILE", env)
+    monkeypatch.setattr(connect, "gh_login", lambda: "MSMuneerIqbal")
+    monkeypatch.setattr(connect, "gh_token", lambda user="": "gho_" + "x" * 36 if user == "MSMuneerIqbal" else "")
+    monkeypatch.setattr("builtins.input", lambda prompt="": "")  # Enter: yes
+
+    async def works(token):
+        assert token.startswith("gho_")
+        return "Connected as @MSMuneerIqbal."
+
+    monkeypatch.setattr(connect, "check_token", works)
+    connect.connect_github()
+    text = env.read_text(encoding="utf-8")
+    assert "GITHUB_AUTH=gh" in text and "GITHUB_USER=MSMuneerIqbal" in text
+    assert "gho_" not in text and "GITHUB_TOKEN=\n" in text  # no token copied into .env
+
+
+def test_the_app_asks_gh_for_the_token(monkeypatch):
+    from junior.github import connection
+
+    monkeypatch.setenv("GITHUB_AUTH", "gh")
+    monkeypatch.setenv("GITHUB_USER", "MSMuneerIqbal")
+    get_settings.cache_clear()
+    calls = []
+
+    def fake_run(args, **kw):
+        calls.append(args)
+        return SimpleNamespace(returncode=0, stdout="gho_fromgh\n")
+
+    monkeypatch.setattr(connection.shutil, "which", lambda name: "gh.exe")
+    monkeypatch.setattr(connection.subprocess, "run", fake_run)
+    assert connection.is_connected() and connection.saved_token() == "gho_fromgh"
+    assert calls[-1] == ["gh.exe", "auth", "token", "--user", "MSMuneerIqbal"]
+
+    monkeypatch.setattr(connection.shutil, "which", lambda name: None)  # gh not installed
+    assert connection.saved_token() == ""

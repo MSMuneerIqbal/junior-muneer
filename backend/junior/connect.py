@@ -18,7 +18,7 @@ from pathlib import Path
 import httpx
 
 from junior.config import BACKEND_DIR, get_settings
-from junior.github.connection import check_token
+from junior.github.connection import check_token, gh_login, gh_token
 from junior.senders.facebook import GRAPH, FacebookPageSender, appsecret_proof
 
 ENV_FILE = BACKEND_DIR / ".env"
@@ -111,21 +111,34 @@ def connect_meta() -> None:
 
 
 def connect_github() -> None:
-    print("Connect GitHub (see TASK.md, P6-01, for how to make the token).\n")
+    login = gh_login()
+    if login:
+        answer = input(f"Your GitHub CLI is logged in as @{login}. Use that login? [Y/n] ").strip().lower()
+        if answer in ("", "y", "yes"):
+            result = asyncio.run(check_token(gh_token(login)))
+            if not result.startswith("Connected"):
+                raise SystemExit(f"{result} Nothing was saved.")
+            set_env({"GITHUB_AUTH": "gh", "GITHUB_USER": login, "GITHUB_TOKEN": ""}, heading="GitHub (written by connect.bat github)")
+            print(f"\n{result} Saved: use the GitHub CLI login @{login} (the token stays in Windows' store, not in .env).")
+            print("Restart the backend (stop.bat, then start.bat), then check it in Settings → Connections.")
+            return
+    print("Connect GitHub with a fine-grained token (see TASK.md, P6-01, for how to make one).\n")
     token = getpass.getpass("Fine-grained token (hidden, starts with github_pat_): ").strip()
     if not re.fullmatch(r"(github_pat_|ghp_)[A-Za-z0-9_]{20,}", token):
         raise SystemExit("That doesn't look like a GitHub token (it starts with github_pat_). Nothing was saved.")
     result = asyncio.run(check_token(token))
     if not result.startswith("Connected"):
         raise SystemExit(f"{result} Nothing was saved.")
-    set_env({"GITHUB_TOKEN": token}, heading="GitHub (written by connect.bat github)")
+    set_env({"GITHUB_TOKEN": token, "GITHUB_AUTH": "", "GITHUB_USER": ""}, heading="GitHub (written by connect.bat github)")
     print(f"\n{result} Saved in backend/.env (token {masked(token)}).")
     print("Restart the backend (stop.bat, then start.bat), then check it in Settings → Connections.")
 
 
 def check() -> None:
     s = get_settings()
-    print("GitHub:", asyncio.run(check_token(s.github_token)))
+    from junior.github.connection import saved_token
+
+    print("GitHub:", asyncio.run(check_token(saved_token())))
     if not (s.meta_page_id and s.meta_page_token):
         print("Facebook Page: not connected. Run connect.bat meta.")
         return
