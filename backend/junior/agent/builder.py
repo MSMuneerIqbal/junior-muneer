@@ -7,6 +7,7 @@ from openai import AsyncOpenAI
 
 from junior.agent.context import TurnContext
 from junior.agent.tools import build_tools
+from junior.ai_client import ai_client
 from junior.config import get_settings
 from junior.memories import memories_for_prompt
 from junior.profile import profile_for_chat
@@ -52,7 +53,7 @@ def openai_model_provider() -> ModelProvider:
             "No OpenAI API key yet. Paste it into backend/.env as OPENAI_API_KEY=... "
             "and restart the backend."
         )
-    openai_client = AsyncOpenAI(api_key=key)
+    openai_client = ai_client(key)
     clients: dict[str, AsyncOpenAI] = {}
 
     def provide(name: str) -> Model:
@@ -70,7 +71,7 @@ def openai_model_provider() -> ModelProvider:
                     f"{info['key_env']}=... and restart the backend, or switch the model back "
                     "to OpenAI in Settings -> Models."
                 )
-            clients[provider] = AsyncOpenAI(api_key=provider_key, base_url=info["base_url"])
+            clients[provider] = ai_client(provider_key, base_url=info["base_url"])
         return OpenAIChatCompletionsModel(model=ModelRouter.bare(name), openai_client=clients[provider])
 
     return provide

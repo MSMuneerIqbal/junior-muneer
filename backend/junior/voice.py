@@ -18,9 +18,9 @@ from typing import Protocol
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
-from openai import AsyncOpenAI
 
 from junior.agent.builder import NoApiKeyError
+from junior.ai_client import ai_client
 from junior.audit import audit
 from junior.config import get_settings
 from junior.costs import BudgetExceeded, budget_left
@@ -113,7 +113,7 @@ class OpenAIVoice:
         key = get_settings().openai_api_key
         if not key:
             raise NoApiKeyError("No OpenAI API key yet. Paste it into backend/.env.")
-        self.client = AsyncOpenAI(api_key=key)
+        self.client = ai_client(key)
 
     async def transcribe(
         self, path: Path, model: str, prompt: str, language: str | None = None

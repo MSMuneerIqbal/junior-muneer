@@ -41,6 +41,8 @@ STEP_LABELS = {
     "write_draft": "Writing it with the team",
     "social_media": "Asking the Social Media Manager",
     "ai_news": "Asking the AI-News-Agent",
+    "freelance": "Asking the Freelance Manager",
+    "score_job": "Scoring the job",
     "pakistan_news": "Asking the Social-News-Agent",
     "save_ideas": "Saving ideas",
 }

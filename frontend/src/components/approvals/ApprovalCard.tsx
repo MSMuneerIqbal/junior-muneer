@@ -23,6 +23,35 @@ const button =
 const primary =
   "rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-accent-fg transition hover:opacity-90 disabled:opacity-50";
 
+/** A proposal's screening questions: each answer has its own box on Upwork, so its own Copy. */
+function ScreeningAnswers({ answers }: { answers: { question: string; answer: string }[] }) {
+  const [copied, setCopied] = useState<number | null>(null);
+  return (
+    <section aria-label="Screening answers" className="mt-3 flex flex-col gap-2">
+      <p className="text-xs font-medium text-muted">Screening questions: paste each answer in its own box</p>
+      {answers.map((a, n) => (
+        <div key={n} className="rounded-lg border border-line bg-bg px-3 py-2">
+          <p className="text-xs font-medium">{a.question}</p>
+          <p dir="auto" className={`mt-1 whitespace-pre-wrap text-sm leading-relaxed ${urduClass(a.answer)}`}>
+            {a.answer}
+          </p>
+          <button
+            type="button"
+            className="mt-1.5 rounded-md border border-line px-2 py-0.5 text-xs hover:bg-panel-2"
+            onClick={async () => {
+              await navigator.clipboard.writeText(a.answer);
+              setCopied(n);
+              setTimeout(() => setCopied(null), 2000);
+            }}
+          >
+            {copied === n ? "Copied ✓" : `Copy answer ${n + 1}`}
+          </button>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 /** For API items: why it wasn't sent, or what to check. */
 function SendState({
   item,
@@ -176,6 +205,9 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
               </li>
             ))}
           </ul>
+        )}
+        {Array.isArray(item.meta.answers) && item.meta.answers.length > 0 && (
+          <ScreeningAnswers answers={item.meta.answers as { question: string; answer: string }[]} />
         )}
         {item.meta.image_idea && <p className="mt-2 text-xs text-muted">🖼 Image idea: {item.meta.image_idea}</p>}
         {waiting && item.needs_image && (

@@ -36,6 +36,50 @@ def too_long(text: str, playbook: Playbook) -> str:
     return ""
 
 
+# Lines that are notes or labels, not part of the text to paste ("Status: awaiting approval", "Cover letter:").
+_NOTES = re.compile(
+    r"^\s*(approval card|status\s*:|recommendation\b|cover letter\s*:?\s*$|screening (questions?|answers?)\b|"
+    r"notes?( to (you|muneer|the user))?\s*:|draft\s*:|p\.?s\.? for you|\[(insert|your name|add)[^\]]*\])",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+# Lines that list what you haven't done, or still need to "validate": they lose clients.
+_A = "['’]"
+_UNDERSELL = re.compile(
+    rf"\b(i(?: have|{_A}ve) (?:not|never)\b|i haven{_A}?t\b|"
+    rf"(?:no|i don{_A}?t have)(?: much| any| prior| direct| real)* experience|"
+    rf"(?:i{_A}d|i would|i{_A}ll|i will) (?:still )?(?:need|have) to (?:validate|learn|confirm|figure out)|"
+    rf"still needs? to (?:be )?validat|i{_A}?m (?:new to|not (?:sure|an expert))|i can{_A}?t (?:promise|guarantee))",
+    re.IGNORECASE,
+)
+
+
+def undersells(text: str) -> list[str]:
+    found = _UNDERSELL.search(text)
+    if not found:
+        return []
+    return [
+        f"Undersells you: “{found.group(0)}”. Don't list what you haven't done or still need to check; "
+        "show your closest real work and ask the client about the unknowns."
+    ]
+
+
+_PLACEHOLDER = re.compile(r"\[(insert[^\]]*|your name|name|client name|company( name)?|link|url|add [^\]]*)\]", re.IGNORECASE)
+
+
+def leftover_notes(text: str) -> list[str]:
+    """Labels, notes or placeholders left in a draft: pasting them would look careless."""
+    hole = _PLACEHOLDER.search(text)
+    if hole:
+        return [f"Has a placeholder to fill in: “{hole.group(0)}”. Write the real words or leave it out."]
+    found = _NOTES.search(text)
+    if not found:
+        return []
+    line = text[found.start() : text.find("\n", found.start()) if "\n" in text[found.start() :] else len(text)].strip()
+    return [f"Has a note or label that isn't part of the text to paste: “{line[:60]}”. Leave only the text itself."]
+
+
 def lint(text: str, playbook: Playbook, item_type: str = "post") -> list[str]:
     """Fast rule-based checks. Plain-English problems, empty when none."""
     if item_type == "post":
@@ -44,7 +88,17 @@ def lint(text: str, playbook: Playbook, item_type: str = "post") -> list[str]:
         issues = [p for p in [too_long(text, playbook)] if p]
         if item_type in SHORT_KINDS and len(_HASHTAG.findall(text)) > MAX_SHORT_HASHTAGS:
             issues.append(f"A {item_type} doesn't need hashtags; use at most {MAX_SHORT_HASHTAGS}.")
+    if item_type == "proposal":  # the playbook's length guide, as a hint
+        words = len(text.split())
+        low, high = playbook.words
+        if words > high:
+            issues.append(f"Long for a {playbook.label} proposal: {words} words, aim for {low} to {high}.")
+        elif words < low:
+            issues.append(f"Short for a {playbook.label} proposal: {words} words, aim for {low} to {high}.")
     issues.extend(red_lines(text, playbook.platform))
+    issues.extend(leftover_notes(text))
+    if item_type == "proposal" or playbook.platform in ("upwork", "fiverr"):
+        issues.extend(undersells(text))
     if "—" in text or "–" in text:
         issues.append("Uses long dashes. Most people don't type these; use a comma or a full stop.")
     found = [p for p in AI_PHRASES if re.search(rf"\b{re.escape(p)}\b", text, re.IGNORECASE)]

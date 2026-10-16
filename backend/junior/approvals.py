@@ -337,7 +337,12 @@ def mark_posted(item_id: int) -> ApprovalOut:
         item.status = "posted"
         item.decided_at = item.posted_at = utcnow()
 
-    return _change(item_id, "posted", fn)
+    out = _change(item_id, "posted", fn)
+    if out.meta.get("job_id"):
+        from junior.freelance.jobs import proposal_sent
+
+        proposal_sent(int(out.meta["job_id"]))
+    return out
 
 
 def reject_item(item_id: int) -> ApprovalOut:

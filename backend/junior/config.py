@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     )
 
     openai_api_key: str = ""
+    # An AI request that sends nothing back for this long gives up (and is tried once more).
+    ai_timeout_seconds: float = 120.0
     # Optional: other providers' keys (see [providers] in agents/models.toml).
     deepseek_api_key: str = ""
     # Phase 3: your Facebook Page (written by connect.bat meta; never committed).

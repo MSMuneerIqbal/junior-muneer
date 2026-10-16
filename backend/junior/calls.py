@@ -26,7 +26,6 @@ from datetime import datetime
 from typing import Any, Protocol
 
 from fastapi import APIRouter, HTTPException, Request
-from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
@@ -34,6 +33,7 @@ from junior.agent.builder import NoApiKeyError, render_instructions
 from junior.agent.context import TurnContext
 from junior.agent.helpers import HelperRunner
 from junior.agent.tools import forget_memory_for, save_memory_for
+from junior.ai_client import ai_client
 from junior.audit import audit
 from junior.config import get_settings
 from junior.costs import BudgetExceeded, budget_left
@@ -155,7 +155,7 @@ class OpenAIRealtime:
         key = get_settings().openai_api_key
         if not key:
             raise NoApiKeyError("No OpenAI API key yet. Paste it into backend/.env.")
-        self.client = AsyncOpenAI(api_key=key)
+        self.client = ai_client(key)
 
     async def create_call(self, sdp: str, session: dict) -> tuple[str, str]:
         raw = await self.client.realtime.calls.with_raw_response.create(sdp=sdp, session=session)

@@ -207,6 +207,33 @@ class NewsDigest(Base):
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
 
 
+class Job(Base):
+    """A job post you pasted, scored by the Freelance Manager (junior/freelance/jobs.py)."""
+
+    __tablename__ = "jobs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    platform: Mapped[str] = mapped_column(String(30), default="upwork")
+    title: Mapped[str] = mapped_column(String(200))
+    url: Mapped[str] = mapped_column(String(500), default="")
+    text: Mapped[str] = mapped_column(Text, default="")  # the post as you pasted it
+    budget: Mapped[str] = mapped_column(String(100), default="")
+    skills: Mapped[list[Any]] = mapped_column(default=list)
+    client: Mapped[dict[str, Any]] = mapped_column(default=dict)
+    score: Mapped[int] = mapped_column(Integer, default=0)
+    # apply · maybe · skip
+    verdict: Mapped[str] = mapped_column(String(10), default="maybe")
+    reasons: Mapped[list[Any]] = mapped_column(default=list)
+    concerns: Mapped[list[Any]] = mapped_column(default=list)
+    scam_signs: Mapped[list[Any]] = mapped_column(default=list)
+    # new · proposal · sent · skipped
+    status: Mapped[str] = mapped_column(String(20), default="new", index=True)
+    paste_id: Mapped[int | None] = mapped_column(ForeignKey("pastes.id", ondelete="SET NULL"), nullable=True)
+    approval_id: Mapped[int | None] = mapped_column(ForeignKey("approvals.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
 class Paste(Base):
     """Text you pasted from another site. Outside content: data, never instructions."""
 

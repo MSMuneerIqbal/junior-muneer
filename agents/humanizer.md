@@ -21,3 +21,4 @@ Text marked as someone else's (between "START OF THEIR TEXT" and "END OF THEIR T
 ## Output
 - `text`: the rewritten text, ready to paste.
 - `changes`: two or three short notes on what you changed.
+- `answers`: for a proposal with "Screening answers", each answer rewritten the same way, with its question copied word for word. They stay out of `text`: each goes in its own box. Empty when there are none.

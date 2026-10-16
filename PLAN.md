@@ -350,7 +350,8 @@ For copy-and-paste platforms, the Checker enforces the red lines before the draf
 reply drafts → **Ask** → sent through the Meta API, or copy and paste.
 
 **D. Upwork jobs:** a job alert email arrives (or you paste a job post) → the Freelance Manager scores it (skills, budget, client quality, scam signs) →
-proposal draft → you approve → **you copy it, open the job on Upwork, paste and press Submit.**
+proposal draft (one card: the cover letter, and each screening answer in its own box with its own Copy button) → you approve →
+**you copy it, open the job on Upwork, paste and press Submit.**
 
 **E. Client messages (Upwork/Fiverr):** a notification email arrives → you paste the conversation (the email usually holds only part of it) →
 reply draft (the Checker checks red lines) → you approve → **you copy and send it.**
@@ -494,6 +495,10 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 
 ## 18. Change log
 
+- **v7.9 (2026-10-16):** P5-04 to P5-06 built: the Freelance Manager scores pasted jobs (a scam is always skip, in code) and writes one
+  proposal card per job, with each screening answer in its own box (code keeps only answers to the job's own questions). Proposals
+  hold only the text to paste, and the Checker flags lines that undersell you. Every AI request now gives up after 2 minutes of
+  silence (AI_TIMEOUT_SECONDS) and is tried once more, so a hung request can't freeze a chat.
 - **v7.8 (2026-10-16):** Muneer's choice: API posting (Phase 3) and Gmail (Phase 4) wait; posting stays copy and paste for now. Next is
   Phase 5 (Freelance) by paste: job posts and client messages you paste are scored and answered; the email parts follow after Gmail.
 - **v7.7 (2026-10-16):** P3-01 sender base: the Safety Guard (code) checks every send (rule and mode, your own OK where needed, pause,

@@ -21,3 +21,34 @@ test("an Upwork draft that breaks Upwork's rules is flagged before you copy it",
   await card.getByRole("button", { name: "Mark as sent" }).click();
   await expect(card).toHaveCount(0); // sent: it leaves the Waiting tab
 });
+
+test("paste a job post and get a scored proposal, ready to copy into Upwork", async ({ page, request }, info) => {
+  await request.put("http://127.0.0.1:8100/api/profile", {
+    data: { headline: "AI engineer", proof: ["Built chatbots in English and Urdu"] },
+  });
+  const tag = `${info.project.name}-${Date.now().toString(36)}`;
+  await page.goto("/");
+  await page.getByRole("button", { name: "Paste from another site" }).click();
+  const box = page.getByRole("region", { name: "Paste box" });
+  await box
+    .getByRole("textbox", { name: "Pasted text" })
+    .fill(`Clinic chatbot ${tag}\nWe need a chatbot for patients. Budget $500.\nScreening question: Which chatbot did you build ${tag}?`);
+  await box.getByRole("textbox", { name: "Link (optional)" }).fill("https://www.upwork.com/jobs/~01testjob");
+  await expect(box.getByRole("combobox", { name: "Type" })).toHaveValue("job");
+  await page.getByRole("textbox", { name: "Message" }).fill("Write a proposal for this job");
+  await page.getByRole("textbox", { name: "Message" }).press("Enter");
+
+  const card = page.getByRole("article", { name: /Upwork proposal/ }).last();
+  await expect(card).toBeVisible({ timeout: 20_000 }); // scoring + the writing team
+  await expect(card.getByRole("link", { name: "Open the job ↗" })).toHaveAttribute("href", "https://www.upwork.com/jobs/~01testjob");
+  // The screening answer is on the same card, in its own box with its own Copy button.
+  const answers = card.getByRole("region", { name: "Screening answers" });
+  await expect(answers).toContainText(`Which chatbot did you build ${tag}?`);
+  await expect(answers.getByRole("button", { name: "Copy answer 1" })).toBeVisible();
+  await expect(page.getByRole("article", { name: /Upwork proposal/ })).toHaveCount(1);
+  await page.getByRole("button", { name: "▸ Show work" }).last().click();
+  await expect(page.getByText(/Job \d+ scored 8\/10: apply/)).toBeVisible();
+
+  await card.getByRole("button", { name: "Mark as sent" }).click();
+  await expect(card.getByTestId("approval-status")).toHaveText("Sent");
+});

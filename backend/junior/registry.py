@@ -26,7 +26,8 @@ log = logging.getLogger(__name__)
 AGENTS_DIR = REPO_DIR / "agents"
 # Tools an agent file may ask for. Grows as tools are added.
 KNOWN_TOOLS = frozenset({"web_search", "hosted_web_search", "database", "memory", "approvals", "writing", "ideas", "social",
-                          "ai_official_search", "pakistan_official_search", "news"})
+                          "ai_official_search", "pakistan_official_search", "news",
+                          "jobs", "freelance"})
 NOT_AGENT_FILES = {"README.md"}
 
 _NAME = re.compile(r"^[a-z][a-z0-9_]{1,49}$")

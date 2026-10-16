@@ -304,9 +304,9 @@ Read-only: these agents never post or send anything. News pages are outside cont
 - [ ] **P5-01** You set up Upwork saved-search alerts and Fiverr email notifications to your Gmail (guide for you) *(after Phase 4)*
 - [x] **P5-02** Upwork and Fiverr playbooks + red lines in the Checker and Safety Guard
 - [ ] **P5-03** Email parsers for Upwork job alerts and Fiverr order/message emails (raw email shown when parsing is unsure) *(after Phase 4)*
-- [ ] **P5-04** Freelance Manager subagent
-- [ ] **P5-05** Job scoring from alert emails and pasted job posts (skill match, budget, client quality, scam signs)
-- [ ] **P5-06** Proposal flow: draft → approve → Copy + Open job on Upwork → you paste and Submit → Mark as sent
+- [x] **P5-04** Freelance Manager subagent
+- [x] **P5-05** Job scoring from alert emails and pasted job posts (skill match, budget, client quality, scam signs) *(pasted posts done; alert emails come with P5-03)*
+- [x] **P5-06** Proposal flow: draft → approve → Copy + Open job on Upwork → you paste and Submit → Mark as sent
 - [ ] **P5-07** Client messages (workflow E): you paste the conversation → reply draft → copy and send yourself
 - [ ] **P5-08** Fiverr orders: deadlines, revisions, reminders, delivery message drafts
 - [ ] **P5-09** Clients and contacts store

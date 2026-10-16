@@ -5,10 +5,13 @@ import logging
 from collections.abc import AsyncIterator, Callable
 from typing import Any
 
+from openai import APIConnectionError
+
 from junior.agent.builder import ModelProvider, NoApiKeyError, build_agent, chosen_model
 from junior.agent.context import TurnContext
 from junior.agent.helpers import HelperRunner
 from junior.agent.runner import TurnResult, stream_turn
+from junior.ai_client import no_answer_message
 from junior.approvals import attach_to_message
 from junior.audit import audit
 from junior.chat.history import build_input, save_usage, summarize_if_long
@@ -284,6 +287,13 @@ class ChatService:
             self._save_partial_usage(conversation_id, context)
             self._audit_run(conversation_id, context, "blocked", error=str(e))
             yield {"type": "error", "message": str(e)}
+            return
+        except APIConnectionError as e:  # no answer in time, or no internet
+            log.warning("Chat turn: %s: %s", type(e).__name__, e)
+            self._save_partial_usage(conversation_id, context)
+            message = no_answer_message(e)
+            self._audit_run(conversation_id, context, "error", error=message)
+            yield {"type": "error", "message": message}
             return
         except Exception as e:  # shown in the chat; details in the log
             log.exception("Chat turn failed")

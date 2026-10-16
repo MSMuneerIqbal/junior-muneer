@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("paste a job post, and a draft from it opens that post", async ({ page }, info) => {
-  const tag = `${info.project.name}-${Date.now()}`;
+  const tag = `${info.project.name}-${Date.now().toString(36)}`; // no long digit runs (they look like phone numbers)
   await page.goto("/");
   await page.getByRole("button", { name: "Paste from another site" }).click();
   const box = page.getByRole("region", { name: "Paste box" });
@@ -17,9 +17,10 @@ test("paste a job post, and a draft from it opens that post", async ({ page }, i
   const pasted = page.getByRole("figure", { name: "Pasted content" });
   await expect(pasted).toContainText(`Need an AI chatbot for our clinic ${tag}`);
   await expect(pasted).toContainText("Pasted job post · Upwork");
-  const card = page.getByRole("article", { name: new RegExp(`Proposal ${tag}`) });
-  await expect(card.getByText("Made from outside content", { exact: false })).toBeVisible();
-  await expect(card.getByRole("link", { name: /Open original/ })).toHaveAttribute("href", "https://www.upwork.com/jobs/~01abc");
+  // The Freelance Manager scores the job, then the writing team writes the proposal.
+  const card = page.getByRole("article", { name: /Upwork proposal/ });
+  await expect(card.getByText("Made from outside content", { exact: false })).toBeVisible({ timeout: 20_000 });
+  await expect(card.getByRole("link", { name: /Open the job/ })).toHaveAttribute("href", "https://www.upwork.com/jobs/~01abc");
   await expect(page.getByRole("region", { name: "Paste box" })).toHaveCount(0);
 
   // Saved: still there after a reload.

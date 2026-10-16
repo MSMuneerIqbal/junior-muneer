@@ -12,8 +12,17 @@ import re
 
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 _PHONE_CANDIDATE = re.compile(r"\+?\(?\d[\d\s().-]{7,}\d")
+_APP = r"(whats\s?app|telegram|skype|discord|signal|wechat|viber|google meet|zoom)"
+# An app is a red line only as a way to talk ("WhatsApp me", "let's talk on Telegram"), not as a product
+# ("I built WhatsApp chatbots").
 _APPS = re.compile(
-    r"\b(whats\s?app|telegram|skype|discord|wechat|viber|signal app|on signal|zoom (call|meeting|link)|google meet)\b",
+    rf"\b(contact|message|text|reach|add|call|ping|dm|find|talk to|chat with) (me|us) (on|via|at|over|through) {_APP}\b"
+    rf"|\b{_APP} (me|us)\b"
+    rf"|\bmy {_APP}\b"
+    rf"|\b{_APP}\s*(id|number|no\.?|handle)\s*[:#=]"
+    rf"|\b(let'?s|we can|can we|could we|i can|happy to) (talk|chat|connect|discuss|continue|move|speak)( this| it)? (on|via|over|to) {_APP}\b"
+    rf"|\b{_APP} (call|meeting|link|group|chat)\b"
+    rf"|\b{_APP}\s*[:\-]?\s*@\w{{3,}}",  # "Telegram: @hr_jobs"
     re.IGNORECASE,
 )
 # Payment apps and services that only ever mean "pay me outside the platform", and payment phrases.

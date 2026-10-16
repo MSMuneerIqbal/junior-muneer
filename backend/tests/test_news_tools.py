@@ -1,6 +1,5 @@
 """P2b-04: Junior Muneer sends news questions to the news agents (chat and live calls)."""
 
-import asyncio
 import json
 from datetime import UTC, datetime, timedelta
 from email.utils import format_datetime

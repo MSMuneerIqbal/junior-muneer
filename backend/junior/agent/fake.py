@@ -58,6 +58,44 @@ def _last_user_text(items: Any) -> str:
 
 
 class FakeModel(Model):
+    def _fake_freelance(self, input: Any, brief: str) -> list[Any]:
+        """The Freelance Manager: score a pasted job, then write the proposal; or reply to a client."""
+        outputs = [
+            i.get("output", "") for i in (input if isinstance(input, list) else [])
+            if isinstance(i, dict) and i.get("type") == "function_call_output"
+        ]
+        their = ""
+        if "START OF THEIR TEXT" in brief:
+            their = brief.split("START OF THEIR TEXT", 1)[1].split("END OF THEIR TEXT", 1)[0].strip("= \n")
+        if not outputs:
+            if not their:
+                return [assistant_message("(fake Freelance Manager) Paste the job post with the Paste box first.")]
+            if "(a job from" in brief:
+                score = {
+                    "title": their.splitlines()[0][:80],
+                    "budget": "",
+                    "skills": ["Python"],
+                    "score": 8,
+                    "verdict": "apply",
+                    "reasons": ["(fake) Matches your skills"],
+                    "concerns": [],
+                }
+                return [function_call("score_job", {"score": score}, call_id="fake-score")]
+            platform = "fiverr" if "from fiverr" in brief else "upwork"
+            args = {"platform": platform, "item_type": "reply", "request": "a reply to this client"}
+            return [function_call("write_draft", args, call_id="fake-reply")]
+        latest = outputs[-1]
+        saved = re.match(r"Saved as job (\d+)", latest)
+        if saved and "Marked skip" not in latest and "proposal" in brief.lower():
+            args = {"platform": "upwork", "item_type": "proposal", "request": "a proposal for this job", "job_id": int(saved.group(1))}
+            questions = [
+                line.split(":", 1)[1].strip() for line in their.splitlines() if line.lower().startswith("screening question:")
+            ]
+            if questions:
+                args["screening_questions"] = questions
+            return [function_call("write_draft", args, call_id="fake-proposal")]
+        return [assistant_message(f"(fake Freelance Manager) {latest}")]
+
     def _plan(self, input: Any, tools: list[Any]) -> tuple[list[Any], bool]:
         """What to answer: (output items, include a hosted web search)."""
         hosted_search = any(isinstance(t, WebSearchTool) for t in tools)
@@ -70,6 +108,8 @@ class FakeModel(Model):
         if hosted_search:
             # The web researcher: pretend to search, then report.
             return [assistant_message(f"- (fake search result for: {text})")], True
+        if text.startswith("## Request from") and "score_job" in tool_names:
+            return self._fake_freelance(input, text), False
         last = input[-1] if isinstance(input, list) and input else None
         if isinstance(last, dict) and last.get("type") == "function_call_output":
             return [assistant_message(f"(fake AI) Tool said: {last.get('output')}")], False
@@ -102,6 +142,8 @@ class FakeModel(Model):
             return [function_call("ai_news", {"question": text}, call_id="fake-ai-news")], False
         if "pakistan" in lowered and ("news" in lowered or "trending" in lowered) and "pakistan_news" in tool_names:
             return [function_call("pakistan_news", {"question": text}, call_id="fake-pk-news")], False
+        if "freelance" in tool_names and any(w in lowered for w in ("proposal", "should i apply", "upwork", "fiverr", "client")):
+            return [function_call("freelance", {"request": text}, call_id="fake-freelance")], False
         if text.lower().startswith(("write ", "ideas")) and "social_media" in tool_names:
             return [function_call("social_media", {"request": text}, call_id="fake-social")], False
         if text.lower().startswith("draft ") and "add_to_approvals" in tool_names:
@@ -173,10 +215,15 @@ def _team_answer(schema: str, prompt: str) -> dict:
         return _fake_digest(prompt)
     if "Draft" in schema:
         who = "(fake Writer, revised)" if "## The Checker sent it back" in prompt else "(fake Writer)"
+        listed = prompt.split("## Screening questions (", 1)[1].split("\n## ", 1)[0] if "## Screening questions (" in prompt else ""
         return {
             "text": f"{who} A short post about {request}. Here's what I built and one thing I learned.\n\n#AI #MCP #Python",
             "image_idea": "A screenshot of the app",
             "missing_facts": [],
+            "answers": [
+                {"question": q, "answer": f"(fake Writer) A short, true answer to: {q}"}
+                for q in re.findall(r"^\d+\. (.+)$", listed, re.MULTILINE)
+            ],
         }
     if "Review" in schema:
         draft = prompt.split("<draft>\n", 1)[-1]
