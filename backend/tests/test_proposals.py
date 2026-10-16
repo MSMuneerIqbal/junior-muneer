@@ -32,6 +32,8 @@ def run_team(model, questions=None, times=1, job_id=None):
         c.put("/api/profile", json={"headline": "AI engineer", "proof": ["Built a hospital assistant with 47 tools over MCP"]})
         context = TurnContext(conversation_id=None, settings=all_settings())
         context.helpers = HelperRunner(load_registry(), lambda _n: model)
+        if job_id is not None:  # the job post you pasted
+            context.paste = {"id": None, "text": "Clinic chatbot job", "platform": "upwork", "kind": "job", "source_url": ""}
         results = [
             asyncio.run(
                 write_draft_for(context, "upwork", "proposal", "the clinic chatbot job", job_id=job_id, screening_questions=questions)

@@ -14,6 +14,7 @@ const NAV = [
   { href: "/", label: "Chat", icon: "💬" },
   { href: "/approvals", label: "Approvals", icon: "✅" },
   { href: "/social", label: "Social", icon: "📣" },
+  { href: "/freelance", label: "Freelance", icon: "💼" },
   { href: "/news", label: "News", icon: "📰" },
   { href: "/profile", label: "Profile", icon: "👤" },
   { href: "/memory", label: "Memory", icon: "🧠" },

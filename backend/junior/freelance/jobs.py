@@ -106,6 +106,13 @@ def get_job(job_id: int) -> JobOut | None:
         return _out(job) if job else None
 
 
+def get_job_text(job_id: int) -> str:
+    """The job post as you pasted it (empty if there's no such job)."""
+    with session_scope() as s:
+        job = s.get(Job, job_id)
+        return job.text if job else ""
+
+
 def link_proposal(job_id: int, approval_id: int) -> None:
     with session_scope() as s:
         job = s.get(Job, job_id)

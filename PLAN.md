@@ -507,6 +507,9 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
   the client's newest message; warning signs in their words show live and on the card. Plan and Add image are for posts only.
   P5-08: Fiverr orders by paste (due time, revisions, reminders, delivery messages); the Checker's notes for you ("Note for you: …")
   show on the card without failing a draft whose text is right.
+  P5-09 (clients store) skipped by Muneer's choice. P5-10: the Freelance page (Upwork and Fiverr tabs): orders to deliver with
+  Mark delivered / completed / cancelled and "Write delivery message", drafts waiting, scored jobs with "Write a proposal"
+  (uses the saved post, no new paste) and Skip, and finished orders.
 - **v7.8 (2026-10-16):** Muneer's choice: API posting (Phase 3) and Gmail (Phase 4) wait; posting stays copy and paste for now. Next is
   Phase 5 (Freelance) by paste: job posts and client messages you paste are scored and answered; the email parts follow after Gmail.
 - **v7.7 (2026-10-16):** P3-01 sender base: the Safety Guard (code) checks every send (rule and mode, your own OK where needed, pause,

@@ -11,9 +11,9 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
   (Social Media Manager), P2-08 (images), P2-09 (style memory), P2-10 (Social page), P2-11 (planned posts).
 - Phase 2 accepted (P2-12). Phase 2b (news agents) accepted (P2b-06).
   Phase 3 (social APIs) and Phase 4 (Gmail) are **paused by Muneer**: posting stays copy and paste for now (P3-01 sender base
-  and the P3-02 Facebook code are ready for later). **Now: Phase 5 (Freelance) by paste**: P5-02, P5-04 to P5-08 done
+  and the P3-02 Facebook code are ready for later). **Now: Phase 5 (Freelance) by paste**: P5-02, P5-04 to P5-08 and P5-10 done (P5-09 skipped)
   (Freelance Manager, job scoring + scam signs, one proposal card per job with screening answers in their own boxes,
-  client replies with warning signs, Fiverr orders with due-time reminders); next P5-09 (clients store).
+  client replies with warning signs, Fiverr orders with due-time reminders, the Freelance page); next P5-11 (acceptance test + push).
 - Last pushed to GitHub (`main`) on 2026-10-16 (through P5-07).
 
 ## Safety rules (never break)

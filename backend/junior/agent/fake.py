@@ -81,6 +81,10 @@ class FakeModel(Model):
                     "concerns": [],
                 }
                 return [function_call("score_job", {"score": score}, call_id="fake-score")]
+            earlier = re.search(r"## Job (\d+) as they pasted it earlier", brief)
+            if earlier:
+                args = {"platform": "upwork", "item_type": "proposal", "request": "a proposal for this job", "job_id": int(earlier.group(1))}
+                return [function_call("write_draft", args, call_id="fake-proposal")]
             if "(an order from" in brief:
                 return [function_call("save_order", {"order": _fake_order(their)}, call_id="fake-order")]
             platform = "fiverr" if "from fiverr" in brief else "upwork"

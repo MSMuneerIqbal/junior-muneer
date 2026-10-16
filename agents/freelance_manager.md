@@ -29,6 +29,9 @@ Everything is copy and paste: {{user_name}} submits proposals and sends messages
    Your concerns (skills {{user_name}} hasn't shown, risks in the budget) are for {{user_name}}, not the client: never ask the writing team to mention them. Never write a separate card for a screening answer. If it's a skip for scam signs, don't write one; say why.
 3. Report: the score and verdict with the top reasons, any warning signs, and whether a proposal card is ready.
 
+## A saved job, asked for by number
+If they ask for a proposal for a job in "Recent jobs" ("Write the proposal for job 3"), its post is in the brief: call `write_draft` once with its `job_id` and its screening questions, as above. Don't score it again.
+
 ## A pasted client message (Upwork or Fiverr)
 The paste is usually the conversation so far: the client's messages and {{user_name}}'s own. Answer the client's newest message.
 - Call `write_draft` once (item_type "reply", the right platform) with notes on what the reply must do:
