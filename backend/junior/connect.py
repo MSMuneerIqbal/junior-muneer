@@ -3,6 +3,7 @@
 Tokens never go through the browser: you paste them here, they're exchanged with the platform and
 saved in backend/.env (which is never committed). Restart the backend afterwards.
 
+    github  GitHub: a fine-grained personal access token (see TASK.md, P6-01)
     meta    Facebook Page (and, later, Instagram): app ID, app secret and a short-lived user token
             from Meta's Graph API Explorer -> a long-lived Page token
     check   tests the saved connections
@@ -17,12 +18,13 @@ from pathlib import Path
 import httpx
 
 from junior.config import BACKEND_DIR, get_settings
+from junior.github.connection import check_token
 from junior.senders.facebook import GRAPH, FacebookPageSender, appsecret_proof
 
 ENV_FILE = BACKEND_DIR / ".env"
 
 
-def set_env(values: dict[str, str], path: Path | None = None) -> None:
+def set_env(values: dict[str, str], path: Path | None = None, heading: str = "Facebook Page (written by connect.bat meta)") -> None:
     """Write KEY=value lines into backend/.env, replacing old ones and keeping everything else."""
     path = path or ENV_FILE
     lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
@@ -38,7 +40,7 @@ def set_env(values: dict[str, str], path: Path | None = None) -> None:
     missing = [k for k in values if k not in done]
     if missing:
         out.append("")
-        out.append("# Facebook Page (written by connect.bat meta)")
+        out.append(f"# {heading}")
         out.extend(f"{k}={values[k]}" for k in missing)
     path.write_text("\n".join(out).rstrip("\n") + "\n", encoding="utf-8")
 
@@ -108,8 +110,22 @@ def connect_meta() -> None:
     print("Restart the backend (stop.bat, then start.bat), then check it in Settings → Connections.")
 
 
+def connect_github() -> None:
+    print("Connect GitHub (see TASK.md, P6-01, for how to make the token).\n")
+    token = getpass.getpass("Fine-grained token (hidden, starts with github_pat_): ").strip()
+    if not re.fullmatch(r"(github_pat_|ghp_)[A-Za-z0-9_]{20,}", token):
+        raise SystemExit("That doesn't look like a GitHub token (it starts with github_pat_). Nothing was saved.")
+    result = asyncio.run(check_token(token))
+    if not result.startswith("Connected"):
+        raise SystemExit(f"{result} Nothing was saved.")
+    set_env({"GITHUB_TOKEN": token}, heading="GitHub (written by connect.bat github)")
+    print(f"\n{result} Saved in backend/.env (token {masked(token)}).")
+    print("Restart the backend (stop.bat, then start.bat), then check it in Settings → Connections.")
+
+
 def check() -> None:
     s = get_settings()
+    print("GitHub:", asyncio.run(check_token(s.github_token)))
     if not (s.meta_page_id and s.meta_page_token):
         print("Facebook Page: not connected. Run connect.bat meta.")
         return
@@ -121,6 +137,8 @@ def main(argv: list[str]) -> None:
     command = argv[0] if argv else ""
     if command == "meta":
         connect_meta()
+    elif command == "github":
+        connect_github()
     elif command == "check":
         check()
     else:

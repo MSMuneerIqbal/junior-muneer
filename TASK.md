@@ -318,6 +318,18 @@ Read-only: these agents never post or send anything. News pages are outside cont
 **Phase done when:** "What changed in my repo this week?" gets a correct answer, and an approved issue gets created.
 
 - [ ] **P6-01** GitHub fine-grained token (guide for you) + the GitHub MCP server in read-only mode
+  - **Built:** `connect.bat github` (checks the token with GitHub before saving it in `backend/.env`), GitHub in
+    Settings → Connections with a Check button, and the read-only GitHub MCP server for the Developer Agent (GitHub's
+    `/readonly` endpoint, plus code that only lets through tools that read). Waiting for your token to try it for real.
+  - **Your steps (about 5 minutes, free):**
+    1. github.com → your picture → **Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens** → **Generate new token**.
+    2. Name: `Junior Muneer`. Expiration: **90 days** (Settings → Connections shows when it ends). Resource owner: **MSMuneerIqbal**.
+    3. Repository access: **All repositories** (or "Only select repositories" if you want to limit it).
+    4. Repository permissions, all **Read-only**: **Contents**, **Issues**, **Pull requests** (Metadata is added by itself).
+       Creating issues comes in P6-03: then you'll change Issues to "Read and write" on the same token.
+    5. **Generate token** and copy it (it starts with `github_pat_`; GitHub shows it once).
+    6. In the project folder run `connect.bat github`, paste it (it stays hidden), then restart (stop.bat, start.bat).
+    7. Settings → Connections → GitHub → **Check**: it should say "Connected as @MSMuneerIqbal".
 - [ ] **P6-02** Developer Agent: repo summaries, issue and PR reading, code review, drafts
 - [ ] **P6-03** Dev Executor: GitHub write actions through the permission rules (merge and `main` locked to Ask; deletes denied). Tests included
 - [ ] **P6-04** GitHub playbook (commit messages, PR descriptions, branch names)

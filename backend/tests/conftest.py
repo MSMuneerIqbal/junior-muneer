@@ -32,7 +32,7 @@ def isolated_settings(tmp_path, monkeypatch, migrated_db):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "")
     # Your real connections in backend/.env must never be used by tests.
     for key in ("ARTIFICIAL_ANALYSIS_API_KEY", "META_APP_ID", "META_APP_SECRET", "META_PAGE_ID",
-                "META_PAGE_TOKEN", "META_IG_USER_ID", "LINKEDIN_ACCESS_TOKEN", "LINKEDIN_PERSON_ID"):
+                "META_PAGE_TOKEN", "META_IG_USER_ID", "LINKEDIN_ACCESS_TOKEN", "LINKEDIN_PERSON_ID", "GITHUB_TOKEN"):
         monkeypatch.setenv(key, "")
     monkeypatch.setenv("SCHEDULER_ENABLED", "false")
     get_settings.cache_clear()

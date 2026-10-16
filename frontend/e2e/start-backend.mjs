@@ -22,6 +22,7 @@ const child = spawn(python, ["-m", "uvicorn", "junior.main:app", "--port", "8100
     // Your real connections must never be used by tests: nothing may be posted for real.
     ARTIFICIAL_ANALYSIS_API_KEY: "",
     META_APP_ID: "",
+    GITHUB_TOKEN: "",
     META_APP_SECRET: "",
     META_PAGE_ID: "",
     META_PAGE_TOKEN: "",

@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     meta_page_token: str = ""
     meta_ig_user_id: str = ""
     meta_graph_version: str = "v26.0"
+    # Phase 6: your GitHub fine-grained token (written by connect.bat github; never committed).
+    github_token: str = ""
     # Optional: Artificial Analysis's free API key, for "who's on top" rankings in AI news.
     artificial_analysis_api_key: str = ""
     data_dir: Path = Path("data")

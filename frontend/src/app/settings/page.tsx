@@ -689,7 +689,7 @@ function ConnectionRow({ p }: { p: Platform }) {
         {result && <p className="text-xs text-muted" role="status">{result}</p>}
         {!p.connected && p.ready && (
           <p className="text-xs leading-relaxed text-muted">
-            Run <code>{p.how}</code> in the project folder (the steps are in TASK.md, P3-02), then restart. Your tokens stay
+            Run <code>{p.how}</code> in the project folder (the steps are in TASK.md), then restart. Your tokens stay
             in <code>backend/.env</code>: never in the browser or in Git.
           </p>
         )}
@@ -704,7 +704,7 @@ function ConnectionsSection() {
     <Section
       id="connections"
       title="Connections"
-      description="Platforms that post through their official API after your OK. Others stay copy and paste."
+      description="Accounts connected through their official API. Anything that changes something waits for your OK; the rest stays copy and paste."
     >
       {data?.map((p) => <ConnectionRow key={p.key} p={p} />)}
     </Section>
