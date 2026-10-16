@@ -50,7 +50,7 @@ export type ApprovalItem = {
   text: string;
   original_text: string;
   edits: { at: string; before: string; after: string }[];
-  meta: { score?: number; issues?: string[]; image_idea?: string; [key: string]: unknown };
+  meta: { score?: number; issues?: string[]; image_idea?: string; warnings?: string[]; [key: string]: unknown };
   status: ApprovalStatus;
   from_outside: boolean;
   can_always_allow: boolean;

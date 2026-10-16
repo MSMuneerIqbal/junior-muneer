@@ -354,7 +354,8 @@ proposal draft (one card: the cover letter, and each screening answer in its own
 **you copy it, open the job on Upwork, paste and press Submit.**
 
 **E. Client messages (Upwork/Fiverr):** a notification email arrives → you paste the conversation (the email usually holds only part of it) →
-reply draft (the Checker checks red lines) → you approve → **you copy and send it.**
+reply draft (the Checker checks red lines; code flags warning signs in the client's words, like moving to WhatsApp, an email or
+phone number, or paying first, and the reply keeps everything on the platform) → you approve → **you copy and send it.**
 
 **F. Fiverr orders:** deadlines and revisions tracked from notification emails (and pastes), reminders on the dashboard, delivery message drafts.
 
@@ -499,6 +500,8 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
   proposal card per job, with each screening answer in its own box (code keeps only answers to the job's own questions). Proposals
   hold only the text to paste, and the Checker flags lines that undersell you. Every AI request now gives up after 2 minutes of
   silence (AI_TIMEOUT_SECONDS) and is tried once more, so a hung request can't freeze a chat.
+  P5-07: paste a client conversation (the Paste box knows Upwork and Fiverr message links) and get a reply card that answers
+  the client's newest message; warning signs in their words show live and on the card. Plan and Add image are for posts only.
 - **v7.8 (2026-10-16):** Muneer's choice: API posting (Phase 3) and Gmail (Phase 4) wait; posting stays copy and paste for now. Next is
   Phase 5 (Freelance) by paste: job posts and client messages you paste are scored and answered; the email parts follow after Gmail.
 - **v7.7 (2026-10-16):** P3-01 sender base: the Safety Guard (code) checks every send (rule and mode, your own OK where needed, pause,

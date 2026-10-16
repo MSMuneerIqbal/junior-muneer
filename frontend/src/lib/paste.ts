@@ -54,6 +54,8 @@ export function guessFromUrl(url: string): { platform?: string; kind?: string } 
   const platform = HOSTS.find(([re]) => re.test(host))?.[1];
   if (!platform) return {};
   if (platform === "upwork" && /\/jobs?\//.test(url)) return { platform, kind: "job" };
+  if (platform === "upwork" && /\/messages\//.test(url)) return { platform, kind: "client_message" };
+  if (platform === "fiverr" && /\/inbox\//.test(url)) return { platform, kind: "client_message" };
   if (platform === "email") return { platform, kind: "email" };
   return { platform };
 }

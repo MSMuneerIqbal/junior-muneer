@@ -209,6 +209,20 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
         {Array.isArray(item.meta.answers) && item.meta.answers.length > 0 && (
           <ScreeningAnswers answers={item.meta.answers as { question: string; answer: string }[]} />
         )}
+        {item.meta.warnings && item.meta.warnings.length > 0 && item.status !== "posted" && item.status !== "rejected" && (
+          <div
+            role="note"
+            aria-label="Warning signs from the client"
+            className="mt-2 rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn"
+          >
+            <p className="font-medium">⚠ The client&apos;s message has warning signs. Keep everything on {item.platform_label}:</p>
+            <ul className="mt-0.5 list-disc pl-4">
+              {item.meta.warnings.map((w, n) => (
+                <li key={n}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         {item.meta.image_idea && <p className="mt-2 text-xs text-muted">🖼 Image idea: {item.meta.image_idea}</p>}
         {waiting && item.needs_image && (
           <p className="mt-2 text-xs font-medium text-warn">{item.platform_label} posts need an image: add one before posting.</p>
@@ -297,7 +311,9 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
                     {item.open_url === item.meta.source_url
                       ? item.item_type === "proposal"
                         ? "Open the job"
-                        : "Open original"
+                        : item.item_type === "reply" && (item.platform === "upwork" || item.platform === "fiverr")
+                          ? "Open the conversation"
+                          : "Open original"
                       : `Open ${item.platform_label}`}{" "}
                     ↗
                   </a>
@@ -341,30 +357,35 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
                 <button type="button" className={button} disabled={busy} onClick={() => setEditing(item.text)}>
                   Edit
                 </button>
-                <button
-                  type="button"
-                  className={button}
-                  disabled={busy}
-                  onClick={() => setPlanning(toLocalInput(item.planned_at))}
-                >
-                  📅 {item.planned_at ? "Change time" : "Plan"}
-                </button>
-                <label className={`${button} cursor-pointer`}>
-                  🖼 Add image
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    multiple
-                    className="sr-only"
-                    aria-label="Add image"
-                    disabled={busy}
-                    onChange={async (e) => {
-                      const files = Array.from(e.target.files ?? []);
-                      e.target.value = "";
-                      for (const f of files) await run("add_image", f);
-                    }}
-                  />
-                </label>
+                {item.item_type === "post" && (
+                  // Posting times and images are for posts, not proposals, replies or messages.
+                  <>
+                    <button
+                      type="button"
+                      className={button}
+                      disabled={busy}
+                      onClick={() => setPlanning(toLocalInput(item.planned_at))}
+                    >
+                      📅 {item.planned_at ? "Change time" : "Plan"}
+                    </button>
+                    <label className={`${button} cursor-pointer`}>
+                      🖼 Add image
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        multiple
+                        className="sr-only"
+                        aria-label="Add image"
+                        disabled={busy}
+                        onChange={async (e) => {
+                          const files = Array.from(e.target.files ?? []);
+                          e.target.value = "";
+                          for (const f of files) await run("add_image", f);
+                        }}
+                      />
+                    </label>
+                  </>
+                )}
                 {item.kind === "copy" && (
                   <button
                     type="button"

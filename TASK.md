@@ -307,7 +307,7 @@ Read-only: these agents never post or send anything. News pages are outside cont
 - [x] **P5-04** Freelance Manager subagent
 - [x] **P5-05** Job scoring from alert emails and pasted job posts (skill match, budget, client quality, scam signs) *(pasted posts done; alert emails come with P5-03)*
 - [x] **P5-06** Proposal flow: draft → approve → Copy + Open job on Upwork → you paste and Submit → Mark as sent
-- [ ] **P5-07** Client messages (workflow E): you paste the conversation → reply draft → copy and send yourself
+- [x] **P5-07** Client messages (workflow E): you paste the conversation → reply draft → copy and send yourself
 - [ ] **P5-08** Fiverr orders: deadlines, revisions, reminders, delivery message drafts
 - [ ] **P5-09** Clients and contacts store
 - [ ] **P5-10** Freelance page

@@ -20,7 +20,8 @@ _APPS = re.compile(
     rf"|\b{_APP} (me|us)\b"
     rf"|\bmy {_APP}\b"
     rf"|\b{_APP}\s*(id|number|no\.?|handle)\s*[:#=]"
-    rf"|\b(let'?s|we can|can we|could we|i can|happy to) (talk|chat|connect|discuss|continue|move|speak)( this| it)? (on|via|over|to) {_APP}\b"
+    rf"|\b(let['’]?s|let us|we can|can we|could we|i can|happy to) "
+    rf"(talk|chat|connect|discuss|continue|move|speak|switch|communicate)( this| it)? (on|via|over|to|through) {_APP}\b"
     rf"|\b{_APP} (call|meeting|link|group|chat)\b"
     rf"|\b{_APP}\s*[:\-]?\s*@\w{{3,}}",  # "Telegram: @hr_jobs"
     re.IGNORECASE,

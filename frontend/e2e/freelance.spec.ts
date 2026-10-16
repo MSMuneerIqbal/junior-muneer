@@ -52,3 +52,29 @@ test("paste a job post and get a scored proposal, ready to copy into Upwork", as
   await card.getByRole("button", { name: "Mark as sent" }).click();
   await expect(card.getByTestId("approval-status")).toHaveText("Sent");
 });
+
+test("paste a client conversation and get a reply to copy, with warning signs flagged", async ({ page }, info) => {
+  const tag = `${info.project.name}-${Date.now().toString(36)}`;
+  const room = "https://www.upwork.com/ab/messages/rooms/room_test";
+  await page.goto("/");
+  await page.getByRole("button", { name: "Paste from another site" }).click();
+  const box = page.getByRole("region", { name: "Paste box" });
+  await box.getByRole("textbox", { name: "Pasted text" }).fill(`Sarah ${tag}: Can you add voice replies? Let's continue on WhatsApp.`);
+  await box.getByRole("textbox", { name: "Link (optional)" }).fill(room);
+  await expect(box.getByRole("combobox", { name: "Type" })).toHaveValue("client_message"); // guessed from the link
+  await page.getByRole("textbox", { name: "Message" }).fill("Reply to this client");
+  await page.getByRole("textbox", { name: "Message" }).press("Enter");
+
+  const card = page.getByRole("article", { name: /Upwork reply/ });
+  await expect(card).toBeVisible({ timeout: 20_000 });
+  await expect(card.getByRole("note", { name: "Warning signs from the client" })).toContainText("outside the platform");
+  await expect(card.getByRole("link", { name: "Open the conversation ↗" })).toHaveAttribute("href", room);
+  await expect(card.getByRole("button", { name: "📅 Plan" })).toHaveCount(0); // posting times and images are for posts
+  await expect(card.getByLabel("Add image")).toHaveCount(0);
+  await page.getByRole("button", { name: "▸ Show work" }).last().click();
+  await expect(page.getByText("Warning signs in the client's message")).toBeVisible();
+
+  await card.getByRole("button", { name: "Mark as sent" }).click();
+  await expect(card.getByTestId("approval-status")).toHaveText("Sent");
+  await expect(card.getByRole("note", { name: "Warning signs from the client" })).toHaveCount(0); // sent: no longer needed
+});
