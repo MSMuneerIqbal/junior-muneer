@@ -494,6 +494,8 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 
 ## 18. Change log
 
+- **v7.8 (2026-10-16):** Muneer's choice: API posting (Phase 3) and Gmail (Phase 4) wait; posting stays copy and paste for now. Next is
+  Phase 5 (Freelance) by paste: job posts and client messages you paste are scored and answered; the email parts follow after Gmail.
 - **v7.7 (2026-10-16):** P3-01 sender base: the Safety Guard (code) checks every send (rule and mode, your own OK where needed, pause,
   exactly the approved text, hard limits, no keys/tokens/passwords/placeholders, a daily limit of 5 API posts per platform). Each send is claimed
   once and never retried by itself: "failed" stays approved for a retry by hand, "unclear" (or a send cut off by a restart) becomes "check manually".

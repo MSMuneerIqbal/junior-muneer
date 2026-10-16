@@ -10,8 +10,8 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
   (profile, playbooks, permission rules + mode menu, approval queue, Paste box, writing team), P2-07
   (Social Media Manager), P2-08 (images), P2-09 (style memory), P2-10 (Social page), P2-11 (planned posts).
 - Phase 2 accepted (P2-12). Phase 2b (news agents) accepted (P2b-06).
-  **Now: Phase 3** (official social APIs). P3-01 (sender base: `backend/junior/senders/`) done. P3-02 Facebook Page
-  code done (`senders/facebook.py`, `connect.bat meta`); waiting for Muneer's Meta app (steps in TASK.md) to post for real.
+  Phase 3 (social APIs) and Phase 4 (Gmail) are **paused by Muneer**: posting stays copy and paste for now (P3-01 sender base
+  and the P3-02 Facebook code are ready for later). **Now: Phase 5 (Freelance) by paste**, starting with P5-02.
 - Last pushed to GitHub (`main`) on 2026-10-15.
 
 ## Safety rules (never break)

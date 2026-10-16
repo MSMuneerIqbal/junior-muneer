@@ -257,6 +257,9 @@ Read-only: these agents never post or send anything. News pages are outside cont
 
 ## Phase 3: Official social APIs (Meta + LinkedIn)
 
+> **Paused (2026-10-16, Muneer's choice):** posting stays copy and paste for now; the API connections come later.
+> Ready for then: P3-01 (the safe sender) and the P3-02 Facebook code with `connect.bat meta`.
+
 **Phase done when:** an approved post goes live through the API, and a reply to a real comment is sent.
 
 - [x] **P3-01** API sender base: plain code (no AI), sends the exact stored approved text, Safety Guard check first, "run at most once", "check manually" on unclear results. Fake-API tests
@@ -281,6 +284,8 @@ Read-only: these agents never post or send anything. News pages are outside cont
 
 ## Phase 4: Email
 
+> **Waits with the other API work:** it needs a Google Cloud project for Gmail. Freelance (Phase 5) comes first, by copy and paste.
+
 **Phase done when:** you answer a real email from the dashboard.
 
 - [ ] **P4-01** Google Cloud project + Gmail access (guide for you; app set to "production" for personal use so Google doesn't log you out every 7 days)
@@ -292,11 +297,13 @@ Read-only: these agents never post or send anything. News pages are outside cont
 
 ## Phase 5: Freelance (Upwork + Fiverr, copy and paste)
 
-**Phase done when:** a real proposal, drafted from a real job alert, is ready for you to paste into Upwork.
+**Phase done when:** a real proposal, drafted from a real job post you paste, is ready for you to paste into Upwork, and a client message gets a reply draft that keeps Upwork's and Fiverr's rules.
 
-- [ ] **P5-01** You set up Upwork saved-search alerts and Fiverr email notifications to your Gmail (guide for you)
+> Built now by paste (no setup). The email parts (P5-01, P5-03) come after Gmail (Phase 4).
+
+- [ ] **P5-01** You set up Upwork saved-search alerts and Fiverr email notifications to your Gmail (guide for you) *(after Phase 4)*
 - [ ] **P5-02** Upwork and Fiverr playbooks + red lines in the Checker and Safety Guard
-- [ ] **P5-03** Email parsers for Upwork job alerts and Fiverr order/message emails (raw email shown when parsing is unsure)
+- [ ] **P5-03** Email parsers for Upwork job alerts and Fiverr order/message emails (raw email shown when parsing is unsure) *(after Phase 4)*
 - [ ] **P5-04** Freelance Manager subagent
 - [ ] **P5-05** Job scoring from alert emails and pasted job posts (skill match, budget, client quality, scam signs)
 - [ ] **P5-06** Proposal flow: draft → approve → Copy + Open job on Upwork → you paste and Submit → Mark as sent
