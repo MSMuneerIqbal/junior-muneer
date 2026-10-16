@@ -78,3 +78,35 @@ test("paste a client conversation and get a reply to copy, with warning signs fl
   await expect(card.getByTestId("approval-status")).toHaveText("Sent");
   await expect(card.getByRole("note", { name: "Warning signs from the client" })).toHaveCount(0); // sent: no longer needed
 });
+
+test("paste a Fiverr order: it shows when it's due, and the delivery message marks it delivered", async ({ page, request }, info) => {
+  await request.put("http://127.0.0.1:8100/api/profile", {
+    data: { headline: "AI engineer", proof: ["Built chatbots in English and Urdu"] },
+  });
+  const tag = `${info.project.name}-${Date.now().toString(36)}`;
+  const link = "https://www.fiverr.com/users/muneer/manage_orders/FOTEST";
+  await page.goto("/");
+  await page.getByRole("button", { name: "Paste from another site" }).click();
+  const box = page.getByRole("region", { name: "Paste box" });
+  await box.getByRole("textbox", { name: "Pasted text" }).fill(`Chatbot setup ${tag}\nBuyer: sam. Price $50.\nDue in 5 hours.`);
+  await box.getByRole("textbox", { name: "Link (optional)" }).fill(link);
+  await expect(box.getByRole("combobox", { name: "Type" })).toHaveValue("order"); // guessed from the link
+  await page.getByRole("textbox", { name: "Message" }).fill("Track this order and write the delivery message");
+  await page.getByRole("textbox", { name: "Message" }).press("Enter");
+
+  const card = page.getByRole("article", { name: /Fiverr delivery/ });
+  await expect(card).toBeVisible({ timeout: 20_000 });
+  await expect(card.getByRole("link", { name: "Open the order ↗" })).toHaveAttribute("href", link);
+
+  // The Today panel reminds you (wide screens show it beside the chat).
+  if (info.project.name === "desktop") {
+    const due = page.getByRole("region", { name: "Orders due" });
+    await expect(due.getByRole("listitem").filter({ hasText: `Chatbot setup ${tag}` })).toContainText(/in [45] h/);
+  }
+
+  await card.getByRole("button", { name: "Mark as sent" }).click();
+  await expect(card.getByTestId("approval-status")).toHaveText("Sent");
+  if (info.project.name === "desktop") {
+    await expect(page.getByRole("region", { name: "Orders due" }).getByText(`Chatbot setup ${tag}`)).toHaveCount(0); // delivered
+  }
+});

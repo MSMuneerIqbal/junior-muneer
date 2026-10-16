@@ -2,7 +2,7 @@
 
 import useSWR, { useSWRConfig } from "swr";
 import { api, ApiError, BACKEND_URL, fetcher, send } from "@/lib/api";
-import { APPROVALS_COUNT_KEY, isApprovalsKey, PERMISSIONS_KEY } from "@/lib/keys";
+import { APPROVALS_COUNT_KEY, isApprovalsKey, isFreelanceKey, PERMISSIONS_KEY } from "@/lib/keys";
 import type { ApprovalItem } from "@/lib/types";
 
 export const itemKey = (id: number) => `/api/approvals/${id}`;
@@ -51,6 +51,7 @@ export function useApprovalItem(initial: ApprovalItem) {
     await mutate(itemKey(item.id), updated, { revalidate: false });
     void mutate((key) => isApprovalsKey(key) && key !== itemKey(item.id));
     if (action === "approve") void mutate(PERMISSIONS_KEY);
+    if (action === "posted") void mutate(isFreelanceKey);
     if (action === "approve" || action === "send" || action === "resolve") void mutate("/api/usage/today");
     return updated;
   }

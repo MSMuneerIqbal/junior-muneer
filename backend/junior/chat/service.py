@@ -41,7 +41,7 @@ def title_from(text: str) -> str:
 
 
 PASTE_PLATFORMS = ("linkedin", "facebook", "instagram", "x", "upwork", "fiverr", "email", "other")
-PASTE_KINDS = ("post", "comment", "job", "client_message", "email", "other")
+PASTE_KINDS = ("post", "comment", "job", "client_message", "order", "email", "other")
 PASTE_MAX_CHARS = 20000
 PASTE_LABELS = {"client_message": "client message", "job": "job post"}
 

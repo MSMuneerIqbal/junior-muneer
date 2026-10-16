@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { fetcher, send } from "@/lib/api";
 import { useWaitingCount } from "@/lib/approvals";
-import { PAUSE_KEY, PERMISSIONS_KEY, USAGE_KEY } from "@/lib/keys";
-import type { ApprovalItem, UsageToday } from "@/lib/types";
+import { ORDERS_DUE_KEY, PAUSE_KEY, PERMISSIONS_KEY, USAGE_KEY } from "@/lib/keys";
+import { timeLeft } from "@/lib/orders";
+import type { ApprovalItem, Order, UsageToday } from "@/lib/types";
 
 function money(n: number) {
   return n < 0.01 && n > 0 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`;
@@ -138,6 +139,43 @@ function TimeToPost() {
   );
 }
 
+function OrdersDue() {
+  const { data } = useSWR<Order[]>(ORDERS_DUE_KEY, fetcher, { refreshInterval: 60_000 });
+  const [now, setNow] = useState(0); // set in the browser: the page is prerendered without a clock
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const first = setTimeout(tick, 0);
+    const id = setInterval(tick, 60_000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(id);
+    };
+  }, []);
+  if (!data?.length || !now) return null;
+  return (
+    <section aria-label="Orders due" className="rounded-lg border border-line px-3 py-2">
+      <p className="text-sm font-medium">📦 Orders due</p>
+      <ul className="mt-1 flex flex-col gap-1 text-xs">
+        {data.map((o) => {
+          const left = timeLeft(o.due_at ?? "", now);
+          return (
+            <li key={o.id} className="flex items-baseline justify-between gap-2">
+              {o.url ? (
+                <a href={o.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline">
+                  {o.title}
+                </a>
+              ) : (
+                <span className="truncate">{o.title}</span>
+              )}
+              <span className={`shrink-0 tabular-nums ${left.tone}`}>{left.text}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 function NeedsYourOk() {
   const waiting = useWaitingCount();
   return (
@@ -164,6 +202,7 @@ export function TodayPanel() {
       <Spend />
       <CallMinutes />
       <TimeToPost />
+      <OrdersDue />
       <NeedsYourOk />
     </div>
   );

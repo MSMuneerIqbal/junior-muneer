@@ -23,6 +23,7 @@ export const PASTE_KINDS = [
   { value: "comment", label: "Comment" },
   { value: "job", label: "Job post" },
   { value: "client_message", label: "Client message" },
+  { value: "order", label: "Order" },
   { value: "email", label: "Email" },
   { value: "other", label: "Other" },
 ];
@@ -56,6 +57,7 @@ export function guessFromUrl(url: string): { platform?: string; kind?: string } 
   if (platform === "upwork" && /\/jobs?\//.test(url)) return { platform, kind: "job" };
   if (platform === "upwork" && /\/messages\//.test(url)) return { platform, kind: "client_message" };
   if (platform === "fiverr" && /\/inbox\//.test(url)) return { platform, kind: "client_message" };
+  if (platform === "fiverr" && /manage_orders|\/orders\//.test(url)) return { platform, kind: "order" };
   if (platform === "email") return { platform, kind: "email" };
   return { platform };
 }

@@ -177,7 +177,7 @@ def test_jobs_api_and_skip(client):
 
 def test_the_freelance_manager_and_junior_muneer_are_wired():
     registry = load_registry()
-    assert registry.get("freelance_manager").tools == ("writing", "jobs")
+    assert registry.get("freelance_manager").tools == ("writing", "jobs", "orders")
     assert "freelance" in registry.get("junior_muneer").tools
     assert "`freelance`" in registry.get("junior_muneer").instructions
 

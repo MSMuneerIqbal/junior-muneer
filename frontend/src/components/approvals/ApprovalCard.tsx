@@ -311,7 +311,9 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
                     {item.open_url === item.meta.source_url
                       ? item.item_type === "proposal"
                         ? "Open the job"
-                        : item.item_type === "reply" && (item.platform === "upwork" || item.platform === "fiverr")
+                        : item.meta.order_id
+                          ? "Open the order"
+                          : item.item_type === "reply" && (item.platform === "upwork" || item.platform === "fiverr")
                           ? "Open the conversation"
                           : "Open original"
                       : `Open ${item.platform_label}`}{" "}

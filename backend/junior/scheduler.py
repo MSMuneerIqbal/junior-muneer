@@ -1,6 +1,6 @@
 """The built-in scheduler: checks every few minutes and runs what is due.
 
-Jobs: the daily backup, reminders for planned posts (P2-11) and the morning news digests
+Jobs: the daily backup, reminders for planned posts (P2-11) and Fiverr orders (P5-08), and the morning news digests
 (Phase 2b, added by the app because it needs the agents).
 """
 
@@ -11,6 +11,7 @@ from collections.abc import Callable
 
 from junior.approvals import remind_due
 from junior.backup import backup_if_due
+from junior.freelance.orders import remind_orders
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ CHECK_EVERY_SECONDS = 60  # often enough for post reminders; each job is cheap w
 JOBS: list[tuple[str, Callable[[], object]]] = [
     ("daily backup", backup_if_due),
     ("post reminders", remind_due),
+    ("order reminders", remind_orders),
 ]
 
 

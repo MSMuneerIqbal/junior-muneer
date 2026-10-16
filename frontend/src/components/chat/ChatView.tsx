@@ -10,7 +10,7 @@ import { AssistantMessage, ErrorNotice, UserMessage } from "@/components/chat/Me
 import { PastedMessage } from "@/components/chat/PasteBox";
 import type { PasteDraft } from "@/lib/paste";
 import { fetcher } from "@/lib/api";
-import { isApprovalsKey, isChatsKey, PAUSE_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
+import { isApprovalsKey, isChatsKey, isFreelanceKey, PAUSE_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
 import type { ApprovalItem, ChatEvent, MemoryNote, Message, Step } from "@/lib/types";
 import { useChatSocket } from "@/lib/useChatSocket";
 import { speakMessage } from "@/lib/player";
@@ -121,6 +121,7 @@ export function ChatView() {
           mutateGlobal(`/api/conversations/${event.conversation_id}/summary`);
           mutateGlobal(isChatsKey);
           mutateGlobal(USAGE_KEY);
+          mutateGlobal(isFreelanceKey); // a job or order may have been saved
           break;
         }
         case "error":

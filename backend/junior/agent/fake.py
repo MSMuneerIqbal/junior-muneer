@@ -81,6 +81,8 @@ class FakeModel(Model):
                     "concerns": [],
                 }
                 return [function_call("score_job", {"score": score}, call_id="fake-score")]
+            if "(an order from" in brief:
+                return [function_call("save_order", {"order": _fake_order(their)}, call_id="fake-order")]
             platform = "fiverr" if "from fiverr" in brief else "upwork"
             args = {"platform": platform, "item_type": "reply", "request": "a reply to this client"}
             return [function_call("write_draft", args, call_id="fake-reply")]
@@ -94,6 +96,17 @@ class FakeModel(Model):
             if questions:
                 args["screening_questions"] = questions
             return [function_call("write_draft", args, call_id="fake-proposal")]
+        order = re.match(r"Saved as order (\d+)", latest)
+        request = brief.split("\n", 2)[1] if brief.count("\n") >= 1 else ""
+        if order and "deliver" in request.lower():
+            args = {
+                "platform": "fiverr",
+                "item_type": "delivery",
+                "request": "the delivery message for this order",
+                "notes": "(fake) The files are delivered.",
+                "order_id": int(order.group(1)),
+            }
+            return [function_call("write_draft", args, call_id="fake-delivery")]
         return [assistant_message(f"(fake Freelance Manager) {latest}")]
 
     def _plan(self, input: Any, tools: list[Any]) -> tuple[list[Any], bool]:
@@ -142,7 +155,7 @@ class FakeModel(Model):
             return [function_call("ai_news", {"question": text}, call_id="fake-ai-news")], False
         if "pakistan" in lowered and ("news" in lowered or "trending" in lowered) and "pakistan_news" in tool_names:
             return [function_call("pakistan_news", {"question": text}, call_id="fake-pk-news")], False
-        if "freelance" in tool_names and any(w in lowered for w in ("proposal", "should i apply", "upwork", "fiverr", "client")):
+        if "freelance" in tool_names and any(w in lowered for w in ("proposal", "should i apply", "upwork", "fiverr", "client", "order")):
             return [function_call("freelance", {"request": text}, call_id="fake-freelance")], False
         if text.lower().startswith(("write ", "ideas")) and "social_media" in tool_names:
             return [function_call("social_media", {"request": text}, call_id="fake-social")], False
@@ -206,6 +219,32 @@ class FakeModel(Model):
                 if isinstance(event, ResponseOutputItemDoneEvent) and with_search:
                     await asyncio.sleep(0.6)  # long enough to see "Searching the web…"
                 yield event
+
+
+def _fake_order(their: str) -> dict:
+    """A fake reading of a pasted order: the title from its first line, the due time from 'Due in N hours'."""
+    from datetime import UTC, datetime, timedelta
+
+    from junior.settings_store import get_setting
+    from junior.timeutil import zone
+
+    hours = re.search(r"due in (\d+) hours?", their, re.IGNORECASE)
+    due = ""
+    if hours:
+        local = datetime.now(UTC).astimezone(zone(get_setting("timezone"))) + timedelta(hours=int(hours.group(1)))
+        due = local.strftime("%Y-%m-%d %H:%M")
+    number = re.search(r"#(FO[A-Z0-9]+)", their)
+    return {
+        "number": number.group(1) if number else "",
+        "buyer": "(fake) buyer",
+        "title": their.splitlines()[0][:80],
+        "price": "$50",
+        "due": due,
+        "revisions_included": 2,
+        "revisions_used": 0,
+        "status": "active",
+        "requirements": ["(fake) What the buyer asked for"],
+    }
 
 
 def _team_answer(schema: str, prompt: str) -> dict:

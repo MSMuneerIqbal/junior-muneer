@@ -11,10 +11,10 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
   (Social Media Manager), P2-08 (images), P2-09 (style memory), P2-10 (Social page), P2-11 (planned posts).
 - Phase 2 accepted (P2-12). Phase 2b (news agents) accepted (P2b-06).
   Phase 3 (social APIs) and Phase 4 (Gmail) are **paused by Muneer**: posting stays copy and paste for now (P3-01 sender base
-  and the P3-02 Facebook code are ready for later). **Now: Phase 5 (Freelance) by paste**: P5-02, P5-04 to P5-07 done
+  and the P3-02 Facebook code are ready for later). **Now: Phase 5 (Freelance) by paste**: P5-02, P5-04 to P5-08 done
   (Freelance Manager, job scoring + scam signs, one proposal card per job with screening answers in their own boxes,
-  client replies with warning signs); next P5-08 (Fiverr orders).
-- Last pushed to GitHub (`main`) on 2026-10-15.
+  client replies with warning signs, Fiverr orders with due-time reminders); next P5-09 (clients store).
+- Last pushed to GitHub (`main`) on 2026-10-16 (through P5-07).
 
 ## Safety rules (never break)
 
@@ -37,7 +37,7 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
 - `backend/` (FastAPI, SQLAlchemy + Alembic on SQLite in `data/junior.db`, OpenAI Agents SDK):
   `junior/chat/` (WebSocket chat), `junior/agent/` (builder, runner, tools, fake AI), `junior/writing/`
   (team pipeline + style checks, `redlines.py` for Upwork/Fiverr rules), `junior/news/` (sources, reader, fact guard, digests),
-  `junior/freelance/` (jobs, scam signs), `ai_client.py` (every OpenAI client: 2-minute time limit, one retry), `approvals.py`,
+  `junior/freelance/` (jobs, scam signs, client messages, orders), `ai_client.py` (every OpenAI client: 2-minute time limit, one retry), `approvals.py`,
   `permissions.py`, `profile.py`, `voice.py`, `calls.py`.
 - `frontend/` (Next.js 16, SWR, Tailwind 4): read `frontend/AGENTS.md` and
   `node_modules/next/dist/docs/` before writing Next.js code; this Next.js differs from older versions.

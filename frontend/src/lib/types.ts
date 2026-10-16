@@ -69,6 +69,25 @@ export type ApprovalItem = {
   updated_at: string;
 };
 
+export type Order = {
+  id: number;
+  platform: string;
+  number: string;
+  buyer: string;
+  title: string;
+  price: string;
+  url: string;
+  due_at: string | null;
+  revisions_included: number | null;
+  revisions_used: number;
+  status: "active" | "revision" | "delivered" | "completed" | "cancelled";
+  requirements: string[];
+  history: { at: string; what: string }[];
+  approval_id: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type MemoryNote = {
   action: "saved" | "deleted";
   id: number;

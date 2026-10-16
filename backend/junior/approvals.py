@@ -342,6 +342,10 @@ def mark_posted(item_id: int) -> ApprovalOut:
         from junior.freelance.jobs import proposal_sent
 
         proposal_sent(int(out.meta["job_id"]))
+    if out.meta.get("order_id") and out.item_type == "delivery":
+        from junior.freelance.orders import delivery_sent
+
+        delivery_sent(int(out.meta["order_id"]))
     return out
 
 

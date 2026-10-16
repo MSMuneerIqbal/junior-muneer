@@ -234,6 +234,34 @@ class Job(Base):
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
+class Order(Base):
+    """A Fiverr order you pasted, tracked for its deadline and revisions (junior/freelance/orders.py)."""
+
+    __tablename__ = "orders"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    platform: Mapped[str] = mapped_column(String(30), default="fiverr")
+    number: Mapped[str] = mapped_column(String(40), default="", index=True)  # Fiverr's order number, e.g. FO1A2B3C4D5E
+    buyer: Mapped[str] = mapped_column(String(100), default="")
+    title: Mapped[str] = mapped_column(String(200))
+    price: Mapped[str] = mapped_column(String(50), default="")
+    url: Mapped[str] = mapped_column(String(500), default="")
+    due_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True, index=True)
+    revisions_included: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    revisions_used: Mapped[int] = mapped_column(Integer, default=0)
+    # active · revision · delivered · completed · cancelled
+    status: Mapped[str] = mapped_column(String(20), default="active", index=True)
+    requirements: Mapped[list[Any]] = mapped_column(default=list)
+    # What happened, oldest first: [{"at": iso time, "what": "Revision asked: bigger logo"}]
+    history: Mapped[list[Any]] = mapped_column(default=list)
+    # Reminders given for the current due time: 0 none · 1 a day before · 2 six hours before · 3 late
+    reminder_stage: Mapped[int] = mapped_column(Integer, default=0)
+    paste_id: Mapped[int | None] = mapped_column(ForeignKey("pastes.id", ondelete="SET NULL"), nullable=True)
+    approval_id: Mapped[int | None] = mapped_column(ForeignKey("approvals.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
 class Paste(Base):
     """Text you pasted from another site. Outside content: data, never instructions."""
 
