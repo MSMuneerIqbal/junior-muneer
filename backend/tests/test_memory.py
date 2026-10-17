@@ -1,5 +1,6 @@
 """Long-term memory, including the safety rule: memories only from your own words."""
 
+import re
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -57,7 +58,7 @@ def test_saves_a_memory_from_your_words_and_knows_it_in_a_new_chat(client, model
     # A brand-new chat: the memory is in his instructions.
     model.enqueue(chunked_answer("$25/hr"))
     chat(client, "What's my rate?")
-    assert f"[{note['id']}] Muneer's rate is $25/hr" in model.last_call.system_instructions
+    assert re.search(rf"\[{note['id']}\] \(saved \d\d \w+ \d{{4}}\) Muneer's rate is \$25/hr", model.last_call.system_instructions)
 
 
 def test_undo_removes_the_memory(client, model):
@@ -160,5 +161,5 @@ def test_editing_a_memory_changes_his_next_answer(client, model):
     model.enqueue(chunked_answer("$30/hr"))
     chat(client, "What's my rate?")
     prompt = model.last_call.system_instructions
-    assert f"[{m['id']}] Rate is $30/hr" in prompt
+    assert re.search(rf"\[{m['id']}\] \(saved [^)]+\) Rate is \$30/hr", prompt)
     assert "Rate is $25/hr" not in prompt

@@ -77,14 +77,15 @@ def openai_model_provider() -> ModelProvider:
     return provide
 
 
-def render_instructions(spec: AgentSpec, s: dict) -> str:
-    """An agent's instructions with your name, language, time, memories and status filled in."""
+def render_instructions(spec: AgentSpec, s: dict, query: str = "") -> str:
+    """An agent's instructions with your name, language, time, memories and status filled in.
+    `query` (your message) picks the older memories that fit it, when there are many."""
     return spec.render(
         user_name=s["user_name"],
         language=LANGUAGE_RULES.get(s["language"], LANGUAGE_RULES["match"]),
         timezone=s["timezone"],
         now=local_now_text(s["timezone"]),
-        memories=memories_for_prompt() if "memory" in spec.tools else "",
+        memories=memories_for_prompt(query, s["timezone"]) if "memory" in spec.tools else "",
         profile=profile_for_chat() if "{{profile}}" in spec.instructions else "",
         status=_status(s),
     )
@@ -124,7 +125,7 @@ def build_agent(
     model_name = model_override or chosen_model(spec, router)
 
     def instructions(ctx: RunContextWrapper[TurnContext], _agent: Agent[TurnContext]) -> str:
-        return render_instructions(spec, ctx.context.settings)
+        return render_instructions(spec, ctx.context.settings, ctx.context.user_text)
 
     agent = Agent[TurnContext](
         name=spec.name,

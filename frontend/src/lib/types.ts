@@ -137,6 +137,9 @@ export type Memory = {
   updated_at: string;
 };
 
+/** A memory the weekly tidy-up archived (P7-04): hidden from Junior Muneer, restorable. */
+export type ArchivedMemory = { id: number; content: string; reason: string; archived_at: string; created_at: string };
+
 export type UsageToday = {
   spent_usd: number;
   cap_usd: number;

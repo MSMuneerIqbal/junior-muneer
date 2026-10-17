@@ -38,6 +38,7 @@ class SettingsUpdate(BaseModel):
     news_digest_enabled: bool | None = None
     news_digest_time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
     briefing_enabled: bool | None = None
+    memory_tidy_enabled: bool | None = None
     briefing_time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
 
     @field_validator("main_model", "helper_model")
@@ -63,7 +64,7 @@ class SettingsUpdate(BaseModel):
 
 
 # Edited through their own pages and endpoints (/api/profile, /api/permissions).
-NOT_HERE = {"profile", "permission_mode", "permission_rules"}
+NOT_HERE = {"profile", "permission_mode", "permission_rules", "memory_tidied_at"}
 
 
 @router.get("/api/settings")

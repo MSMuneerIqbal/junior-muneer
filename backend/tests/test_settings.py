@@ -48,6 +48,7 @@ def test_defaults(client):
         "news_digest_time": "07:30",
         "briefing_enabled": True,
         "briefing_time": "08:00",
+        "memory_tidy_enabled": True,
     }
 
 

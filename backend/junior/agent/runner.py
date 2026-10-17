@@ -37,6 +37,7 @@ STEP_LABELS = {
     "spending": "Checking your spending",
     "save_memory": "Saving a memory",
     "forget_memory": "Forgetting a memory",
+    "recall_memory": "Looking through your memories",
     "add_to_approvals": "Adding it to your approval queue",
     "write_draft": "Writing it with the team",
     "social_media": "Asking the Social Media Manager",

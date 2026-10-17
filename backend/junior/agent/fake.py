@@ -94,7 +94,8 @@ class FakeModel(Model):
             return [function_call("write_draft", args, call_id="fake-reply")]
         latest = outputs[-1]
         saved = re.match(r"Saved as job (\d+)", latest)
-        if saved and "Marked skip" not in latest and "proposal" in brief.lower():
+        asked = brief.split("\n", 2)[1].lower() if brief.count("\n") >= 1 else ""  # the request, not the job lists
+        if saved and "Marked skip" not in latest and "proposal" in asked:
             args = {"platform": "upwork", "item_type": "proposal", "request": "a proposal for this job", "job_id": int(saved.group(1))}
             questions = [
                 line.split(":", 1)[1].strip() for line in their.splitlines() if line.lower().startswith("screening question:")
@@ -289,6 +290,8 @@ def _team_answer(schema: str, prompt: str) -> dict:
     request = next((line[len("Request: "):] for line in prompt.splitlines() if line.startswith("Request: ")), "")
     if "DigestIn" in schema:
         return _fake_digest(prompt)
+    if "TidyOut" in schema:
+        return _fake_tidy(prompt)
     if "Draft" in schema:
         who = "(fake Writer, revised)" if "## The Checker sent it back" in prompt else "(fake Writer)"
         listed = prompt.split("## Screening questions (", 1)[1].split("\n## ", 1)[0] if "## Screening questions (" in prompt else ""
@@ -309,6 +312,19 @@ def _team_answer(schema: str, prompt: str) -> dict:
     draft = prompt.split("<draft>\n", 1)[-1].split("\n</draft>", 1)[0]
     text = draft.replace("(fake Writer, revised)", "(fake Humanizer)").replace("(fake Writer)", "(fake Humanizer)")
     return {"text": text, "changes": ["Simpler words"]}
+
+
+def _fake_tidy(prompt: str) -> dict:
+    """The fake memory tidier: archives exact duplicates (same words), keeping the first."""
+    first: dict[str, int] = {}
+    picks = []
+    for m in re.finditer(r"^\[(\d+)\] \(saved [^)]*\) (.+)$", prompt, re.MULTILINE):
+        key = m.group(2).strip().casefold()
+        if key in first:
+            picks.append({"id": int(m.group(1)), "kind": "duplicate", "keep_id": first[key], "reason": f"Same as {first[key]}."})
+        else:
+            first[key] = int(m.group(1))
+    return {"archive": picks}
 
 
 def _fake_digest(prompt: str) -> dict:

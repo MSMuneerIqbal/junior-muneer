@@ -94,6 +94,9 @@ class Memory(Base):
     updated_at: Mapped[datetime] = mapped_column(
         UTCDateTime(), default=utcnow, onupdate=utcnow
     )
+    # Set by the weekly tidy-up (duplicates, outdated): hidden from Junior Muneer, restorable.
+    archived_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    archive_reason: Mapped[str] = mapped_column(String(300), default="", server_default="")
 
 
 class Usage(Base):

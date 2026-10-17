@@ -221,6 +221,9 @@ def save_memory_for(context: TurnContext, fact: str, your_words: str) -> str:
                 "chat. Only save what the user said themself."
             )
         existing = s.scalars(select(Memory).where(Memory.content == fact)).first()
+        if existing and existing.archived_at is not None:  # a tidy-up archived it, but you said it again
+            existing.archived_at, existing.archive_reason = None, ""
+            return f"Remembered again: memory {existing.id} was archived by a tidy-up, and it's back."
         if existing:
             return f"Already remembered (memory {existing.id})."
         memory = Memory(content=fact, source_message_id=backing)
@@ -285,7 +288,19 @@ def forget_memory(ctx: Ctx, memory_id: int) -> str:
     return forget_memory_for(ctx.context, memory_id)
 
 
-MEMORY_TOOLS: list[FunctionTool] = [save_memory, forget_memory]
+@function_tool
+def recall_memory(ctx: Ctx, query: str) -> str:
+    """Search all the user's saved memories, including older ones not in your list.
+
+    Args:
+        query: What to look for, in a few words ("sister wedding", "hourly rate").
+    """
+    from junior.memories import search_memories
+
+    return search_memories(query, ctx.context.settings["timezone"])
+
+
+MEMORY_TOOLS: list[FunctionTool] = [save_memory, forget_memory, recall_memory]
 TOOL_FACTORIES["memory"] = lambda: list(MEMORY_TOOLS)
 
 

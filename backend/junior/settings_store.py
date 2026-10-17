@@ -40,6 +40,9 @@ DEFAULTS: dict[str, Any] = {
     # Phase 7: the morning briefing (yesterday, today's agenda, news), once a day at this local time.
     "briefing_enabled": True,
     "briefing_time": "08:00",
+    # Phase 7: the weekly memory tidy-up (duplicates and outdated memories are archived, restorable).
+    "memory_tidy_enabled": True,
+    "memory_tidied_at": "",
     # Permission rules (/api/permissions): ask_all · rules, and your rule per action type.
     "permission_mode": "rules",
     "permission_rules": {},

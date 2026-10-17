@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { fetcher, send } from "@/lib/api";
 import { MEMORIES_KEY } from "@/lib/keys";
-import type { Memory } from "@/lib/types";
+import type { ArchivedMemory, Memory } from "@/lib/types";
 
 function MemoryRow({ memory, onChange }: { memory: Memory; onChange: () => Promise<unknown> }) {
   const [mode, setMode] = useState<"view" | "edit" | "delete">("view");
@@ -102,10 +102,69 @@ function MemoryRow({ memory, onChange }: { memory: Memory; onChange: () => Promi
   );
 }
 
+/** What the weekly tidy-up archived (duplicates, outdated), with why, and Restore. */
+function TidiedUp({ onRestore }: { onRestore: () => Promise<unknown> }) {
+  const { data, mutate } = useSWR<ArchivedMemory[]>(`${MEMORIES_KEY}/archived`, fetcher);
+  const [error, setError] = useState<string | null>(null);
+  if (!data?.length) return null;
+  async function restore(id: number) {
+    setError(null);
+    try {
+      await send("POST", `${MEMORIES_KEY}/${id}/restore`);
+      await Promise.all([mutate(), onRestore()]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't restore");
+    }
+  }
+  return (
+    <section aria-label="Tidied up" className="flex flex-col gap-2">
+      <h2 className="text-sm font-semibold">Tidied up</h2>
+      <p className="text-xs text-muted">Archived by the weekly tidy-up, so Junior Muneer doesn&apos;t use them. Restore any you still need.</p>
+      <ul className="flex flex-col gap-2">
+        {data.map((m) => (
+          <li key={m.id} className="flex items-start gap-3 rounded-lg border border-dashed border-line px-4 py-3">
+            <div className="flex-1">
+              <p dir="auto" className="text-muted line-through decoration-1">
+                {m.content}
+              </p>
+              <p className="mt-1 text-xs text-muted">{m.reason}</p>
+            </div>
+            <button
+              onClick={() => restore(m.id)}
+              className="rounded-md px-2 py-1 text-sm text-muted hover:bg-panel-2 hover:text-ink"
+              aria-label={`Restore: ${m.content}`}
+            >
+              Restore
+            </button>
+          </li>
+        ))}
+      </ul>
+      {error && <p className="text-sm text-danger">{error}</p>}
+    </section>
+  );
+}
+
 export default function MemoryPage() {
   const { data, error, mutate } = useSWR<Memory[]>(MEMORIES_KEY, fetcher);
+  const { mutate: mutateGlobal } = useSWRConfig();
   const [text, setText] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
+  const [tidying, setTidying] = useState(false);
+  const [tidyNote, setTidyNote] = useState<string | null>(null);
+
+  async function tidy() {
+    setTidying(true);
+    setTidyNote(null);
+    try {
+      const r = await send<{ message: string }>("POST", `${MEMORIES_KEY}/tidy`);
+      setTidyNote(r.message);
+      await Promise.all([mutate(), mutateGlobal(`${MEMORIES_KEY}/archived`)]);
+    } catch (e) {
+      setTidyNote(e instanceof Error ? e.message : "Couldn't tidy up");
+    } finally {
+      setTidying(false);
+    }
+  }
 
   async function add() {
     if (!text.trim()) return;
@@ -158,14 +217,30 @@ export default function MemoryPage() {
         )}
         {data && data.length > 0 && (
           <>
-            <p className="text-sm text-muted">{data.length} memories</p>
-            <ul className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm text-muted">{data.length} memories</p>
+              <button
+                onClick={tidy}
+                disabled={tidying || data.length < 2}
+                title="Archive duplicates and outdated memories (you can restore them). It also runs once a week."
+                className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-panel-2 disabled:opacity-50"
+              >
+                {tidying ? "Tidying up…" : "🧹 Tidy up now"}
+              </button>
+            </div>
+            {tidyNote && (
+              <p role="status" className="text-sm text-muted">
+                {tidyNote}
+              </p>
+            )}
+            <ul aria-label="Your memories" className="flex flex-col gap-2">
               {data.map((m) => (
                 <MemoryRow key={`${m.id}-${m.updated_at}`} memory={m} onChange={() => mutate()} />
               ))}
             </ul>
           </>
         )}
+        <TidiedUp onRestore={() => mutate()} />
       </div>
     </div>
   );
