@@ -90,6 +90,19 @@ export type Order = {
   updated_at: string;
 };
 
+/** Long work Junior Muneer finishes in the background and posts to its chat (P7-02). */
+export type BackgroundTask = {
+  id: number;
+  conversation_id: number | null;
+  title: string;
+  status: "running" | "done" | "failed";
+  message_id: number | null;
+  error: string;
+  cost_usd: number;
+  created_at: string;
+  finished_at: string | null;
+};
+
 export type MemoryNote = {
   action: "saved" | "deleted";
   id: number;

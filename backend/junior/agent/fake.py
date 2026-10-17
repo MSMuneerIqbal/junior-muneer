@@ -128,6 +128,15 @@ class FakeModel(Model):
         if text.startswith("## Request from") and "score_job" in tool_names:
             return self._fake_freelance(input, text), False
         last = input[-1] if isinstance(input, list) and input else None
+        if text.startswith("[Background task"):
+            asked = text.split(": ", 1)[1].splitlines()[0] if ": " in text else text
+            return [assistant_message(f"(fake AI) Finished in the background: {asked}")], False
+        if text.lower().startswith("in background:") and "run_in_background" in tool_names:
+            said = last.get("output", "") if isinstance(last, dict) and last.get("type") == "function_call_output" else ""
+            if not said:
+                asked = text[len("in background:"):].strip()
+                return [function_call("run_in_background", {"title": asked[:40], "request": asked}, call_id="fake-bg")], False
+            return [assistant_message("(fake AI) I'm on it in the background. Keep chatting; the result will appear here.")], False
         if text.lower().startswith("do these:") and "update_plan" in tool_names:
             # A request with several parts: show the checklist, then tick every part off.
             parts = [p.strip() for p in text[len("do these:"):].split(";") if p.strip()]
@@ -204,6 +213,8 @@ class FakeModel(Model):
 
     async def stream_response(self, system_instructions, input, model_settings, tools, output_schema, handoffs, tracing, **kwargs) -> AsyncIterator[Any]:  # noqa: E501
         output, with_search = self._plan(input, tools)
+        if _last_user_text(input).startswith("[Background task"):
+            await asyncio.sleep(2)  # long enough to see "Working on it in the background"
         step = ModelStep(output=output, usage=_usage(str(input), str(output)))
         events = _stream_events_for_step(step, preserve_raw_usage=False)
         if with_search:

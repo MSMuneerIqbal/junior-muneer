@@ -7,7 +7,7 @@ import { fetcher, send } from "@/lib/api";
 import { useWaitingCount } from "@/lib/approvals";
 import { ORDERS_DUE_KEY, PAUSE_KEY, PERMISSIONS_KEY, USAGE_KEY } from "@/lib/keys";
 import { timeLeft } from "@/lib/orders";
-import type { ApprovalItem, Order, UsageToday } from "@/lib/types";
+import type { ApprovalItem, BackgroundTask, Order, UsageToday } from "@/lib/types";
 
 function money(n: number) {
   return n < 0.01 && n > 0 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`;
@@ -176,6 +176,34 @@ function OrdersDue() {
   );
 }
 
+function BackgroundWork() {
+  const { data } = useSWR<BackgroundTask[]>("/api/tasks?limit=4", fetcher, {
+    refreshInterval: (d) => (d?.some((t) => t.status === "running") ? 3000 : 30_000),
+  });
+  if (!data?.length) return null;
+  const mark = { running: "⏳", done: "✅", failed: "⚠" } as const;
+  return (
+    <section aria-label="Background work" className="rounded-lg border border-line px-3 py-2">
+      <p className="text-sm font-medium">Background work</p>
+      <ul className="mt-1 flex flex-col gap-1 text-xs">
+        {data.map((t) => (
+          <li key={t.id} className="flex items-baseline gap-1.5">
+            <span aria-hidden>{mark[t.status]}</span>
+            {t.conversation_id ? (
+              <Link href={`/?c=${t.conversation_id}`} className="truncate hover:underline">
+                {t.title}
+              </Link>
+            ) : (
+              <span className="truncate">{t.title}</span>
+            )}
+            <span className="ml-auto shrink-0 text-muted">{t.status === "running" ? "working" : t.status}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function NeedsYourOk() {
   const waiting = useWaitingCount();
   return (
@@ -203,6 +231,7 @@ export function TodayPanel() {
       <CallMinutes />
       <TimeToPost />
       <OrdersDue />
+      <BackgroundWork />
       <NeedsYourOk />
     </div>
   );

@@ -212,6 +212,9 @@ class ChatService:
         context = TurnContext(
             conversation_id=conversation_id, settings=settings, paste=saved_paste, user_text=text
         )
+        context.start_background = lambda title, request: self.start_background(
+            conversation_id, title, request, saved_paste, context
+        )
         try:
             budget = budget_left(settings)
             provider = self.model_provider()
@@ -286,6 +289,7 @@ class ChatService:
         except (NoApiKeyError, BudgetExceeded) as e:
             self._save_partial_usage(conversation_id, context)
             self._audit_run(conversation_id, context, "blocked", error=str(e))
+            self._drop_queued(context)
             yield {"type": "error", "message": str(e)}
             return
         except APIConnectionError as e:  # no answer in time, or no internet
@@ -293,6 +297,7 @@ class ChatService:
             self._save_partial_usage(conversation_id, context)
             message = no_answer_message(e)
             self._audit_run(conversation_id, context, "error", error=message)
+            self._drop_queued(context)
             yield {"type": "error", "message": message}
             return
         except Exception as e:  # shown in the chat; details in the log
@@ -300,6 +305,7 @@ class ChatService:
             self._save_partial_usage(conversation_id, context)
             message = f"Something went wrong: {type(e).__name__}: {e}"
             self._audit_run(conversation_id, context, "error", error=message)
+            self._drop_queued(context)
             yield {"type": "error", "message": message}
             return
 
@@ -315,6 +321,8 @@ class ChatService:
             "steps": result.steps,
             "cost_usd": result.cost_usd,
         }
+        for start in context.after_turn:  # background tasks start once "I'm on it" is saved
+            start()
 
         # After the answer is out, so it never slows the reply down. Time-limited, so a
         # stalled provider can't hold up your next message.
@@ -328,3 +336,93 @@ class ChatService:
             log.info("Chat %s: summary skipped, daily cap reached", conversation_id)
         except Exception:
             log.exception("Summarizing chat %s failed; will retry next turn", conversation_id)
+
+    # ---- background tasks (P7-02) ---------------------------------------------
+
+    def start_background(
+        self, conversation_id: int, title: str, request: str, paste: dict | None = None, context: TurnContext | None = None
+    ) -> str:
+        """Start a long request in the background (after this turn's answer); its result is posted to this chat."""
+        from junior.background import MAX_RUNNING, new_task, running_count
+        from junior.pause import is_paused
+
+        if is_paused():
+            return "NOT started: everything is paused. Do it now in this answer instead."
+        if running_count() >= MAX_RUNNING:
+            return f"NOT started: {MAX_RUNNING} tasks are already running in the background. Do it now instead, or ask them to wait."
+        task_id = new_task(conversation_id, title, request)
+
+        def launch() -> None:
+            job = asyncio.create_task(self._background(task_id, conversation_id, title, request, paste))
+            _BACKGROUND.add(job)
+            job.add_done_callback(_BACKGROUND.discard)
+
+        if context is None:
+            launch()
+        else:
+            context.after_turn.append(launch)
+            context.queued_tasks.append(task_id)
+        return (
+            f"Started in the background as task {task_id}: “{title}”. Tell them you're on it, that they can keep "
+            "chatting, and that the result will appear in this chat. Don't do the task yourself now."
+        )
+
+    def _drop_queued(self, context: TurnContext) -> None:
+        """The turn failed: background tasks it queued never start."""
+        from junior.background import finish_task
+
+        for task_id in context.queued_tasks:
+            finish_task(task_id, "failed", error="The chat answer failed before it could start. Ask again.")
+        context.after_turn.clear()
+
+    async def _background(
+        self, task_id: int, conversation_id: int, title: str, request: str, paste: dict | None
+    ) -> None:
+        from junior.background import finish_task
+
+        settings = all_settings()
+        context = TurnContext(conversation_id=conversation_id, settings=settings, paste=paste, user_text=request)
+        context.background = True
+        try:
+            budget = budget_left(settings)
+            provider = self.model_provider()
+            router = get_router()
+            agent, model_name = build_agent(self.registry.get(MAIN_AGENT), router, provider)
+            context.helpers = HelperRunner(self.registry, provider)
+            items, context.user_message_ids, pasted = build_input(conversation_id, settings["user_name"])
+            if pasted or paste:
+                context.mark_outside()
+            items.append(
+                {
+                    "role": "user",
+                    "content": f"[Background task {task_id}] Do this now, fully: {request}\n"
+                    "You're working in the background: I'm not waiting on this message. Reply with the finished result.",
+                }
+            )
+            result: TurnResult | None = None
+            async for event in stream_turn(agent, model_name, router, items, context, budget):
+                if event["type"] == "final":
+                    result = event["result"]
+            assert result is not None
+            result.text = f"**Done in the background: {title}**\n\n{result.text}"
+            message_id = self._finish(conversation_id, result)
+            attach_to_message(context.approval_ids, message_id)
+            self._audit_run(conversation_id, context, "ok", background_task=task_id)
+            finish_task(task_id, "done", message_id, cost_usd=result.cost_usd)
+        except Exception as e:  # posted to the chat; details in the log
+            if isinstance(e, APIConnectionError):
+                why = no_answer_message(e)
+            elif isinstance(e, (NoApiKeyError, BudgetExceeded)):
+                why = str(e)
+            else:
+                log.exception("Background task %s failed", task_id)
+                why = f"{type(e).__name__}: {e}"
+            self._save_partial_usage(conversation_id, context)
+            self._audit_run(conversation_id, context, "error", error=why, background_task=task_id)
+            failed = TurnResult(text=f"**I couldn't finish “{title}” in the background.** {why}", usage=[])
+            message_id = self._finish(conversation_id, failed)
+            finish_task(task_id, "failed", message_id, error=why, cost_usd=sum(u.cost_usd for u in context.usage))
+
+
+# Running background jobs (kept so they aren't garbage-collected mid-way).
+_BACKGROUND: set[asyncio.Task] = set()

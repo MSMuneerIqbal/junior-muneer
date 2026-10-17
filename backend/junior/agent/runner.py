@@ -47,6 +47,7 @@ STEP_LABELS = {
     "update_order": "Updating the order",
     "pakistan_news": "Asking the Social-News-Agent",
     "save_ideas": "Saving ideas",
+    "run_in_background": "Starting it in the background",
 }
 
 
@@ -127,7 +128,7 @@ class TurnHooks(RunHooks[TurnContext]):
         audit(
             "tool_call",
             getattr(tool, "name", type(tool).__name__),
-            result="refused" if text.startswith("NOT ") else "ok",
+            result="refused" if text.startswith("NOT ") else "error" if text.startswith("ERROR: the tool failed") else "ok",
             detail={"agent": agent.name, **_tool_log_detail(context, result)},
             conversation_id=context.context.conversation_id,
         )

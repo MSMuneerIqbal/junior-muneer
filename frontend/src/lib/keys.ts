@@ -16,6 +16,9 @@ export const isApprovalsKey = (key: unknown) => typeof key === "string" && key.s
 export const isFreelanceKey = (key: unknown) =>
   typeof key === "string" && (key.startsWith("/api/orders") || key.startsWith("/api/jobs"));
 
+/** Every background tasks list (the chat's and the Today panel's). */
+export const isTasksKey = (key: unknown) => typeof key === "string" && key.startsWith("/api/tasks");
+
 /** Refresh every chat list, including searched ones. */
 export const isChatsKey = (key: unknown) =>
   key === CHATS_KEY || (typeof key === "string" && key.startsWith(CHATS_KEY + "?"));

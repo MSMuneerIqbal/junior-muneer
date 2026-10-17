@@ -40,6 +40,12 @@ class TurnContext:
     proposal_jobs: set[int] = field(default_factory=set)
     # Every model call so far, kept here so the cost is saved even if the turn fails.
     usage: list[ModelUsage] = field(default_factory=list)
+    # Long requests: starts one in the background (set by the chat; None in calls and background work).
+    start_background: Any = None
+    background: bool = False  # this turn is itself a background task
+    # Run when this turn's answer is saved (background tasks it started), and their ids.
+    after_turn: list[Any] = field(default_factory=list)
+    queued_tasks: list[int] = field(default_factory=list)
     # Runs helper agents for tools (a junior.agent.helpers.HelperRunner).
     helpers: Any = None
 

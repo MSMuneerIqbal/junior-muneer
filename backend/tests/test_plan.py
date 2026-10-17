@@ -52,3 +52,23 @@ def test_an_empty_checklist_is_refused():
     context = TurnContext(conversation_id=None, settings={})
     assert update_plan_for(context, [PlanItem(text="  ")]).startswith("NOT")
     assert context.pending_events == []
+
+
+def test_a_tool_that_fails_says_why_and_is_logged_as_an_error(monkeypatch):
+    """The SDK's default hides the error; ours logs it, tells the agent its kind, and audits it as an error."""
+    import junior.agent.tools as tools
+
+    def boom(context, items):
+        raise RuntimeError("the writing team stalled")
+
+    monkeypatch.setattr(tools, "update_plan_for", boom)
+    model = ScriptedModel([[function_call("update_plan", items("pending", "pending"), call_id="p1")], chunked_answer("That didn't work.")])
+    with TestClient(create_app(model_provider=lambda: (lambda _n: model))) as c:
+        with c.websocket_connect("/ws/chat") as ws:
+            ws.send_json({"type": "message", "conversation_id": None, "text": "Two things please"})
+            while ws.receive_json()["type"] not in ("done", "error"):
+                pass
+        said = next(o["output"] for o in model.calls[-1].input if isinstance(o, dict) and o.get("type") == "function_call_output")
+        assert said.startswith("ERROR: the tool failed (RuntimeError: the writing team stalled).")
+        call = next(a for a in c.get("/api/activity?kind=tool_call").json() if a["name"] == "update_plan")
+        assert call["result"] == "error"

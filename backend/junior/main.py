@@ -42,6 +42,8 @@ from junior.registry import load_registry
 from junior.scheduler import scheduler_loop
 from junior.senders.api import router as senders_router
 from junior.senders.dispatch import recover_interrupted_sends
+from junior.background import recover_interrupted as recover_background
+from junior.background import router as tasks_router
 from junior.senders.registry import SenderRegistry, set_current
 from junior.settings_api import router as settings_router
 from junior.voice import FakeVoice, OpenAIVoice, VoiceClient
@@ -94,6 +96,7 @@ def create_app(
         app.state.news_sources = load_sources()
         app.state.senders = senders() if senders is not None else default_senders(settings)
         recover_interrupted_sends()
+        recover_background()
         set_current(app.state.senders)
         app.state.chat = ChatService(app.state.registry, model_provider)
         app.state.voice = voice
@@ -147,6 +150,7 @@ def create_app(
     app.include_router(jobs_router)
     app.include_router(orders_router)
     app.include_router(github_router)
+    app.include_router(tasks_router)
     app.include_router(images_router)
     return app
 

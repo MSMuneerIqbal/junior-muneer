@@ -10,11 +10,11 @@ import { AssistantMessage, ErrorNotice, UserMessage } from "@/components/chat/Me
 import { PastedMessage } from "@/components/chat/PasteBox";
 import type { PasteDraft } from "@/lib/paste";
 import { fetcher } from "@/lib/api";
-import { isApprovalsKey, isChatsKey, isFreelanceKey, PAUSE_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
+import { isApprovalsKey, isChatsKey, isFreelanceKey, isTasksKey, PAUSE_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
 import type { ApprovalItem, ChatEvent, MemoryNote, Message, Step } from "@/lib/types";
 import { useChatSocket } from "@/lib/useChatSocket";
 import { speakMessage } from "@/lib/player";
-import type { ChatSummary, Settings } from "@/lib/types";
+import type { BackgroundTask, ChatSummary, Settings } from "@/lib/types";
 
 /** The answer being written right now. */
 type Turn = {
@@ -122,6 +122,7 @@ export function ChatView() {
           mutateGlobal(isChatsKey);
           mutateGlobal(USAGE_KEY);
           mutateGlobal(isFreelanceKey); // a job or order may have been saved
+          mutateGlobal(isTasksKey); // a background task may have started
           break;
         }
         case "error":
@@ -168,6 +169,25 @@ export function ChatView() {
     });
   }
 
+  // Background tasks in this chat: checked every 2 s while one runs; its result then appears.
+  const { data: tasks } = useSWR<BackgroundTask[]>(
+    conversationId ? `/api/tasks?conversation_id=${conversationId}` : null,
+    fetcher,
+    { refreshInterval: (data) => (data?.some((t) => t.status === "running") ? 2000 : 0) },
+  );
+  const runningTasks = tasks?.filter((t) => t.status === "running") ?? [];
+  const running = runningTasks.length;
+  const wasRunning = useRef(0);
+  useEffect(() => {
+    if (running < wasRunning.current) {
+      void mutate(); // the finished task's answer
+      mutateGlobal(isApprovalsKey);
+      mutateGlobal(isChatsKey);
+      mutateGlobal(USAGE_KEY);
+    }
+    wasRunning.current = running;
+  }, [running, mutate, mutateGlobal]);
+
   // Only show the live turn in the chat it belongs to.
   const liveTurn = turn && turn.conversationId === conversationId ? turn : null;
   const messages = saved ?? [];
@@ -182,7 +202,7 @@ export function ChatView() {
   useEffect(() => {
     const el = scroller.current;
     if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
-  }, [messages.length, liveTurn?.text, liveTurn?.steps.length]);
+  }, [messages.length, liveTurn?.text, liveTurn?.steps.length, running]);
 
   const empty = !messages.length && !liveTurn;
 
@@ -274,6 +294,14 @@ export function ChatView() {
               />
             )}
             {liveTurn?.status === "error" && <ErrorNotice message={liveTurn.error ?? "Error"} />}
+            {runningTasks.map((t) => (
+              <p key={t.id} role="status" className="flex items-center gap-2 text-sm text-muted">
+                <span aria-hidden className="animate-pulse">
+                  ⏳
+                </span>
+                Working on it in the background: {t.title}
+              </p>
+            ))}
           </div>
         )}
       </div>

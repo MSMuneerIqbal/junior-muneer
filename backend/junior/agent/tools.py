@@ -1,11 +1,13 @@
 """Tools an agent file can ask for, by name (see KNOWN_TOOLS in registry.py)."""
 
+import logging
 import re
 from collections.abc import Callable
 from datetime import timedelta
 from typing import Literal
 
 from agents import FunctionTool, RunContextWrapper, Tool, WebSearchTool, function_tool
+from agents.tool import set_function_tool_failure_error_function
 from pydantic import BaseModel
 
 from junior.freelance.jobs import JobScore as JobScoreIn
@@ -152,12 +154,26 @@ TOOL_FACTORIES: dict[str, Callable[[], list[Tool]]] = {
 }
 
 
+log = logging.getLogger(__name__)
+TOOL_FAILED = "ERROR: the tool failed"
+
+
+def _tool_failed(_ctx: object, error: Exception) -> str:
+    """A tool raised: log the real error (the SDK would hide it) and tell the agent what kind it was."""
+    log.warning("Tool failed: %s: %s", type(error).__name__, error, exc_info=error)
+    first = str(error).splitlines()[0][:200] if str(error) else ""
+    return f"{TOOL_FAILED} ({type(error).__name__}{': ' + first if first else ''}). Try once more; if it fails again, tell the user."
+
+
 def build_tools(names: tuple[str, ...]) -> list[Tool]:
     tools: list[Tool] = []
     for name in names:
         if name not in TOOL_FACTORIES:
             raise KeyError(f"Tool {name!r} is not available yet.")
         tools.extend(TOOL_FACTORIES[name]())
+    for tool in tools:
+        if isinstance(tool, FunctionTool):
+            set_function_tool_failure_error_function(tool, _tool_failed)
     return tools
 
 
@@ -956,3 +972,33 @@ def update_plan(ctx: Ctx, items: list[PlanItem]) -> str:
 
 
 TOOL_FACTORIES["plan"] = lambda: [update_plan]
+
+
+# ---- Long tasks in the background (P7-02) -------------------------------------------
+
+
+def run_in_background_for(context: TurnContext, title: str, request: str) -> str:
+    if context.background:
+        return "NOT started: you're already working in the background. Do the task now, fully."
+    if context.start_background is None:
+        return "NOT started: background tasks work in the text chat. Do it now instead."
+    if not request.strip():
+        return "NOT started: say what to do."
+    return context.start_background(title, request)
+
+
+@function_tool
+def run_in_background(ctx: Ctx, title: str, request: str) -> str:
+    """Finish a long request in the background, so the user can keep chatting; the result is posted to this chat.
+
+    Use it for work that takes a while: several drafts at once, a big multi-part task, a deep
+    look at many items. Not for quick things.
+
+    Args:
+        title: A few words for it ("3 LinkedIn posts for next week").
+        request: The full request in the user's words, with every detail they gave.
+    """
+    return run_in_background_for(ctx.context, title, request)
+
+
+TOOL_FACTORIES["background"] = lambda: [run_in_background]

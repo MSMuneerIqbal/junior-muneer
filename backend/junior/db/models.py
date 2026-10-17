@@ -262,6 +262,24 @@ class Order(Base):
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
+class BackgroundTask(Base):
+    """A long request Junior Muneer finishes in the background and posts to its chat (junior/background.py)."""
+
+    __tablename__ = "background_tasks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    conversation_id: Mapped[int | None] = mapped_column(ForeignKey("conversations.id", ondelete="SET NULL"), nullable=True, index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    request: Mapped[str] = mapped_column(Text)
+    # running · done · failed
+    status: Mapped[str] = mapped_column(String(20), default="running", index=True)
+    message_id: Mapped[int | None] = mapped_column(ForeignKey("messages.id", ondelete="SET NULL"), nullable=True)
+    error: Mapped[str] = mapped_column(Text, default="")
+    cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+
+
 class Connection(Base):
     """An account you connected in the app (GitHub). The token is encrypted (junior/secrets.py)."""
 
