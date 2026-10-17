@@ -37,6 +37,9 @@ DEFAULTS: dict[str, Any] = {
     # News (Phase 2b): both digests are built each morning at this local time.
     "news_digest_enabled": True,
     "news_digest_time": "07:30",
+    # Phase 7: the morning briefing (yesterday, today's agenda, news), once a day at this local time.
+    "briefing_enabled": True,
+    "briefing_time": "08:00",
     # Permission rules (/api/permissions): ask_all · rules, and your rule per action type.
     "permission_mode": "rules",
     "permission_rules": {},

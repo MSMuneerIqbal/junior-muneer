@@ -14,6 +14,7 @@ const KIND_ICON: Record<Conversation["kind"], string> = {
   voice: "🎙 ",
   call: "📞 ",
   whatsapp: "🟢 ",
+  briefing: "", // its title starts with ☀
 };
 
 function dayStart(d: Date) {

@@ -359,7 +359,7 @@ Read-only: these agents never post or send anything. News pages are outside cont
 
 - [x] **P7-01** Multi-step tasks across several subagents, with progress shown in the chat *(a live checklist, like Claude's to-do list; parts run together)*
 - [x] **P7-02** Long tasks run in the background and post their results to the chat *("I'm on it", keep chatting; the result and its cards appear in the same chat)*
-- [ ] **P7-03** Daily briefing and "what happened today" reports
+- [x] **P7-03** Daily briefing and "what happened today" reports *(facts from the database only; ☀ briefing each morning, Settings → News)*
 - [ ] **P7-04** Smarter memory: better recall, automatic tidy-up of old memories
 - [ ] **P7-05** Optional: RSS reader for news and blogs you follow
 - [ ] **P7-06** Tests + your acceptance test + push

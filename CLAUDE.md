@@ -16,8 +16,8 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
   client replies with warning signs, Fiverr orders with due-time reminders, the Freelance page). **Now: Phase 6 (Developer Agent)**: P6-01 done (read-only GitHub MCP in `junior/github/`;
   people connect GitHub in the app with GitHub's device login, `oauth.py`; needs his OAuth App client ID in
   `GITHUB_CLIENT_ID`); Phase 6 **paused by Muneer** after P6-01.
-- **Now: Phase 7 (full power)**: P7-01 checklist and P7-02 background tasks (`junior/background.py`) done; next P7-03
-  ("what happened today" + morning briefing).
+- **Now: Phase 7 (full power)**: P7-01 checklist, P7-02 background tasks (`junior/background.py`) and P7-03 reports +
+  morning briefing (`junior/reports.py`) done; next P7-04 (smarter memory).
 - Last pushed to GitHub (`main`) on 2026-10-16 (Phase 5 accepted).
 
 ## Safety rules (never break)

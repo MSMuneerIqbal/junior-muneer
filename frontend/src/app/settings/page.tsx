@@ -613,6 +613,29 @@ function SettingsForm({ initial }: { initial: Settings }) {
             </label>
           </div>
         </Row>
+        <Row
+          label="Morning briefing"
+          hint="Each morning: what needs you today, what got done yesterday, and the news, from the app's records only. About $0.001. Skipped while paused."
+        >
+          <div className="flex flex-wrap items-center gap-3">
+            <Toggle
+              checked={form.briefing_enabled}
+              onChange={(v) => set("briefing_enabled", v)}
+              label="Write a morning briefing every day"
+            />
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-muted">at</span>
+              <input
+                type="time"
+                value={form.briefing_time}
+                disabled={!form.briefing_enabled}
+                onChange={(e) => set("briefing_time", e.target.value)}
+                className={`${input} w-32 disabled:opacity-50`}
+                aria-label="Morning briefing time"
+              />
+            </label>
+          </div>
+        </Row>
       </Section>
 
       <PermissionsSection />

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { fetcher, send } from "@/lib/api";
 import { useWaitingCount } from "@/lib/approvals";
-import { ORDERS_DUE_KEY, PAUSE_KEY, PERMISSIONS_KEY, USAGE_KEY } from "@/lib/keys";
+import { isChatsKey, ORDERS_DUE_KEY, PAUSE_KEY, PERMISSIONS_KEY, USAGE_KEY } from "@/lib/keys";
 import { timeLeft } from "@/lib/orders";
 import type { ApprovalItem, BackgroundTask, Order, UsageToday } from "@/lib/types";
 
@@ -176,6 +176,46 @@ function OrdersDue() {
   );
 }
 
+function Briefing() {
+  const { data, mutate } = useSWR<{ conversation_id: number | null }>("/api/briefing/today", fetcher, {
+    refreshInterval: 300_000,
+  });
+  const { mutate: mutateGlobal } = useSWRConfig();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!data) return null;
+  if (data.conversation_id) {
+    return (
+      <Link
+        href={`/?c=${data.conversation_id}`}
+        className="flex items-center gap-2 rounded-lg bg-accent-soft px-3 py-2 text-sm font-medium hover:opacity-90"
+      >
+        <span aria-hidden>☀</span> Today&apos;s briefing
+      </Link>
+    );
+  }
+  async function make() {
+    setBusy(true);
+    setError(null);
+    try {
+      await mutate(send<{ conversation_id: number }>("POST", "/api/briefing/now"));
+      void mutateGlobal(isChatsKey); // it's a chat in your list
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't make it");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div>
+      <button type="button" onClick={make} disabled={busy} className="w-full rounded-lg border border-line px-3 py-2 text-left text-sm hover:bg-panel-2">
+        ☀ {busy ? "Writing your briefing…" : "Today's briefing"}
+      </button>
+      {error && <p className="mt-1 text-xs text-danger">{error}</p>}
+    </div>
+  );
+}
+
 function BackgroundWork() {
   const { data } = useSWR<BackgroundTask[]>("/api/tasks?limit=4", fetcher, {
     refreshInterval: (d) => (d?.some((t) => t.status === "running") ? 3000 : 30_000),
@@ -226,6 +266,7 @@ export function TodayPanel() {
   return (
     <div className="flex flex-col gap-5 p-4">
       <h2 className="font-semibold">Today</h2>
+      <Briefing />
       <PauseButton />
       <Spend />
       <CallMinutes />

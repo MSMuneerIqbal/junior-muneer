@@ -3,7 +3,7 @@
 export type Conversation = {
   id: number;
   title: string;
-  kind: "text" | "voice" | "call" | "whatsapp";
+  kind: "text" | "voice" | "call" | "whatsapp" | "briefing";
   pinned: boolean;
   created_at: string;
   updated_at: string;
@@ -176,6 +176,8 @@ export type Settings = {
   api_posts_per_day: number;
   news_digest_enabled: boolean;
   news_digest_time: string;
+  briefing_enabled: boolean;
+  briefing_time: string;
 };
 
 export type ChatSummary = {

@@ -47,6 +47,8 @@ def _usage(text_in: str, text_out: str) -> Usage:
     )
 
 
+NL = chr(10)
+
 def _last_user_text(items: Any) -> str:
     if isinstance(items, str):
         return items
@@ -128,6 +130,15 @@ class FakeModel(Model):
         if text.startswith("## Request from") and "score_job" in tool_names:
             return self._fake_freelance(input, text), False
         last = input[-1] if isinstance(input, list) and input else None
+        if text.startswith("## Morning briefing facts"):
+            needs = next((ln[2:] for ln in text.splitlines() if ln.startswith("- Waiting for your OK")), "Nothing needs you yet.")
+            return [assistant_message(f"(fake AI) Good morning! {needs}")], False
+        if "what happened" in text.lower() and "what_happened" in tool_names:
+            said = last.get("output", "") if isinstance(last, dict) and last.get("type") == "function_call_output" else ""
+            if not said:
+                return [function_call("what_happened", {"period": "today"}, call_id="fake-report")], False
+            facts = said.split("(These facts", 1)[0].strip()
+            return [assistant_message(f"(fake AI) Here's your day:{NL}{NL}{facts}")], False
         if text.startswith("[Background task"):
             asked = text.split(": ", 1)[1].splitlines()[0] if ": " in text else text
             return [assistant_message(f"(fake AI) Finished in the background: {asked}")], False

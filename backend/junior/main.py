@@ -44,6 +44,8 @@ from junior.senders.api import router as senders_router
 from junior.senders.dispatch import recover_interrupted_sends
 from junior.background import recover_interrupted as recover_background
 from junior.background import router as tasks_router
+from junior.reports import morning_briefing
+from junior.reports import router as reports_router
 from junior.senders.registry import SenderRegistry, set_current
 from junior.settings_api import router as settings_router
 from junior.voice import FakeVoice, OpenAIVoice, VoiceClient
@@ -104,8 +106,11 @@ def create_app(
         async def news_job() -> None:
             await morning_digests(app.state.registry, model_provider)
 
+        async def briefing_job() -> None:
+            await morning_briefing(app.state.registry, model_provider)
+
         scheduler = (
-            asyncio.create_task(scheduler_loop(extra=[("morning news", news_job)]))
+            asyncio.create_task(scheduler_loop(extra=[("morning news", news_job), ("morning briefing", briefing_job)]))
             if get_settings().scheduler_enabled
             else None
         )
@@ -151,6 +156,7 @@ def create_app(
     app.include_router(orders_router)
     app.include_router(github_router)
     app.include_router(tasks_router)
+    app.include_router(reports_router)
     app.include_router(images_router)
     return app
 

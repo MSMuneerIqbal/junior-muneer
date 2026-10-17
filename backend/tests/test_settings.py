@@ -46,6 +46,8 @@ def test_defaults(client):
         "api_posts_per_day": 5,
         "news_digest_enabled": True,
         "news_digest_time": "07:30",
+        "briefing_enabled": True,
+        "briefing_time": "08:00",
     }
 
 

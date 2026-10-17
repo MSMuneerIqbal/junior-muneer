@@ -37,6 +37,8 @@ class SettingsUpdate(BaseModel):
     api_posts_per_day: int | None = Field(default=None, ge=0, le=50)
     news_digest_enabled: bool | None = None
     news_digest_time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    briefing_enabled: bool | None = None
+    briefing_time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
 
     @field_validator("main_model", "helper_model")
     @classmethod

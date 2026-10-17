@@ -48,6 +48,7 @@ STEP_LABELS = {
     "pakistan_news": "Asking the Social-News-Agent",
     "save_ideas": "Saving ideas",
     "run_in_background": "Starting it in the background",
+    "what_happened": "Checking what happened",
 }
 
 

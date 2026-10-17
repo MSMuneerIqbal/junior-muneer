@@ -1002,3 +1002,29 @@ def run_in_background(ctx: Ctx, title: str, request: str) -> str:
 
 
 TOOL_FACTORIES["background"] = lambda: [run_in_background]
+
+
+# ---- What happened (P7-03) ------------------------------------------------------------
+
+
+def what_happened_for(context: TurnContext, period: str) -> str:
+    from junior.reports import day_facts
+
+    return (
+        day_facts(period, context.settings["timezone"])  # type: ignore[arg-type]
+        + "\n\n(These facts come from the app's records. Summarize only them; don't add anything.)"
+    )
+
+
+@function_tool
+def what_happened(ctx: Ctx, period: Literal["today", "yesterday", "week"] = "today") -> str:
+    """Everything that happened in a period, from the app's records: chats, drafts made and posted, jobs scored,
+    proposals sent, orders saved and due, post ideas, memories, background work and spend.
+
+    Args:
+        period: today, yesterday, or the last 7 days (week).
+    """
+    return what_happened_for(ctx.context, period)
+
+
+TOOL_FACTORIES["reports"] = lambda: [what_happened]
