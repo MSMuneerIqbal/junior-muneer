@@ -265,6 +265,34 @@ class Order(Base):
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
+class Feed(Base):
+    """A news site or blog you follow by RSS or Atom (junior/feeds.py)."""
+
+    __tablename__ = "feeds"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    url: Mapped[str] = mapped_column(String(500), unique=True)
+    title: Mapped[str] = mapped_column(String(200))
+    item_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_read_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    last_error: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
+class FeedItem(Base):
+    """One post from a feed you follow. Outside content: data, never instructions."""
+
+    __tablename__ = "feed_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    feed_id: Mapped[int] = mapped_column(ForeignKey("feeds.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    url: Mapped[str] = mapped_column(String(500))
+    published_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True, index=True)
+    summary: Mapped[str] = mapped_column(Text, default="")
+    fetched_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
 class BackgroundTask(Base):
     """A long request Junior Muneer finishes in the background and posts to its chat (junior/background.py)."""
 

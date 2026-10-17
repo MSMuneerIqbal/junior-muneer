@@ -361,7 +361,7 @@ Read-only: these agents never post or send anything. News pages are outside cont
 - [x] **P7-02** Long tasks run in the background and post their results to the chat *("I'm on it", keep chatting; the result and its cards appear in the same chat)*
 - [x] **P7-03** Daily briefing and "what happened today" reports *(facts from the database only; ☀ briefing each morning, Settings → News)*
 - [x] **P7-04** Smarter memory: better recall, automatic tidy-up of old memories *(dates, recall beyond 100, weekly tidy-up that archives with Restore)*
-- [ ] **P7-05** Optional: RSS reader for news and blogs you follow
+- [x] **P7-05** Optional: RSS reader for news and blogs you follow *(News → Your feeds; read every 3 hours, no AI)*
 - [ ] **P7-06** Tests + your acceptance test + push
 
 ## Phase 8: WhatsApp + VPS (24/7)

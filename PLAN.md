@@ -499,6 +499,18 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 
 ## 18. Change log
 
+- **v8.0 (2026-10-17):** Phase 6 paused by Muneer after P6-01 (GitHub connects in the app with GitHub's device login, or the
+  GitHub CLI login; read-only, two locks). Phase 7 built:
+  - P7-01: a request with several parts gets a live checklist (like Claude's to-do list); its parts run together.
+  - P7-02: long work runs in the background: Junior says he's on it, you keep chatting, and the result (with its cards) is posted
+    to the same chat. At most 3 at a time, not while paused; tasks cut off by a restart are marked failed.
+  - P7-03: "What happened today?" (or yesterday, this week) is answered from a report built by code from the database, and a
+    morning briefing (☀, Settings → News) says what needs you, what got done yesterday and the news, from those facts only.
+  - P7-04: memories show the date they were saved; past 100, Junior gets the newest plus the ones that fit your message and can
+    search the rest; a weekly tidy-up archives duplicates and outdated memories (code-checked, restorable, never rewritten).
+  - P7-05: your own RSS/Atom feeds (News → Your feeds), read every 3 hours by the same safe reader, kept apart from the official
+    news, and outside content for Junior.
+  - Every tool failure is now logged with the real error and audited as an error (the SDK hid it).
 - **v7.9 (2026-10-16):** P5-04 to P5-06 built: the Freelance Manager scores pasted jobs (a scam is always skip, in code) and writes one
   proposal card per job, with each screening answer in its own box (code keeps only answers to the job's own questions). Proposals
   hold only the text to paste, and the Checker flags lines that undersell you. Every AI request now gives up after 2 minutes of

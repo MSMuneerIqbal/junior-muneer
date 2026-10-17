@@ -46,6 +46,8 @@ from junior.background import recover_interrupted as recover_background
 from junior.background import router as tasks_router
 from junior.reports import morning_briefing
 from junior.memory_tidy import weekly_tidy
+from junior.feeds import feeds_if_due
+from junior.feeds import router as feeds_router
 from junior.reports import router as reports_router
 from junior.senders.registry import SenderRegistry, set_current
 from junior.settings_api import router as settings_router
@@ -114,7 +116,7 @@ def create_app(
             await weekly_tidy(app.state.registry, model_provider)
 
         scheduler = (
-            asyncio.create_task(scheduler_loop(extra=[("morning news", news_job), ("morning briefing", briefing_job), ("memory tidy-up", tidy_job)]))
+            asyncio.create_task(scheduler_loop(extra=[("morning news", news_job), ("morning briefing", briefing_job), ("memory tidy-up", tidy_job), ("your feeds", feeds_if_due)]))
             if get_settings().scheduler_enabled
             else None
         )
@@ -161,6 +163,7 @@ def create_app(
     app.include_router(github_router)
     app.include_router(tasks_router)
     app.include_router(reports_router)
+    app.include_router(feeds_router)
     app.include_router(images_router)
     return app
 

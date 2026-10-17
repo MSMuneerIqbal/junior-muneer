@@ -43,6 +43,8 @@ DEFAULTS: dict[str, Any] = {
     # Phase 7: the weekly memory tidy-up (duplicates and outdated memories are archived, restorable).
     "memory_tidy_enabled": True,
     "memory_tidied_at": "",
+    # Phase 7: when your own feeds were last read (every 3 hours).
+    "feeds_read_at": "",
     # Permission rules (/api/permissions): ask_all · rules, and your rule per action type.
     "permission_mode": "rules",
     "permission_rules": {},

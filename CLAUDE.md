@@ -1,23 +1,21 @@
 # Junior Muneer: notes for Claude
 
 Muneer's personal AI assistant and friend (English + Urdu): chat, voice messages, live calls, and a
-team of subagents that draft posts, proposals and replies. **PLAN.md** is the design (v7.4), **TASK.md**
+team of subagents that draft posts, proposals and replies. **PLAN.md** is the design (v8.0), **TASK.md**
 is the task list with ticks. Read the relevant TASK.md entry before starting a task.
 
 ## Where we are (update this at the end of every session)
 
-- Done: Phase 0 (text chat), Phase 1 (voice + live calls), Phase 2 tasks P2-01 to P2-06
-  (profile, playbooks, permission rules + mode menu, approval queue, Paste box, writing team), P2-07
-  (Social Media Manager), P2-08 (images), P2-09 (style memory), P2-10 (Social page), P2-11 (planned posts).
-- Phase 2 accepted (P2-12). Phase 2b (news agents) accepted (P2b-06).
-  Phase 3 (social APIs) and Phase 4 (Gmail) are **paused by Muneer**: posting stays copy and paste for now (P3-01 sender base
-  and the P3-02 Facebook code are ready for later). Phase 5 (Freelance, by paste) **accepted**: P5-02, P5-04 to P5-08 and P5-10 done (P5-09 skipped; P5-01/P5-03 wait for Gmail)
-  (Freelance Manager, job scoring + scam signs, one proposal card per job with screening answers in their own boxes,
-  client replies with warning signs, Fiverr orders with due-time reminders, the Freelance page). **Now: Phase 6 (Developer Agent)**: P6-01 done (read-only GitHub MCP in `junior/github/`;
-  people connect GitHub in the app with GitHub's device login, `oauth.py`; needs his OAuth App client ID in
-  `GITHUB_CLIENT_ID`); Phase 6 **paused by Muneer** after P6-01.
-- **Now: Phase 7 (full power)**: P7-01 checklist, P7-02 background tasks (`junior/background.py`) P7-03 reports +
-  morning briefing (`junior/reports.py`) and P7-04 smarter memory (`junior/memory_tidy.py`) done; next P7-05 (your feeds).
+- **Accepted:** Phase 0 (text chat), 1 (voice + live calls), 2 (social by copy and paste: profile, playbooks,
+  permissions + mode menu, approvals, Paste box, writing team, Social Media Manager, images, style memory, planned posts),
+  2b (news agents) and 5 (Freelance by paste: job scoring + scam signs, proposals with screening answers in their own
+  boxes, client replies with warning signs, Fiverr orders, the Freelance page; P5-09 skipped).
+- **Paused by Muneer:** Phase 3 (social APIs; P3-01 sender base and P3-02 Facebook code are ready), Phase 4 (Gmail; P5-01
+  and P5-03 wait for it), Phase 6 after P6-01 (GitHub connects in the app by GitHub's device login, `junior/github/`;
+  the in-app button needs his OAuth App client ID in `GITHUB_CLIENT_ID`).
+- **Now: Phase 7 (full power):** P7-01 checklist (`update_plan`), P7-02 background tasks (`junior/background.py`),
+  P7-03 "what happened" + morning briefing (`junior/reports.py`), P7-04 smarter memory (`junior/memory_tidy.py`) and
+  P7-05 your feeds (`junior/feeds.py`) built; next P7-06 (Muneer's acceptance test, then push).
 - Last pushed to GitHub (`main`) on 2026-10-16 (Phase 5 accepted).
 
 ## Safety rules (never break)

@@ -64,7 +64,7 @@ class SettingsUpdate(BaseModel):
 
 
 # Edited through their own pages and endpoints (/api/profile, /api/permissions).
-NOT_HERE = {"profile", "permission_mode", "permission_rules", "memory_tidied_at"}
+NOT_HERE = {"profile", "permission_mode", "permission_rules", "memory_tidied_at", "feeds_read_at"}
 
 
 @router.get("/api/settings")

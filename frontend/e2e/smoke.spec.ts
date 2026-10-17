@@ -42,7 +42,7 @@ test("memory note can be undone", async ({ page }) => {
   await box.press("Enter");
   await expect(page.getByText("Memory updated: I drink green tea")).toBeVisible();
   await page.getByRole("button", { name: "Undo" }).click();
-  await expect(page.getByText("Undone")).toBeVisible();
+  await expect(page.getByText("Undone", { exact: true })).toBeVisible();
 
   await openMenu(page);
   await page.getByRole("link", { name: "Memory", exact: true }).click();

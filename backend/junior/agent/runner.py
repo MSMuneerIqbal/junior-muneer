@@ -50,6 +50,7 @@ STEP_LABELS = {
     "save_ideas": "Saving ideas",
     "run_in_background": "Starting it in the background",
     "what_happened": "Checking what happened",
+    "my_feeds": "Reading your feeds",
 }
 
 
