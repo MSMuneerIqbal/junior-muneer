@@ -144,4 +144,91 @@ async def google_sheet_read(ctx: Ctx, link: str, tab: str = "") -> str:
     return await sheet_read_for(ctx.context, link, tab)
 
 
-GOOGLE_TOOLS = [google_doc_create, google_doc_read, google_sheet_create, google_sheet_read]
+# ---- Calendar --------------------------------------------------------------------------
+
+
+async def calendar_add_for(
+    context: TurnContext,
+    title: str,
+    start: str,
+    your_words: str,
+    end: str = "",
+    all_day: bool = False,
+    location: str = "",
+    notes: str = "",
+    reminder_minutes: int | None = None,
+) -> str:
+    from junior.google.calendar import add_event, describe
+
+    action = "google.calendar.create"
+    if refusal := _not_ready("calendar.events") or gate.check(context, action, your_words=your_words):
+        return refusal
+    tz = context.settings["timezone"]
+    try:
+        event = await add_event(title, start, end, all_day, location, notes, reminder_minutes, tz)
+    except GoogleError as e:
+        gate.failed(context, action, str(e))
+        return f"NOT done: {e}"
+    when = describe(event, tz)
+    gate.done(context, action, {"event": when, "link": event.get("htmlLink", "")})
+    return f"Added to their Google Calendar: {when}. Link: {event.get('htmlLink', '')}\nTell them in one line, with the day and time."
+
+
+async def calendar_list_for(context: TurnContext, days: int = 7, search: str = "") -> str:
+    from junior.google.calendar import describe, upcoming
+
+    if refusal := _not_ready("calendar.events"):
+        return refusal
+    tz = context.settings["timezone"]
+    try:
+        events = await upcoming(days, tz, query=search)
+    except GoogleError as e:
+        return f"Couldn't read the calendar: {e}"
+    if not events:
+        return f"Nothing on their Google Calendar in the next {days} day(s)" + (f" matching {search!r}." if search else ".")
+    lines = "\n".join(f"- {describe(e, tz)}" for e in events)
+    return gate.fence(context, lines, f"their Google Calendar, the next {days} day(s), in their time zone")
+
+
+@function_tool
+async def calendar_add_event(
+    ctx: Ctx,
+    title: str,
+    start: str,
+    your_words: str,
+    end: str = "",
+    all_day: bool = False,
+    location: str = "",
+    notes: str = "",
+    reminder_minutes: int | None = None,
+) -> str:
+    """Add an event to the user's own Google Calendar when they ask ("add my exam on 5 Nov at 10am"). Nobody is
+    invited. Work out the exact date from today's date; if the day or time is unclear, ask first instead.
+
+    Args:
+        title: What it is, e.g. "Data Mining exam".
+        start: Their local time, "YYYY-MM-DD HH:MM" (or "YYYY-MM-DD" when all_day).
+        your_words: The user's exact words asking for it (copied word for word).
+        end: When it ends, same format; empty = one hour after the start (or the same day when all_day).
+        all_day: True for a whole-day event (a deadline, a holiday, a trip).
+        location: Where, if they said.
+        notes: Anything else they said about it.
+        reminder_minutes: A pop-up reminder this many minutes before, if they asked for one.
+    """
+    return await calendar_add_for(ctx.context, title, start, your_words, end, all_day, location, notes, reminder_minutes)
+
+
+@function_tool
+async def calendar_events(ctx: Ctx, days: int = 7, search: str = "") -> str:
+    """What's on the user's Google Calendar from now on ("what's on tomorrow?", "when is my exam?").
+
+    Args:
+        days: How many days ahead to look (1 to 60). For "tomorrow" use 2; for "this week" use 7.
+        search: Words to look for in the events, e.g. "exam" (empty for everything).
+    """
+    return await calendar_list_for(ctx.context, days, search)
+
+
+GOOGLE_TOOLS = [
+    google_doc_create, google_doc_read, google_sheet_create, google_sheet_read, calendar_add_event, calendar_events,
+]

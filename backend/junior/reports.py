@@ -199,13 +199,15 @@ def briefing_today(tz_name: str, now: datetime | None = None) -> int | None:
         )
 
 
-def briefing_prompt(settings: dict, now: datetime | None = None) -> str:
+def briefing_prompt(settings: dict, now: datetime | None = None, calendar: str = "") -> str:
     tz = settings["timezone"]
     parts = [
         f"## Morning briefing facts for {settings['user_name']} ({_local(now or datetime.now(UTC), tz)}, their time zone)",
         "### Yesterday\n" + day_facts("yesterday", tz, now),
         "### Today so far and what's next\n" + day_facts("today", tz, now),
     ]
+    if calendar:
+        parts.append("### Today on their Google Calendar\n" + calendar)
     if headlines := news_headlines():
         parts.append("### Latest news headlines (from today's digests)\n" + headlines)
     return "\n\n".join(parts)
@@ -225,7 +227,10 @@ async def make_briefing(registry, provider_factory, force: bool = False) -> int 
     provider = provider_factory()  # no API key: says so
     context = TurnContext(conversation_id=None, settings=settings)
     context.mark_outside()  # news headlines are outside content
-    text = await HelperRunner(registry, provider).run("briefing", briefing_prompt(settings), context)
+    from junior.google.calendar import today_for_briefing
+
+    calendar = await today_for_briefing(settings["timezone"])
+    text = await HelperRunner(registry, provider).run("briefing", briefing_prompt(settings, calendar=calendar), context)
     cost = round(sum(u.cost_usd for u in context.usage), 6)
     title = "☀ Morning briefing · " + datetime.now(UTC).astimezone(zone(settings["timezone"])).strftime("%a %d %b")
     with session_scope() as s:

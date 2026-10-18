@@ -3,6 +3,7 @@ Calendar, kept in memory. Nothing leaves the PC."""
 
 import json
 import re
+from datetime import UTC, datetime
 from functools import lru_cache
 
 import httpx
@@ -105,11 +106,21 @@ class FakeGoogle:
                 event["htmlLink"] = f"https://www.google.com/calendar/event?eid={event['id']}"
                 self.events.append(event)
                 return httpx.Response(200, json=event)
-            lo, hi = request.url.params.get("timeMin", ""), request.url.params.get("timeMax", "~")
-            found = [e for e in self.events if lo <= (e["start"].get("dateTime") or e["start"].get("date")) <= hi]
-            found.sort(key=lambda e: e["start"].get("dateTime") or e["start"].get("date"))
+            lo, hi = (_when(request.url.params.get(k)) for k in ("timeMin", "timeMax"))
+            found = [e for e in self.events if lo <= _when(e["start"].get("dateTime") or e["start"].get("date")) < hi]
+            q = request.url.params.get("q", "").casefold()
+            found = [e for e in found if q in e.get("summary", "").casefold()]
+            found.sort(key=lambda e: _when(e["start"].get("dateTime") or e["start"].get("date")))
             return httpx.Response(200, json={"items": found})
         return httpx.Response(404, json={"error": {"message": f"Fake Google doesn't know {method} {host}{path}"}})
+
+
+def _when(text: str | None) -> datetime:
+    """A time from Google's formats (2026-11-05T10:00:00+05:00, ...Z, or a date) as UTC."""
+    if not text:
+        return datetime.max.replace(tzinfo=UTC)
+    dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    return (dt if dt.tzinfo else dt.replace(tzinfo=UTC)).astimezone(UTC)
 
 
 @lru_cache
