@@ -31,6 +31,10 @@ def wa(monkeypatch):
     sent: list[dict] = []
 
     def meta(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST" and request.url.path.endswith("/media"):  # a spoken answer being uploaded
+            assert b'name="type"' in request.content and b"audio/mpeg" in request.content
+            sent.append({"upload": len(request.content)})
+            return httpx.Response(200, json={"id": "media-up-1"})
         if request.method == "POST":
             sent.append(json.loads(request.content))
             return httpx.Response(200, json={"messages": [{"id": "wamid.out"}]})
@@ -120,14 +124,42 @@ def test_a_message_delivered_twice_is_answered_once(wa):
         assert len(wa) == 1
 
 
-def test_a_voice_note_is_transcribed_and_answered(wa):
+def voice_note(mid="wamid.v"):
+    return message({"from": OWNER, "id": mid, "type": "audio", "audio": {"id": "media-1", "mime_type": "audio/ogg; codecs=opus"}})
+
+
+def test_a_voice_note_gets_a_voice_note_back(wa):
     model = ScriptedModel([chunked_answer("I heard you.")])
     with app(model) as c:
-        signed(c, message({"from": OWNER, "id": "wamid.v", "type": "audio", "audio": {"id": "media-1", "mime_type": "audio/ogg; codecs=opus"}}))
-        assert wait_for(wa, 1)[0]["text"]["body"] == "I heard you."
+        signed(c, voice_note())
+        upload, reply = wait_for(wa, 2)[:2]
+        assert "upload" in upload  # the spoken answer, uploaded to WhatsApp...
+        assert reply["type"] == "audio" and reply["audio"] == {"id": "media-up-1"}  # ...and sent as audio
+        assert not any(m.get("type") == "text" for m in wa)  # no text copy
         chat = next(x for x in c.get("/api/conversations").json() if x["kind"] == "whatsapp")
-        mine = c.get(f"/api/conversations/{chat['id']}/messages").json()[0]
+        mine, his = c.get(f"/api/conversations/{chat['id']}/messages").json()[:2]
         assert mine["content"].startswith("(fake transcription of a 504-byte recording)") and mine["audio_file"].endswith(".ogg")
+        assert his["audio_file"].endswith(".mp3")  # kept with his answer: the dashboard plays it without paying again
+
+
+def test_if_speech_fails_the_answer_comes_as_text(wa, monkeypatch):
+    import junior.voice as voice
+
+    async def broken(voice_factory, message_id):
+        raise RuntimeError("speech service down")
+
+    monkeypatch.setattr(voice, "speak_message", broken)
+    model = ScriptedModel([chunked_answer("I heard you.")])
+    with app(model) as c:
+        signed(c, voice_note("wamid.v2"))
+        assert wait_for(wa, 1)[0]["text"]["body"] == "I heard you."
+
+
+def test_typed_messages_still_get_text(wa):
+    model = ScriptedModel([chunked_answer("Text for text.")])
+    with app(model) as c:
+        signed(c, text("hi", mid="wamid.t"))
+        assert wait_for(wa, 1)[0]["type"] == "text"
 
 
 def test_drafts_come_with_buttons_and_a_tap_marks_them(wa):

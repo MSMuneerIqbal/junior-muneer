@@ -399,24 +399,55 @@ async def speak(request: Request, message_id: int):
             return
         finally:
             lock.release()
-        audio_id = f"{uuid.uuid4().hex}.mp3"
-        (audio_dir() / audio_id).write_bytes(audio)
-        seconds = len(text) / CHARS_PER_MINUTE * 60 / speed
-        cost = len(text) / CHARS_PER_MINUTE * model_router.audio_price(model).get("per_minute", 0.0)
-        record_audio_usage("speaker", model, "voice", seconds, cost, conversation_id)
-        audit(
-            "tool_call",
-            "speak",
-            detail={"model": model, "voice": settings["tts_voice"], "characters": len(text)},
-            cost_usd=cost,
-            conversation_id=conversation_id,
-        )
-        with session_scope() as s:
-            message = s.get(Message, message_id)
-            message.audio_file = audio_id
-            message.audio_seconds = round(seconds, 1)
+        _store_speech(message_id, conversation_id, bytes(audio), text, model, settings, speed)
 
     return StreamingResponse(generate(), media_type="audio/mpeg")
+
+
+def _store_speech(message_id: int, conversation_id: int | None, audio: bytes, text: str, model: str, settings: dict, speed: float) -> None:
+    """Keep a spoken answer with its message (played back later without paying again), and count its cost."""
+    audio_id = f"{uuid.uuid4().hex}.mp3"
+    (audio_dir() / audio_id).write_bytes(audio)
+    seconds = len(text) / CHARS_PER_MINUTE * 60 / speed
+    cost = len(text) / CHARS_PER_MINUTE * get_router().audio_price(model).get("per_minute", 0.0)
+    record_audio_usage("speaker", model, "voice", seconds, cost, conversation_id)
+    audit(
+        "tool_call",
+        "speak",
+        detail={"model": model, "voice": settings["tts_voice"], "characters": len(text)},
+        cost_usd=cost,
+        conversation_id=conversation_id,
+    )
+    with session_scope() as s:
+        message = s.get(Message, message_id)
+        message.audio_file = audio_id
+        message.audio_seconds = round(seconds, 1)
+
+
+async def speak_message(voice_factory, message_id: int) -> bytes:
+    """One of his answers as MP3 (for a WhatsApp voice reply). Reuses it if it was spoken before.
+    Raises if it can't be made (no key, the daily cap, the speech service failing)."""
+    saved = _saved_speech(message_id)
+    if saved is not None:
+        return saved.read_bytes()
+    with session_scope() as s:
+        message = s.get(Message, message_id)
+        text = speakable(message.content)
+        conversation_id = message.conversation_id
+    if not text:
+        return b""
+    budget_left()
+    voice: VoiceClient = voice_factory()
+    settings = all_settings()
+    model = get_router().audio_model("speech")
+    speed = float(settings["tts_speed"])
+    audio = bytearray()
+    async with asyncio.timeout(SPEAK_TIMEOUT_SECONDS):
+        for piece in chunks(text):
+            async for chunk in voice.speak(piece, model, settings["tts_voice"], speed, speak_instructions(settings)):
+                audio.extend(chunk)
+    _store_speech(message_id, conversation_id, bytes(audio), text, model, settings, speed)
+    return bytes(audio)
 
 
 @router.get("/api/voice/preview/{voice}/{accent}.mp3")

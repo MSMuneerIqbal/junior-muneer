@@ -122,6 +122,18 @@ class WhatsApp:
             },
         })
 
+    async def send_audio(self, to: str, data: bytes, mime: str = "audio/mpeg") -> None:
+        """A spoken answer: upload the file to WhatsApp, then send it."""
+        async with self._client() as c:
+            r = await c.post(
+                f"{self.phone_id}/media",
+                data={"messaging_product": "whatsapp", "type": mime},
+                files={"file": ("answer.mp3", data, mime)},
+            )
+        if r.status_code >= 400:
+            raise RuntimeError(f"WhatsApp didn't take the audio ({r.status_code}): {r.text[:200]}")
+        await self._send(to, {"type": "audio", "audio": {"id": r.json()["id"]}})
+
     async def download(self, media_id: str) -> tuple[bytes, str]:
         """A voice note: its address first, then the file (both need the token)."""
         async with self._client() as c:
@@ -150,6 +162,8 @@ class WhatsApp:
 
 def _fake_whatsapp() -> httpx.MockTransport:
     def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST" and request.url.path.endswith("/media"):
+            return httpx.Response(200, json={"id": "media.fake"})
         if request.method == "POST":
             FAKE_SENT.append(json.loads(request.content))
             return httpx.Response(200, json={"messages": [{"id": "wamid.fake"}]})
@@ -211,18 +225,31 @@ async def send_drafts(to: str, items: list[dict]) -> None:
 
 
 async def answer(app: Any, text: str, audio_id: str | None = None, audio_seconds: float | None = None) -> None:
-    """Run a normal chat turn in your WhatsApp chat and send the answer (and any drafts) back."""
+    """Run a normal chat turn in your WhatsApp chat and send the answer (and any drafts) back.
+    You spoke (a voice note): he answers with a voice note too, or in text if speech fails."""
     owner = get_settings().whatsapp_owner_number
     convo = whatsapp_chat()
-    drafts, reply, problem = [], "", ""
+    drafts, reply, problem, message_id = [], "", "", None
     async for event in app.state.chat.reply(convo, text, audio_id, audio_seconds):
         if event["type"] == "approval":
             drafts.append(event["item"])
         elif event["type"] == "done":
-            reply = event["text"]
+            reply, message_id = event["text"], event["message_id"]
         elif event["type"] == "error":
             problem = event["message"]
-    await client().send_text(owner, reply or problem or "I couldn't answer that just now. Please try again.")
+    spoken = False
+    if audio_id and reply and message_id is not None:
+        try:
+            from junior.voice import speak_message
+
+            mp3 = await speak_message(app.state.voice, message_id)
+            if mp3:
+                await client().send_audio(owner, mp3)
+                spoken = True
+        except Exception as e:  # no voice: the text still goes
+            log.warning("WhatsApp voice reply failed, sending text: %s: %s", type(e).__name__, e)
+    if not spoken:
+        await client().send_text(owner, reply or problem or "I couldn't answer that just now. Please try again.")
     await send_drafts(owner, drafts)
 
 
