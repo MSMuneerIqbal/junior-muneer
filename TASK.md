@@ -382,7 +382,7 @@ Read-only: these agents never post or send anything. News pages are outside cont
     3. Send me the address and tell me how you'll give me access (we'll set up an SSH key together; never send a password
        in chat). Then I install Docker, copy the app, set the login and start it.
 - [ ] **P8-03** Move data and settings; reconnect the API logins (Meta, LinkedIn, Gmail) on the server
-- [ ] **P8-04** WhatsApp Business API (separate phone number): chat, voice notes and approvals, saved in the same chat history
+- [x] **P8-04** WhatsApp Business API (separate phone number): chat, voice notes and approvals, saved in the same chat history
   - **Built (before the server, by your choice):** chat and voice notes on WhatsApp, answered in a WhatsApp chat in the same
     history (🟢 in the chat list); drafts come with buttons (Posted ✓ or Approve, and Reject); background results are sent
     there too. Only your own number is answered, only messages signed by Meta are accepted, and from outside addresses only
@@ -401,6 +401,9 @@ Read-only: these agents never post or send anything. News pages are outside cont
        `cloudflared tunnel --url http://localhost:8000`. It prints an address like `https://xxxx.trycloudflare.com`.
     6. **WhatsApp → Configuration → Webhook → Edit:** Callback URL `https://xxxx.trycloudflare.com/api/whatsapp/webhook`,
        the verify token from step 4 → **Verify and save**. Under **Webhook fields**, subscribe to **messages**.
+    6b. **Publish the app** (Meta delivers real messages only to published apps; it needs a privacy policy link:
+       ours is https://gist.github.com/MSMuneerIqbal/6f29706e4df8a63e823a2dbe41001180), and **subscribe the app to the
+       WhatsApp account** (`POST /{WABA_ID}/subscribed_apps` with the token; done 2026-10-18 for WABA 2319962942090041).
     7. From your phone, send "Salam" to the test number on WhatsApp. Junior answers there, and the chat shows on the
        dashboard. (A quick tunnel's address changes each time you start it: repeat step 6 then. On the server it's fixed.)
 - [ ] **P8-05** Monitoring and automatic restarts
