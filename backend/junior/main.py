@@ -109,7 +109,10 @@ def create_app(
         app.state.voice = voice
         app.state.calls = CallManager(realtime, app.state.registry, model_provider)
         async def news_job() -> None:
+            from junior.news.mail import daily_news_email
+
             await morning_digests(app.state.registry, model_provider)
+            await daily_news_email()
 
         async def briefing_job() -> None:
             await morning_briefing(app.state.registry, model_provider)

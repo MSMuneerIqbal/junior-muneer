@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     # Or use your GitHub CLI login (gh): the token stays in Windows' own store, asked from gh when needed.
     github_auth: str = ""  # "gh" to use the GitHub CLI login
     github_user: str = ""
+    # Your Gmail, to email yourself the daily top 5 AI news: the address and a Google App Password
+    # (myaccount.google.com/apppasswords; never your real password, never committed).
+    gmail_address: str = ""
+    gmail_app_password: str = ""
     # Optional: Artificial Analysis's free API key, for "who's on top" rankings in AI news.
     artificial_analysis_api_key: str = ""
     data_dir: Path = Path("data")

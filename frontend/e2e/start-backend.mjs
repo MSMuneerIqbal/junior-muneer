@@ -28,6 +28,9 @@ const child = spawn(python, ["-m", "uvicorn", "junior.main:app", "--port", "8100
     WHATSAPP_PHONE_NUMBER_ID: "100200300",
     WHATSAPP_VERIFY_TOKEN: "e2e-verify",
     WHATSAPP_OWNER_NUMBER: "923001112233",
+    // A pretend Gmail for the news email test (FAKE_AI + GMAIL_APP_PASSWORD=fake): nothing leaves this PC.
+    GMAIL_ADDRESS: "me@example.com",
+    GMAIL_APP_PASSWORD: "fake",
     GITHUB_CLIENT_ID: "fake", // a pretend GitHub for the Connect GitHub test
     GITHUB_AUTH: "",
     GITHUB_USER: "",

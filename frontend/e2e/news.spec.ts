@@ -22,6 +22,12 @@ test("the News page builds and shows sourced digests for AI and Pakistan", async
   await page.getByRole("tab", { name: "AI" }).click();
   const build = page.getByRole("button", { name: /Build it now|Refresh/ });
   await build.click();
+  // The day's top 5 first; the rest under "More news".
+  const top = page.getByRole("region", { name: "Top 5" });
+  await expect(top.getByText("#1", { exact: true })).toBeVisible({ timeout: 20_000 });
+  expect(await top.getByRole("listitem").count()).toBeLessThanOrEqual(5);
+  await expect(page.getByRole("region", { name: "New models and releases" })).toBeHidden();
+  await page.getByText(/More news: all \d+ stories/).click();
   const models = page.getByRole("region", { name: "New models and releases" });
   await expect(models.getByText("Introducing GPT-7 (sample)")).toBeVisible({ timeout: 20_000 });
   await expect(models.getByRole("link", { name: /OpenAI ·/ }).first()).toHaveAttribute("href", "https://openai.com/index/sample-gpt-7/");
@@ -30,9 +36,24 @@ test("the News page builds and shows sourced digests for AI and Pakistan", async
 
   await page.getByRole("tab", { name: "Pakistan" }).click();
   await page.getByRole("button", { name: /Build it now|Refresh/ }).click();
+  await expect(page.getByRole("region", { name: "Top 5" })).toBeVisible({ timeout: 20_000 });
+  await page.getByText(/More news: all \d+ stories/).click();
   const trending = page.getByRole("region", { name: "Trending online" });
   await expect(trending.getByText("babar azam")).toBeVisible({ timeout: 20_000 });
   await expect(trending.getByRole("link", { name: /Google Trends Pakistan ·/ })).toHaveAttribute("href", /trends\.google\.com\/trending\?geo=PK#babar/);
+});
+
+test("the top 5 AI news can be emailed now from Settings", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "one shared database: once is enough");
+  await page.goto("/news");
+  await page.getByRole("tab", { name: "AI" }).click();
+  await expect(page.getByRole("region", { name: "Top 5" })).toBeVisible({ timeout: 20_000 }); // built by the test above
+  await page.goto("/settings#news");
+  await expect(page.getByRole("switch", { name: "Email me the top 5 AI news every morning" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByText("me@example.com")).toBeVisible();
+  await page.getByRole("button", { name: "Send it now" }).click();
+  await expect(page.getByRole("status").filter({ hasText: /Sent the top \d AI news to me@example\.com\./ })).toBeVisible();
+  await expect(page.getByText(/last sent \d{4}-\d\d-\d\d/)).toBeVisible();
 });
 
 test("the morning digest can be switched off and its time changed", async ({ page }) => {

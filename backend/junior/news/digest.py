@@ -88,7 +88,15 @@ def earlier_digest_articles(topic: str, now: datetime, exclude: set[int]) -> dic
 
 
 def _with_id(row: NewsDigest) -> dict:
-    return {**row.data, "id": row.id, "built_at": row.built_at.isoformat(), "cost_usd": row.cost_usd}
+    from junior.news.guard import top_stories
+
+    return {
+        **row.data,
+        "id": row.id,
+        "built_at": row.built_at.isoformat(),
+        "cost_usd": row.cost_usd,
+        "top": top_stories(row.data.get("sections", [])),
+    }
 
 
 def latest_digest(topic: str) -> dict | None:

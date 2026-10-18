@@ -413,5 +413,14 @@ Read-only: these agents never post or send anything. News pages are outside cont
   Everyday settings only (models, language, voice, WhatsApp chats, briefing, news, memory tidy-up); the daily limit, pause,
   call minutes, API posts and permissions stay on the Settings page. Needs your own words; blocked when a paste, web result
   or feed is in the turn, and in background work. Each change is in Activity.
+- [x] **Extra:** email to yourself (before Phase 4), through Gmail's mail server with a Google App Password
+  (`GMAIL_ADDRESS`, `GMAIL_APP_PASSWORD`; `junior/mailer.py`). Always to your own address only.
+  - **`email_me` tool:** "email me the AI news / this proposal / today's plan": anything, when you ask (your own words,
+    at most 3 per message). Rule `gmail.to_self` (Auto; Ask or Deny stops it).
+  - **Daily top 5 AI news:** the news agents rate each story 1-10; the News page shows the top 5 first (the rest under
+    "More news"), and after the morning digest the AI top 5 is emailed (`junior/news/mail.py`, rule `gmail.news_to_self`,
+    Settings → News: on/off and "Send it now").
+  - **Your step:** turn on 2-Step Verification, make an App Password at https://myaccount.google.com/apppasswords
+    (name it "Junior Muneer"), paste it after `GMAIL_APP_PASSWORD=` in backend/.env, restart.
 - [ ] **P8-05** Monitoring and automatic restarts
 - [ ] **P8-06** Your one-week test + push

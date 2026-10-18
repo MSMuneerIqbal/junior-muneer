@@ -37,6 +37,9 @@ DEFAULTS: dict[str, Any] = {
     # News (Phase 2b): both digests are built each morning at this local time.
     "news_digest_enabled": True,
     "news_digest_time": "07:30",
+    # The day's top 5 AI news emailed to your Gmail after the morning digest (needs GMAIL_* in backend/.env).
+    "news_email_enabled": True,
+    "news_emailed_on": "",
     # Phase 7: the morning briefing (yesterday, today's agenda, news), once a day at this local time.
     "briefing_enabled": True,
     "briefing_time": "08:00",

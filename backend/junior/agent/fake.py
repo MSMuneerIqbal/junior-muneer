@@ -164,6 +164,10 @@ class FakeModel(Model):
             return [assistant_message(f"(fake AI) Tool said: {last.get('output')}")], False
         if "search" in text.lower() and "web_search" in tool_names:
             return [function_call("web_search", {"query": text}, call_id="fake-search")], False
+        if text.lower().startswith("email me ") and "email_me" in tool_names:
+            words = text[len("email me ") :].strip()
+            args = {"subject": f"From Junior Muneer: {words[:60]}", "body": f"(fake AI) {words}", "your_words": text}
+            return [function_call("email_me", args, call_id="fake-email")], False
         if text.lower().startswith("remember "):
             words = text[len("remember ") :].strip()
             return [
@@ -344,7 +348,7 @@ def _fake_digest(prompt: str) -> dict:
         key = "trending" if "Trends" in source and "trending" in sections else keys[n % len(keys)]
         n += 1
         if len(sections[key]) < 3:
-            sections[key].append({"article_ids": [int(m.group(1))], "headline": m.group(2), "summary": f"(fake digest) From {source}."})
+            sections[key].append({"article_ids": [int(m.group(1))], "headline": m.group(2), "summary": f"(fake digest) From {source}.", "importance": 10 - n % 9})
     return {"sections": [{"key": k, "items": v} for k, v in sections.items()]}
 
 

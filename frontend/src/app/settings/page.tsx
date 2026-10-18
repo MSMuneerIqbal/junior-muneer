@@ -152,6 +152,61 @@ function Toggle({
   );
 }
 
+type NewsEmail = { configured: boolean; address: string; enabled: boolean; last_sent: string; rule: Rule };
+
+/** Whether Gmail is set up for the daily top 5, and a button to send it now. */
+function NewsEmailStatus() {
+  const { data, mutate } = useSWR<NewsEmail>("/api/news-email", fetcher);
+  const [busy, setBusy] = useState(false);
+  const [said, setSaid] = useState<{ ok: boolean; text: string } | null>(null);
+  if (!data) return null;
+  if (!data.configured) {
+    return (
+      <p className="text-xs text-muted">
+        Gmail isn&apos;t set up yet: add <code>GMAIL_ADDRESS</code> and <code>GMAIL_APP_PASSWORD</code> (a Google App
+        Password, not your normal password) to <code>backend/.env</code>, then restart.
+      </p>
+    );
+  }
+  async function sendNow() {
+    setBusy(true);
+    setSaid(null);
+    try {
+      const r = await send<{ message: string }>("POST", "/api/news-email/send");
+      setSaid({ ok: true, text: r.message });
+      await mutate();
+    } catch (e) {
+      setSaid({ ok: false, text: e instanceof Error ? e.message : "Couldn't send it" });
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="flex flex-col gap-1.5 text-xs text-muted">
+      <p>
+        To <span className="text-ink">{data.address}</span>
+        {data.last_sent ? ` · last sent ${data.last_sent}` : " · not sent yet"}
+        {data.rule !== "auto" && ` · your rule is ${data.rule === "ask" ? "Ask" : "Deny"}, so it won't send by itself`}
+      </p>
+      <div>
+        <button
+          type="button"
+          onClick={sendNow}
+          disabled={busy}
+          className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink hover:bg-panel-2 disabled:opacity-50"
+        >
+          {busy ? "Sending…" : "Send it now"}
+        </button>
+      </div>
+      {said && (
+        <p role={said.ok ? "status" : "alert"} className={said.ok ? "text-ok" : "text-danger"}>
+          {said.text}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function Badge({ tone, children }: { tone: "accent" | "warn" | "muted" | "ok"; children: ReactNode }) {
   const style = {
     accent: "bg-accent-soft text-accent",
@@ -641,6 +696,19 @@ function SettingsForm({ initial }: { initial: Settings }) {
                 aria-label="Morning digest time"
               />
             </label>
+          </div>
+        </Row>
+        <Row
+          label="Top 5 AI news by email"
+          hint="After the morning digest, the day's top 5 AI news goes to your own Gmail. Only ever to your address."
+        >
+          <div className="flex flex-col gap-2">
+            <Toggle
+              checked={form.news_email_enabled}
+              onChange={(v) => set("news_email_enabled", v)}
+              label="Email me the top 5 AI news every morning"
+            />
+            <NewsEmailStatus />
           </div>
         </Row>
         <Row

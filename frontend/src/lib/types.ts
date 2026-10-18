@@ -179,6 +179,7 @@ export type Settings = {
   api_posts_per_day: number;
   news_digest_enabled: boolean;
   news_digest_time: string;
+  news_email_enabled: boolean;
   briefing_enabled: boolean;
   briefing_time: string;
   whatsapp_session_hours: number;

@@ -45,6 +45,9 @@ class DigestItemIn(BaseModel):
     article_ids: list[int] = Field(description="The numbers of the articles this item is based on.")
     headline: str = Field(description="A short, plain headline.")
     summary: str = Field(description="One or two sentences: only what the articles say.")
+    importance: int | None = Field(
+        default=None, description="How much this matters to the reader, 1 (minor) to 10 (the biggest news of the period)."
+    )
 
 
 class DigestSectionIn(BaseModel):
@@ -133,6 +136,8 @@ def guard_digest(raw: DigestIn, articles: dict[int, Article], topic: str, now: d
                 "date": sources[0]["date"],
                 "sources": sources,
             }
+            if item.importance is not None:
+                entry["importance"] = max(1, min(10, item.importance))
             if n1 + n2:
                 entry["links_removed"] = n1 + n2
             sections[section.key].append(entry)
@@ -144,6 +149,24 @@ def guard_digest(raw: DigestIn, articles: dict[int, Article], topic: str, now: d
             removed.append({"headline": extra["headline"], "reason": "section full"})
         out.append({"key": key, "title": title, "items": items[:MAX_ITEMS_PER_SECTION]})
     return {"sections": out, "removed": removed}
+
+
+TOP_N = 5
+
+
+def top_stories(sections: list[dict], n: int = TOP_N) -> list[dict]:
+    """The day's top stories across sections: the most important first (the news agent's rating), newest first
+    among equals. Older digests have no ratings: then each section's top item in turn."""
+    items = [{**item, "section": sec["title"]} for sec in sections for item in sec["items"]]
+    if any("importance" in i for i in items):
+        items.sort(key=lambda i: (i.get("importance", 0), i["date"]), reverse=True)
+        return items[:n]
+    picked: list[dict] = []
+    for rank in range(MAX_ITEMS_PER_SECTION):
+        for sec in sections:
+            if rank < len(sec["items"]) and len(picked) < n:
+                picked.append({**sec["items"][rank], "section": sec["title"]})
+    return picked
 
 
 def keep_official_links(text: str, sites: list[str] | tuple[str, ...]) -> tuple[str, int]:

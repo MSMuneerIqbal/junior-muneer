@@ -7,7 +7,7 @@ import { fetcher, send } from "@/lib/api";
 import { urduClass } from "@/lib/urdu";
 
 type Source = { name: string; title: string; url: string; date: string };
-type Item = { headline: string; summary: string; date: string; sources: Source[] };
+type Item = { headline: string; summary: string; date: string; sources: Source[]; section?: string };
 type Section = { key: string; title: string; items: Item[] };
 type Board = { key: string; title: string; rows: { rank: number; model: string; creator: string; score: number }[] };
 type Digest = {
@@ -18,6 +18,7 @@ type Digest = {
   cost_usd: number;
   window_days: number;
   sections: Section[];
+  top: Item[];
   removed: { headline: string; reason: string }[];
   failed: { source: string; reason: string }[];
   read: string[];
@@ -80,7 +81,44 @@ function Rankings({ data }: { data: Digest["leaderboards"] }) {
   );
 }
 
+function NewsItem({ item, rank }: { item: Item; rank?: number }) {
+  return (
+    <li className="rounded-2xl border border-line bg-panel px-4 py-3 shadow-sm">
+      {rank !== undefined && (
+        <p className="mb-1 text-xs text-muted">
+          <span className="font-semibold text-accent">#{rank}</span>
+          {item.section ? ` · ${item.section}` : ""}
+        </p>
+      )}
+      <p dir="auto" className={`text-sm font-medium ${urduClass(item.headline)}`}>
+        {item.headline}
+      </p>
+      {item.summary && (
+        <p dir="auto" className={`mt-1 text-sm leading-relaxed text-ink/90 ${urduClass(item.summary)}`}>
+          {item.summary}
+        </p>
+      )}
+      <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+        {item.sources.map((s) => (
+          <a
+            key={s.url}
+            href={s.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={s.title}
+            className="underline-offset-2 hover:text-ink hover:underline"
+          >
+            {s.name} · {day(s.date)} ↗
+          </a>
+        ))}
+      </p>
+    </li>
+  );
+}
+
 function DigestView({ digest }: { digest: Digest }) {
+  const top = digest.top ?? [];
+  const total = digest.sections.reduce((n, s) => n + s.items.length, 0);
   return (
     <div className="flex flex-col gap-8">
       {digest.failed.length > 0 && (
@@ -89,47 +127,42 @@ function DigestView({ digest }: { digest: Digest }) {
           in for them.
         </p>
       )}
-      {digest.topic === "ai" && <Rankings data={digest.leaderboards} />}
-      {digest.sections.map((section) => (
-        <section key={section.key} aria-label={section.title} className="flex flex-col gap-3">
-          <h2 className="flex items-baseline gap-2 text-base font-semibold">
-            {section.title}
-            <span className="text-sm font-normal text-muted">{section.items.length}</span>
-          </h2>
-          {section.items.length === 0 ? (
-            <p className="text-sm text-muted">Nothing in this section today.</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {section.items.map((item, n) => (
-                <li key={n} className="rounded-2xl border border-line bg-panel px-4 py-3 shadow-sm">
-                  <p dir="auto" className={`text-sm font-medium ${urduClass(item.headline)}`}>
-                    {item.headline}
-                  </p>
-                  {item.summary && (
-                    <p dir="auto" className={`mt-1 text-sm leading-relaxed text-ink/90 ${urduClass(item.summary)}`}>
-                      {item.summary}
-                    </p>
-                  )}
-                  <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
-                    {item.sources.map((s) => (
-                      <a
-                        key={s.url}
-                        href={s.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={s.title}
-                        className="underline-offset-2 hover:text-ink hover:underline"
-                      >
-                        {s.name} · {day(s.date)} ↗
-                      </a>
-                    ))}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
+      {top.length > 0 && (
+        <section aria-label="Top 5" className="flex flex-col gap-3">
+          <h2 className="text-base font-semibold">Top {top.length} today</h2>
+          <ol className="flex flex-col gap-2">
+            {top.map((item, n) => (
+              <NewsItem key={n} item={item} rank={n + 1} />
+            ))}
+          </ol>
         </section>
-      ))}
+      )}
+      <details className="group flex flex-col gap-8" open={top.length === 0}>
+        <summary className="cursor-pointer list-none text-sm font-medium text-accent hover:underline">
+          <span className="group-open:hidden">More news: all {total} stories, by section ▾</span>
+          <span className="hidden group-open:inline">Hide the rest ▴</span>
+        </summary>
+        <div className="mt-6 flex flex-col gap-8">
+          {digest.topic === "ai" && <Rankings data={digest.leaderboards} />}
+          {digest.sections.map((section) => (
+            <section key={section.key} aria-label={section.title} className="flex flex-col gap-3">
+              <h2 className="flex items-baseline gap-2 text-base font-semibold">
+                {section.title}
+                <span className="text-sm font-normal text-muted">{section.items.length}</span>
+              </h2>
+              {section.items.length === 0 ? (
+                <p className="text-sm text-muted">Nothing in this section today.</p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {section.items.map((item, n) => (
+                    <NewsItem key={n} item={item} />
+                  ))}
+                </ul>
+              )}
+            </section>
+          ))}
+        </div>
+      </details>
       {digest.removed.length > 0 && (
         <details className="text-xs text-muted">
           <summary className="cursor-pointer hover:text-ink">

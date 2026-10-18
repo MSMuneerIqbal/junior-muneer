@@ -30,6 +30,7 @@ CHANGEABLE: dict[str, str] = {
     "briefing_time": "Morning briefing time, HH:MM",
     "news_digest_enabled": "Daily news digests: on or off",
     "news_digest_time": "News digests time, HH:MM",
+    "news_email_enabled": "Email the top 5 AI news to their Gmail each morning: on or off",
     "memory_tidy_enabled": "Weekly memory tidy-up: on or off",
 }
 # Only on the Settings page, never from chat.
