@@ -46,8 +46,8 @@ class TurnContext:
     # Run when this turn's answer is saved (background tasks it started), and their ids.
     after_turn: list[Any] = field(default_factory=list)
     queued_tasks: list[int] = field(default_factory=list)
-    # Emails sent to you in this turn (at most a few).
-    emails_sent: int = 0
+    # Actions done through the gate in this turn (junior/gate.py; at most a few).
+    actions_done: int = 0
     # Runs helper agents for tools (a junior.agent.helpers.HelperRunner).
     helpers: Any = None
 

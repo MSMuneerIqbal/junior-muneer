@@ -1114,51 +1114,24 @@ TOOL_FACTORIES["settings"] = lambda: [my_settings, change_setting]
 
 # ---- Email to yourself ---------------------------------------------------------------
 
-MAX_EMAILS_PER_TURN = 3
-
-
-def _you_said(context: TurnContext, your_words: str) -> bool:
-    """Are these words in one of the user's own messages in this chat?"""
-    quote = _normalize(your_words)
-    if len(quote) < MIN_QUOTE_CHARS:
-        return False
-    with session_scope() as s:
-        mine = s.scalars(
-            select(Message.content).where(Message.id.in_(context.user_message_ids), Message.source == "user")
-        ).all()
-    return any(quote in _normalize(content) for content in mine)
-
-
 async def email_me_for(context: TurnContext, subject: str, body: str, your_words: str) -> str:
     """Email the user (their own Gmail only) something they asked for: news, a draft, notes, a plan."""
+    from junior import gate
     from junior.mailer import MailError, configured, send_to_self
-    from junior.permissions import decide
 
     if not configured():
         return (
             "NOT sent: Gmail isn't set up yet. Tell the user to add GMAIL_ADDRESS and GMAIL_APP_PASSWORD "
             "(a Google App Password) to backend/.env and restart."
         )
-    if not _you_said(context, your_words):
-        return "NOT sent: copy the user's own words asking for this email into your_words. Email only when they ask."
-    decision = decide("gmail.to_self", from_outside=False)
-    if decision.rule != "auto":
-        return f"NOT sent: {decision.reason} They can change it in Settings → Permissions (Email yourself)."
-    if decision.held:
-        return "NOT sent: Junior Muneer is paused. It can be sent after they resume."
-    if context.emails_sent >= MAX_EMAILS_PER_TURN:
-        return f"NOT sent: at most {MAX_EMAILS_PER_TURN} emails per message. Put everything into one email."
+    if refusal := gate.check(context, "gmail.to_self", your_words=your_words):
+        return refusal
     try:
         address = await send_to_self(subject, body)
     except MailError as e:
+        gate.failed(context, "gmail.to_self", str(e))
         return f"NOT sent: {e}"
-    context.emails_sent += 1
-    audit(
-        "action",
-        "email_me",
-        detail={"subject": subject[:200], "characters": len(body)},
-        conversation_id=context.conversation_id,
-    )
+    gate.done(context, "gmail.to_self", {"subject": subject[:200], "characters": len(body)})
     return f"Sent to {address} with the subject {subject!r}. Tell the user in one line."
 
 

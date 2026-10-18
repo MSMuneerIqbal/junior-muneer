@@ -1,4 +1,4 @@
-"""Email yourself anything you ask for (news, drafts, notes): only to your own Gmail, only when you ask."""
+﻿"""Email yourself anything you ask for (news, drafts, notes): only to your own Gmail, only when you ask."""
 
 import asyncio
 
@@ -7,7 +7,8 @@ from fastapi.testclient import TestClient
 
 from junior import mailer
 from junior.agent.context import TurnContext
-from junior.agent.tools import MAX_EMAILS_PER_TURN, TOOL_FACTORIES, email_me_for
+from junior.agent.tools import TOOL_FACTORIES, email_me_for
+from junior.gate import MAX_ACTIONS_PER_TURN
 from junior.config import get_settings
 from junior.db import Conversation, Message, session_scope
 from junior.main import create_app
@@ -68,8 +69,8 @@ def test_news_with_outside_text_in_the_turn_can_still_be_emailed_to_you(mail):
 def test_only_when_you_ask(mail):
     said, sent = mail
     context = said("what's new in AI?")
-    assert run(context).startswith("NOT sent")  # these words aren't yours
-    assert run(context, words="new").startswith("NOT sent")  # too short to be a quote
+    assert run(context).startswith("NOT")  # these words aren't yours
+    assert run(context, words="new").startswith("NOT")  # too short to be a quote
     assert sent == []
 
 
@@ -77,7 +78,7 @@ def test_only_when_you_ask(mail):
 def test_your_rule_can_stop_it(mail, rule):
     said, sent = mail
     set_rule("gmail.to_self", rule)
-    assert run(said("email me the AI news")).startswith("NOT sent")
+    assert run(said("email me the AI news")).startswith("NOT")
     assert sent == []
 
 
@@ -88,13 +89,13 @@ def test_paused_means_not_sent(mail):
     assert sent == []
 
 
-def test_a_few_emails_per_message_at_most(mail):
+def test_a_few_actions_per_message_at_most(mail):
     said, sent = mail
     context = said("email me the AI news")
-    for _ in range(MAX_EMAILS_PER_TURN):
+    for _ in range(MAX_ACTIONS_PER_TURN):
         assert run(context).startswith("Sent")
-    assert run(context).startswith("NOT sent")
-    assert len(sent) == MAX_EMAILS_PER_TURN
+    assert run(context).startswith("NOT")
+    assert len(sent) == MAX_ACTIONS_PER_TURN
 
 
 def test_without_gmail_it_says_what_to_add(monkeypatch):
