@@ -1225,6 +1225,44 @@ async def send_to_me(
 TOOL_FACTORIES["email"] = lambda: [send_to_me]
 
 
+# ---- Files you send (WhatsApp, 📎) --------------------------------------------------------
+
+
+async def read_file_for(context: TurnContext, file_number: int, question: str = "") -> str:
+    from junior import gate
+    from junior.files import received
+    from junior.reading import ReadError, extract_text, is_image, look_at_image
+
+    got = received(file_number)
+    if got is None:
+        return f"There's no file {file_number} (it may have been removed). Ask them to send it again."
+    row, data = got
+    try:
+        if is_image(row.mime, row.filename):
+            text = await look_at_image(data, row.mime, question, context)
+        else:
+            text = extract_text(data, row.mime, row.filename)
+    except ReadError as e:
+        return f"Couldn't read it: {e}"
+    return gate.fence(context, text, f"the file {row.filename!r} they sent")
+
+
+@function_tool
+async def read_file(ctx: Ctx, file_number: int, question: str = "") -> str:
+    """Read what's inside a file the user sent you (a message tagged "[file N: ...]"): PDFs, Word, Excel, CSV and
+    text files, and photos (the text in them and what they show). Use it whenever they want to know what's in it,
+    a summary, or an answer from it.
+
+    Args:
+        file_number: The N from the "[file N: ...]" tag.
+        question: What they want to know from it, if they said (helps with photos).
+    """
+    return await read_file_for(ctx.context, file_number, question)
+
+
+TOOL_FACTORIES["files"] = lambda: [read_file]
+
+
 def _google_tools() -> list[Tool]:
     from junior.google.tools import GOOGLE_TOOLS
 

@@ -136,6 +136,49 @@ async def search(words: str, limit: int = 10) -> list[dict]:
     return got.get("files", [])
 
 
+# Google's own files, read as text.
+AS_TEXT = {
+    "application/vnd.google-apps.document": "text/plain",
+    "application/vnd.google-apps.spreadsheet": "text/csv",  # the first tab
+    "application/vnd.google-apps.presentation": "text/plain",
+}
+
+
+async def for_reading(link: str) -> tuple[str, bytes, str]:
+    """A file to read: (name, content, type). Google's own files come as text or CSV; others as they are."""
+    fid = file_id(link)
+    meta = await call("GET", f"{FILES}/{fid}", params={"fields": "id,name,mimeType,size"})
+    name, mime = meta.get("name", "file"), meta.get("mimeType", "")
+    if mime == FOLDER:
+        raise GoogleError(f"{name!r} is a folder. Ask what's in it, or which file to read.")
+    if mime in AS_TEXT:
+        target = AS_TEXT[mime]
+        return name + (".csv" if target == "text/csv" else ".txt"), await download(f"{FILES}/{fid}/export", params={"mimeType": target}), target
+    if mime.startswith("application/vnd.google-apps."):
+        raise GoogleError(f"{name!r} is a {kind(mime)}, which can't be read as a file.")
+    if int(meta.get("size") or 0) > MAX_BYTES:
+        raise GoogleError(f"{name!r} is too big to read here (over 20 MB).")
+    return name, await download(f"{FILES}/{fid}", params={"alt": "media"}), mime
+
+
+async def folder_contents(name: str, limit: int = 50) -> list[tuple[dict, list[dict]]]:
+    """The folders whose names contain these words, each with what's in it (newest first). At most 3 folders."""
+    words = [w for w in name.split() if w][:5]
+    if not words:
+        raise GoogleError("Tell me the folder's name.")
+    q = " and ".join(f"name contains {_quoted(w)}" for w in words) + f" and mimeType = '{FOLDER}' and trashed = false"
+    folders = (await call("GET", FILES, params={"q": q, "pageSize": "3", "fields": "files(id,name,webViewLink)"})).get("files", [])
+    out = []
+    for folder in folders:
+        inside = await call(
+            "GET", FILES,
+            params={"q": f"{_quoted(folder['id'])} in parents and trashed = false", "orderBy": "folder,modifiedTime desc",
+                    "pageSize": str(limit), "fields": "files(id,name,mimeType,modifiedTime,webViewLink)"},
+        )
+        out.append((folder, inside.get("files", [])))
+    return out
+
+
 async def fetch(link: str, as_pdf: bool = False) -> tuple[str, bytes, str]:
     """A file to send: (file name, content, type). Google's own files are exported; as_pdf turns Docs and Slides into PDF."""
     fid = file_id(link)

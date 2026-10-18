@@ -25,7 +25,10 @@ class FakeGoogle:
             "sheet-income": {"title": "Income", "tabs": {"Sheet1": [["Month", "USD"], ["Sep", "900"], ["Oct", "1200"]]}}
         }
         self.files: dict[str, dict] = {
-            "file-cv-2026": {"name": "Muneer Iqbal CV.pdf", "mimeType": "application/pdf", "size": "52000", "data": b"%PDF-1.7 fake CV"},
+            "file-cv-2026": {"name": "Muneer Iqbal CV.pdf", "mimeType": "application/pdf", "size": "52000",
+                             "data": tiny_pdf("Muneer Iqbal - Agentic AI Engineer, Lahore")},
+            "file-invoice": {"name": "Invoice September.pdf", "mimeType": "application/pdf", "size": "900",
+                             "parents": ["folder-work"], "data": tiny_pdf("Invoice 42: total Rs 5,000")},
             "file-old-cv": {"name": "Muneer Iqbal CV 2024.docx", "size": "40000",
                             "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "data": b"PK old"},
             "folder-work": {"name": "Work", "mimeType": "application/vnd.google-apps.folder", "data": b""},  # yours
@@ -175,6 +178,26 @@ class FakeGoogle:
         mime = head.decode().split("Content-Type:")[1].strip()
         self.files[fid] = {"name": meta["name"], "mimeType": mime, "parents": [parent], "app": True, "data": data[: -len(b"\r\n")]}
         return httpx.Response(200, json={"id": fid, "name": meta["name"], "webViewLink": f"https://drive.google.com/file/d/{fid}/view"})
+
+
+def tiny_pdf(text: str) -> bytes:
+    """A real one-page PDF with this text (for reading tests)."""
+    stream = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET".encode()
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    out, offsets = b"%PDF-1.4\n", []
+    for n, body in enumerate(objects, 1):
+        offsets.append(len(out))
+        out += f"{n} 0 obj\n".encode() + body + b"\nendobj\n"
+    xref = len(out)
+    out += f"xref\n0 {len(objects) + 1}\n0000000000 65535 f \n".encode()
+    out += b"".join(f"{o:010d} 00000 n \n".encode() for o in offsets)
+    return out + f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode()
 
 
 def _when(text: str | None) -> datetime:

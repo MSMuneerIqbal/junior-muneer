@@ -31,6 +31,7 @@ export function Composer({
   const box = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const [attaching, setAttaching] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [fileProblem, setFileProblem] = useState<string | null>(null);
   const pasteText = paste?.text.trim() ?? "";
   const canSend = !busy && (!!text.trim() || !!pasteText);
@@ -60,6 +61,13 @@ export function Composer({
   }
 
   function onPasteText(e: ClipboardEvent<HTMLTextAreaElement>) {
+    const file = e.clipboardData.files[0];
+    if (file) {
+      // A screenshot or a copied file: attach it like 📎.
+      e.preventDefault();
+      void attach(file);
+      return;
+    }
     const pasted = e.clipboardData.getData("text");
     if (paste || text.trim() || pasted.trim().length < LONG_PASTE_CHARS) return;
     e.preventDefault();
@@ -100,7 +108,23 @@ export function Composer({
   }
 
   return (
-    <div className="border-t border-line bg-bg px-3 pt-3 pb-4 sm:px-6">
+    <div
+      className={`border-t border-line px-3 pt-3 pb-4 sm:px-6 ${dragging ? "bg-accent-soft" : "bg-bg"}`}
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes("Files")) return;
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={(e) => {
+        const file = e.dataTransfer.files[0];
+        setDragging(false);
+        if (!file) return;
+        e.preventDefault();
+        void attach(file);
+      }}
+    >
+      {dragging && <p className="mx-auto mb-2 max-w-3xl text-center text-sm font-medium text-accent">Drop the file to attach it</p>}
       {paste && (
         <PasteBox
           value={paste}
@@ -139,7 +163,7 @@ export function Composer({
           onClick={() => picker.current?.click()}
           disabled={attaching}
           aria-label="Attach a file"
-          title="Attach a file (e.g. to save it to your Google Drive)"
+          title="Attach a file to read it or save it to your Drive (or drop it here, or paste a screenshot)"
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-panel-2 hover:text-ink disabled:opacity-50"
         >
           {attaching ? (

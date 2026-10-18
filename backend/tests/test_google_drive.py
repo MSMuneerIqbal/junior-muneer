@@ -89,7 +89,7 @@ def test_sending_your_cv_on_whatsapp_as_the_pdf_it_is(drive):
     assert answer.startswith("Sent to their WhatsApp with the file 'Muneer Iqbal CV.pdf'")
     document = wa["sent"][1]["document"]
     assert document["filename"] == "Muneer Iqbal CV.pdf"
-    assert b"%PDF-1.7 fake CV" in wa["uploads"][0] and b"application/pdf" in wa["uploads"][0]
+    assert b"Agentic AI Engineer" in wa["uploads"][0] and b"application/pdf" in wa["uploads"][0]
 
 
 def test_google_files_are_exported(drive):

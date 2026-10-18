@@ -301,7 +301,70 @@ async def drive_save(ctx: Ctx, file_number: int, your_words: str, folder: str = 
     return await drive_save_for(ctx.context, file_number, your_words, folder, new_name)
 
 
+async def drive_read_for(context: TurnContext, link: str, question: str = "") -> str:
+    from junior.google.drive import for_reading
+    from junior.reading import ReadError, extract_text, is_image, look_at_image
+
+    if refusal := _not_ready("drive.readonly"):
+        return refusal
+    try:
+        name, data, mime = await for_reading(link)
+        if is_image(mime, name):
+            text = await look_at_image(data, mime, question, context)
+        else:
+            text = extract_text(data, mime, name)
+    except (GoogleError, ReadError) as e:
+        return f"Couldn't read it: {e}"
+    return gate.fence(context, text, f"the file {name!r} from their Google Drive")
+
+
+@function_tool
+async def drive_read(ctx: Ctx, link: str, question: str = "") -> str:
+    """Read what's inside a file in the user's Google Drive, by its link (from drive_search or drive_folder):
+    Google Docs, Sheets and Slides, PDFs, Word, Excel, CSV and text files, and photos (the text in them and what
+    they show). Use it when they ask you to read, summarize or answer from a file; to send them the file itself,
+    use send_to_me instead.
+
+    Args:
+        link: The file's Drive link.
+        question: What they want to know from it, if they said (helps with photos).
+    """
+    return await drive_read_for(ctx.context, link, question)
+
+
+async def drive_folder_for(context: TurnContext, name: str) -> str:
+    from junior.google.drive import folder_contents, kind
+
+    if refusal := _not_ready("drive.readonly"):
+        return refusal
+    try:
+        found = await folder_contents(name)
+    except GoogleError as e:
+        return f"Couldn't look in the Drive: {e}"
+    if not found:
+        return f"No folder with {name!r} in its name in their Drive. Try other words, or drive_search for the file itself."
+    blocks = []
+    for folder, inside in found:
+        lines = [
+            f"- {f['name']} ({kind(f.get('mimeType', ''))}, changed {f.get('modifiedTime', '')[:10]}): {f.get('webViewLink', '')}"
+            for f in inside
+        ] or ["(empty)"]
+        blocks.append(f"Folder {folder['name']!r} ({folder.get('webViewLink', '')}):\n" + "\n".join(lines))
+    return gate.fence(context, "\n\n".join(blocks), "folders and file names in their Google Drive")
+
+
+@function_tool
+async def drive_folder(ctx: Ctx, name: str) -> str:
+    """What's inside a folder in the user's Google Drive ("what's in my University folder?"): each file's name,
+    type, date and link. Then read a file with drive_read, or send it with send_to_me.
+
+    Args:
+        name: Words from the folder's name, e.g. "University" or "semester 3".
+    """
+    return await drive_folder_for(ctx.context, name)
+
+
 GOOGLE_TOOLS = [
     google_doc_create, google_doc_read, google_sheet_create, google_sheet_read, calendar_add_event, calendar_events,
-    drive_search, drive_save,
+    drive_search, drive_save, drive_read, drive_folder,
 ]
