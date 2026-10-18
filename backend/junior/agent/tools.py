@@ -1081,3 +1081,32 @@ def my_feeds(ctx: Ctx, days: int = 7) -> str:
 
 
 TOOL_FACTORIES["feeds"] = lambda: [my_feeds]
+
+
+# ---- Settings from chat --------------------------------------------------------------
+
+
+@function_tool
+def my_settings(ctx: Ctx) -> str:
+    """The user's settings that can be changed from chat, with their values now (models, language, voice,
+    WhatsApp chats, briefing, news), and the valid model names."""
+    from junior.settings_chat import current_settings
+
+    return current_settings()
+
+
+@function_tool
+def change_setting(ctx: Ctx, setting: str, value: str, your_words: str) -> str:
+    """Change one of the user's settings when they ask for it in their own message.
+
+    Args:
+        setting: The setting's name from `my_settings`, e.g. main_model, language, whatsapp_session_hours.
+        value: The new value, e.g. "deepseek:deepseek-v4-pro", "urdu", "6", "on", "07:00", "default".
+        your_words: The user's exact words asking for this change (copied word for word).
+    """
+    from junior.settings_chat import change_setting_for
+
+    return change_setting_for(ctx.context, setting, value, your_words)
+
+
+TOOL_FACTORIES["settings"] = lambda: [my_settings, change_setting]

@@ -406,5 +406,12 @@ Read-only: these agents never post or send anything. News pages are outside cont
        WhatsApp account** (`POST /{WABA_ID}/subscribed_apps` with the token; done 2026-10-18 for WABA 2319962942090041).
     7. From your phone, send "Salam" to the test number on WhatsApp. Junior answers there, and the chat shows on the
        dashboard. (A quick tunnel's address changes each time you start it: repeat step 6 then. On the server it's fixed.)
+  - **Done 2026-10-18:** a permanent System User token (expiry Never) and a fixed ngrok free domain (`NGROK_AUTHTOKEN` and
+    `NGROK_DOMAIN` in backend/.env); `start.bat` starts the tunnel too, `stop.bat` stops it. Voice in = voice out; session
+    settings (Settings → WhatsApp).
+- [x] **Extra:** change settings by asking in chat or WhatsApp (`junior/settings_chat.py`: `my_settings`, `change_setting`).
+  Everyday settings only (models, language, voice, WhatsApp chats, briefing, news, memory tidy-up); the daily limit, pause,
+  call minutes, API posts and permissions stay on the Settings page. Needs your own words; blocked when a paste, web result
+  or feed is in the turn, and in background work. Each change is in Activity.
 - [ ] **P8-05** Monitoring and automatic restarts
 - [ ] **P8-06** Your one-week test + push
