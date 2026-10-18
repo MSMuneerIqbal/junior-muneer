@@ -63,6 +63,22 @@ def verify_signature(body: bytes, header: str, secret: str) -> bool:
     return hmac.compare_digest(expected, header.removeprefix("sha256="))
 
 
+_VOICE = r"(voice|audio|awaz|aawaz|awaaz|آواز|وائس)"
+# Asking for a spoken answer ("send me voice", "voice mein batao", "آواز میں بتاؤ"), not just mentioning the word.
+_ASK_VOICE = re.compile(
+    rf"\b(send|give|reply|answer|speak|tell|say)\b[^.?!\n]{{0,20}}\b(in |by |as |a |with )?{_VOICE}"
+    rf"|{_VOICE}\s*(note|message|msg|reply)?\s*(mein|me|main|men|mai|میں)\b"
+    rf"|{_VOICE}\s*(note|message|msg|reply)?\s*(bhejo|bhej|do|de|dein|dena|please|pls|plz|بھیجو|دو|دیں)"
+    rf"|\b(bol|bool) ?(kar|ke)\b|بول کر|سناؤ|سنا دو|\bsunao\b|\bsuna do\b",
+    re.IGNORECASE,
+)
+
+
+def wants_voice(text: str) -> bool:
+    """Did you ask, in a typed message, for the answer as a voice note?"""
+    return bool(_ASK_VOICE.search(text or ""))
+
+
 def to_whatsapp(markdown: str) -> str:
     """Chat markdown -> WhatsApp's own: *bold*, _italic_, links written out."""
     text = re.sub(r"^#{1,6}\s+(.+)$", r"*\1*", markdown, flags=re.MULTILINE)
@@ -226,7 +242,8 @@ async def send_drafts(to: str, items: list[dict]) -> None:
 
 async def answer(app: Any, text: str, audio_id: str | None = None, audio_seconds: float | None = None) -> None:
     """Run a normal chat turn in your WhatsApp chat and send the answer (and any drafts) back.
-    You spoke (a voice note): he answers with a voice note too, or in text if speech fails."""
+    Voice note in: voice note out. Text in: text out, unless you asked for voice ("voice mein batao").
+    If speech fails, the text goes."""
     owner = get_settings().whatsapp_owner_number
     convo = whatsapp_chat()
     drafts, reply, problem, message_id = [], "", "", None
@@ -238,7 +255,7 @@ async def answer(app: Any, text: str, audio_id: str | None = None, audio_seconds
         elif event["type"] == "error":
             problem = event["message"]
     spoken = False
-    if audio_id and reply and message_id is not None:
+    if (audio_id or wants_voice(text)) and reply and message_id is not None:
         try:
             from junior.voice import speak_message
 

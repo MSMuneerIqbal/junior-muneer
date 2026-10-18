@@ -241,3 +241,24 @@ def test_from_outside_only_the_webhook_answers(wa, monkeypatch):
         get_settings.cache_clear()
         assert c.get("/api/memories", headers={"host": "junior.example.com"}).status_code == 200
         assert c.get("/api/memories", headers={"host": "evil.example.com"}).status_code == 403
+
+
+@pytest.mark.parametrize("asked", ["give me voice", "send me a voice note", "reply in voice", "voice mein batao", "voice me bhejo",
+                                   "awaz mein jawab do", "bol kar batao", "sunao", "voice note bhejo", "آواز میں بتاؤ", "voice plz"])
+def test_asking_for_voice_in_text(asked):
+    assert whatsapp.wants_voice(asked)
+
+
+@pytest.mark.parametrize("said", ["what is voice AI?", "my voice recognition project", "how was the audio quality on the call",
+                                  "kya haal hai", "write a post about voice agents", "I built a voice assistant"])
+def test_mentioning_voice_is_not_asking_for_it(said):
+    assert not whatsapp.wants_voice(said)
+
+
+def test_a_typed_request_for_voice_gets_voice(wa):
+    model = ScriptedModel([chunked_answer("Theek hoon, shukriya!")])
+    with app(model) as c:
+        signed(c, text("kaise ho? voice mein batao", mid="wamid.tv"))
+        sent = wait_for(wa, 2)
+        assert "upload" in sent[0] and sent[1]["type"] == "audio"
+        assert not any(m.get("type") == "text" for m in wa)
