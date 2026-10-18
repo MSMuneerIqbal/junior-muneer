@@ -40,6 +40,14 @@ curl -s -o nul http://localhost:3000 && (
 ) || (
   start "Junior Muneer - dashboard" /min cmd /k "cd /d "%ROOT%frontend" && npm run dev"
 )
+rem WhatsApp's fixed address (ngrok), when NGROK_DOMAIN is set in backend\.env.
+findstr /r /c:"^NGROK_DOMAIN=." "%ROOT%backend\.env" >nul 2>nul && (
+  tasklist /fi "IMAGENAME eq ngrok.exe" | find /i "ngrok.exe" >nul && (
+    echo The WhatsApp tunnel is already running.
+  ) || (
+    start "Junior Muneer - WhatsApp tunnel" /min cmd /k ""%ROOT%tunnel.bat""
+  )
+)
 
 echo Waiting for Junior Muneer to start...
 set /a tries=0
@@ -60,7 +68,7 @@ goto :wait_dashboard
 :ready
 echo Junior Muneer is running: http://localhost:3000
 if /i not "%~1"=="nobrowser" start "" http://localhost:3000
-echo To stop it, run stop.bat (or close the two minimized windows).
+echo To stop it, run stop.bat (or close the minimized windows).
 exit /b 0
 
 :failed
