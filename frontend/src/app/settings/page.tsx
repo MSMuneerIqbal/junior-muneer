@@ -859,6 +859,92 @@ function ConnectionRow({ p }: { p: Platform }) {
   );
 }
 
+type GoogleStatus = { configured: boolean; connected: boolean; account: string; missing: string[]; redirect_uri: string };
+
+/** Google Docs, Sheets and Calendar: Google's own consent page, then back here. */
+function GoogleConnection() {
+  const { data, mutate } = useSWR<GoogleStatus>("/api/google/status", fetcher);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    // Google sends you back here with ?google=connected or ?google=error&message=...
+    const q = new URLSearchParams(window.location.search);
+    const result = q.get("google");
+    if (!result) return;
+    setMessage(
+      result === "connected"
+        ? { ok: true, text: `Connected${q.get("account") ? ` as ${q.get("account")}` : ""}.` }
+        : { ok: false, text: q.get("message") || "Google didn't connect." },
+    );
+    window.history.replaceState(null, "", `${window.location.pathname}#connections`);
+    void mutate();
+  }, [mutate]);
+
+  async function disconnect() {
+    try {
+      const r = await send<{ message: string }>("DELETE", "/api/google/connection");
+      setMessage({ ok: true, text: r.message });
+    } catch (e) {
+      setMessage({ ok: false, text: e instanceof Error ? e.message : "Couldn't disconnect" });
+    }
+    void mutate();
+  }
+
+  if (!data) return null;
+  return (
+    <Row label="Google (Docs, Sheets, Calendar)">
+      <div className="flex flex-col gap-1.5 text-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          {data.connected ? (
+            <Badge tone="ok">Connected{data.account ? ` as ${data.account}` : ""}</Badge>
+          ) : (
+            <Badge tone="muted">Not connected</Badge>
+          )}
+          {data.configured && (
+            <a
+              href={`${BACKEND_URL}/api/google/connect`}
+              className={
+                data.connected
+                  ? "rounded-lg border border-line px-2.5 py-1 text-xs hover:bg-panel-2"
+                  : "rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-accent-fg hover:opacity-90"
+              }
+            >
+              {data.connected ? "Connect again" : "Connect Google"}
+            </a>
+          )}
+          {data.connected && (
+            <button type="button" onClick={disconnect} className="rounded-lg border border-line px-2.5 py-1 text-xs text-muted hover:bg-panel-2 hover:text-ink">
+              Disconnect
+            </button>
+          )}
+        </div>
+        {data.connected && data.missing.length > 0 && (
+          <p className="text-xs text-warn">
+            Not allowed on Google: {data.missing.join(", ")}. Use “Connect again” and tick them, if you want those.
+          </p>
+        )}
+        {!data.configured && (
+          <p className="text-xs leading-relaxed text-muted">
+            First add your Google Cloud project&apos;s OAuth client to <code>backend/.env</code> (<code>GOOGLE_CLIENT_ID</code>,{" "}
+            <code>GOOGLE_CLIENT_SECRET</code>; its redirect URI must be <code>{data.redirect_uri}</code>), then restart.
+          </p>
+        )}
+        {data.configured && !data.connected && (
+          <p className="text-xs text-muted">
+            Asks only for: files the app creates, reading your Docs and Sheets, and your calendar events. Never your
+            whole Drive or your Gmail.
+          </p>
+        )}
+        {message && (
+          <p role={message.ok ? "status" : "alert"} className={`text-xs ${message.ok ? "text-ok" : "text-danger"}`}>
+            {message.text}
+          </p>
+        )}
+      </div>
+    </Row>
+  );
+}
+
 function ConnectionsSection() {
   const { data } = useSWR<Platform[]>("/api/connections", fetcher);
   return (
@@ -868,6 +954,7 @@ function ConnectionsSection() {
       description="Accounts connected through their official API. Anything that changes something waits for your OK; the rest stays copy and paste."
     >
       {data?.map((p) => <ConnectionRow key={p.key} p={p} />)}
+      <GoogleConnection />
     </Section>
   );
 }

@@ -31,6 +31,10 @@ const child = spawn(python, ["-m", "uvicorn", "junior.main:app", "--port", "8100
     // A pretend Gmail for the news email test (FAKE_AI + GMAIL_APP_PASSWORD=fake): nothing leaves this PC.
     GMAIL_ADDRESS: "me@example.com",
     GMAIL_APP_PASSWORD: "fake",
+    // A pretend Google (FAKE_AI + GOOGLE_CLIENT_ID=fake): approves at once; Docs, Sheets, Calendar in memory.
+    GOOGLE_CLIENT_ID: "fake",
+    GOOGLE_CLIENT_SECRET: "fake",
+    GOOGLE_REDIRECT_URI: "http://127.0.0.1:8100/api/google/callback",
     GITHUB_CLIENT_ID: "fake", // a pretend GitHub for the Connect GitHub test
     GITHUB_AUTH: "",
     GITHUB_USER: "",

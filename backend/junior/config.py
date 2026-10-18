@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     # (myaccount.google.com/apppasswords; never your real password, never committed).
     gmail_address: str = ""
     gmail_app_password: str = ""
+    # Google Docs, Sheets and Calendar (your own Google Cloud project's OAuth client, "Web application").
+    # You connect your Google account in the app (Settings → Connections); the login is kept encrypted.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    # Where Google sends you back after you approve; it must be listed in the OAuth client exactly.
+    google_redirect_uri: str = "http://127.0.0.1:8000/api/google/callback"
     # Optional: Artificial Analysis's free API key, for "who's on top" rankings in AI news.
     artificial_analysis_api_key: str = ""
     data_dir: Path = Path("data")
