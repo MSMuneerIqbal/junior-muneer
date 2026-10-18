@@ -368,8 +368,19 @@ Read-only: these agents never post or send anything. News pages are outside cont
 
 **Phase done when:** it runs for a week without your PC.
 
-- [ ] **P8-01** Docker setup for the backend and the dashboard
+- [x] **P8-01** Docker setup for the backend and the dashboard
+  - `backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml` (backend + dashboard + Caddy), `Caddyfile`
+    (HTTPS by itself, a login in front of everything, `/api` and `/ws` to the backend), `deploy.env.example`,
+    `.dockerignore` (keys and data never go into an image). The dashboard's server build uses its own address for the API
+    and the chat. Docker isn't on your PC, so the first real build happens on the server (P8-02).
 - [ ] **P8-02** VPS setup, HTTPS, dashboard login
+  - **Your steps:**
+    1. **A server:** a small Ubuntu 24.04 VPS with 2 GB of memory is enough (Hetzner CX22 about €4.50 a month, or
+       DigitalOcean / Contabo about $5–6). Pick the region closest to you; note its IP address.
+    2. **An address:** a domain or subdomain you own (an "A record" pointing to the server's IP), or a free one from
+       duckdns.org. Caddy needs it for HTTPS.
+    3. Send me the address and tell me how you'll give me access (we'll set up an SSH key together; never send a password
+       in chat). Then I install Docker, copy the app, set the login and start it.
 - [ ] **P8-03** Move data and settings; reconnect the API logins (Meta, LinkedIn, Gmail) on the server
 - [ ] **P8-04** WhatsApp Business API (separate phone number): chat, voice notes and approvals, saved in the same chat history
 - [ ] **P8-05** Monitoring and automatic restarts

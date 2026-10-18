@@ -1,0 +1,46 @@
+# Junior Muneer on a server (Phase 8). From the project folder:
+#   cp deploy.env.example deploy.env   then fill it in (domain, login)
+#   docker compose --env-file deploy.env up -d --build
+# Caddy gives the site HTTPS automatically and asks for your login before anything loads.
+# Your keys stay in backend/.env (never in an image); your data stays in ./data on the server.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: backend/.env
+    environment:
+      DATA_DIR: /app/data
+      FRONTEND_ORIGIN: https://${DOMAIN:?set DOMAIN in deploy.env}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in deploy.env}
+      LOGIN_USER: ${LOGIN_USER:?set LOGIN_USER in deploy.env}
+      LOGIN_PASSWORD_HASH: ${LOGIN_PASSWORD_HASH:?set LOGIN_PASSWORD_HASH in deploy.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

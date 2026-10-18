@@ -1,0 +1,13 @@
+# One address for everything, with HTTPS (Caddy gets the certificate by itself) and a login.
+{$DOMAIN} {
+	encode gzip
+
+	# Everything needs your login; the browser remembers it for the API and the chat too.
+	basic_auth {
+		{$LOGIN_USER} {$LOGIN_PASSWORD_HASH}
+	}
+
+	@backend path /api/* /ws/* /health
+	reverse_proxy @backend backend:8000
+	reverse_proxy frontend:3000
+}

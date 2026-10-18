@@ -32,3 +32,6 @@ Thumbs.db
 test-results/
 playwright-report/
 .next-e2e/
+
+# Server deployment (Phase 8)
+deploy.env

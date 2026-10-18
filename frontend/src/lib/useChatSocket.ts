@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { WS_URL } from "@/lib/api";
+import { wsUrl } from "@/lib/api";
 import type { PasteDraft } from "@/lib/paste";
 import type { ChatEvent } from "@/lib/types";
 
@@ -25,7 +25,7 @@ export function useChatSocket(onEvent: (event: ChatEvent) => void) {
     let delay = 500;
 
     function connect() {
-      const ws = new WebSocket(WS_URL);
+      const ws = new WebSocket(wsUrl());
       socket.current = ws;
       ws.onopen = () => {
         delay = 500;

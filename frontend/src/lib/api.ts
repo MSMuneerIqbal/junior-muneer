@@ -1,10 +1,15 @@
 /** Talking to the backend (FastAPI). */
 
-export const BACKEND_URL = (
-  process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://127.0.0.1:8000"
-).replace(/\/$/, "");
+// "same-origin" (the server build, behind Caddy): the API is at the dashboard's own address.
+const configured = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://127.0.0.1:8000";
+export const BACKEND_URL = (configured === "same-origin" ? "" : configured).replace(/\/$/, "");
 
-export const WS_URL = BACKEND_URL.replace(/^http/, "ws") + "/ws/chat";
+/** The chat's WebSocket address (on the server: this page's own address, wss:// over HTTPS). */
+export function wsUrl(): string {
+  if (BACKEND_URL) return BACKEND_URL.replace(/^http/, "ws") + "/ws/chat";
+  const { protocol, host } = window.location;
+  return `${protocol === "https:" ? "wss" : "ws"}://${host}/ws/chat`;
+}
 
 export class ApiError extends Error {
   constructor(
