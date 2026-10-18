@@ -15,6 +15,7 @@ NEEDS = {
     "documents.readonly": "reading your Google Docs",
     "spreadsheets.readonly": "reading your Google Sheets",
     "calendar.events": "your calendar",
+    "drive.readonly": "finding files in your Drive",
 }
 
 
@@ -229,6 +230,39 @@ async def calendar_events(ctx: Ctx, days: int = 7, search: str = "") -> str:
     return await calendar_list_for(ctx.context, days, search)
 
 
+# ---- Drive -----------------------------------------------------------------------------
+
+
+async def drive_search_for(context: TurnContext, words: str) -> str:
+    from junior.google.drive import kind, search
+
+    if refusal := _not_ready("drive.readonly"):
+        return refusal
+    try:
+        files = await search(words)
+    except GoogleError as e:
+        return f"Couldn't search the Drive: {e}"
+    if not files:
+        return f"No files in their Drive with {words!r} in the name. Try other words from the name."
+    lines = "\n".join(
+        f"- {f['name']} ({kind(f.get('mimeType', ''))}, changed {f.get('modifiedTime', '')[:10]}): {f.get('webViewLink', '')}"
+        for f in files
+    )
+    return gate.fence(context, lines, "file names in their Google Drive, newest first")
+
+
+@function_tool
+async def drive_search(ctx: Ctx, words: str) -> str:
+    """Find files in the user's Google Drive by name ("my CV", "the invoice from September"). Returns each file's
+    name, type, date and link. To send one, pass its link to send_to_me as file_link.
+
+    Args:
+        words: A few words from the file's name, e.g. "cv" or "muneer iqbal cv". Fewer words find more.
+    """
+    return await drive_search_for(ctx.context, words)
+
+
 GOOGLE_TOOLS = [
     google_doc_create, google_doc_read, google_sheet_create, google_sheet_read, calendar_add_event, calendar_events,
+    drive_search,
 ]

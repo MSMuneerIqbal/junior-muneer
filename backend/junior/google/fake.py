@@ -10,6 +10,7 @@ import httpx
 
 SCOPES = (
     "openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive.file "
+    "https://www.googleapis.com/auth/drive.readonly "
     "https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/spreadsheets.readonly "
     "https://www.googleapis.com/auth/calendar.events"
 )
@@ -22,6 +23,12 @@ class FakeGoogle:
         }
         self.sheets: dict[str, dict] = {
             "sheet-income": {"title": "Income", "tabs": {"Sheet1": [["Month", "USD"], ["Sep", "900"], ["Oct", "1200"]]}}
+        }
+        self.files: dict[str, dict] = {
+            "file-cv-2026": {"name": "Muneer Iqbal CV.pdf", "mimeType": "application/pdf", "size": "52000", "data": b"%PDF-1.7 fake CV"},
+            "file-old-cv": {"name": "Muneer Iqbal CV 2024.docx", "size": "40000",
+                            "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "data": b"PK old"},
+            "folder-work": {"name": "Work", "mimeType": "application/vnd.google-apps.folder", "data": b""},
         }
         self.events: list[dict] = []
         self.revoked: list[str] = []
@@ -92,12 +99,9 @@ class FakeGoogle:
                 return httpx.Response(200, json={"values": sheet["tabs"].get(tab, [])})
             return httpx.Response(404, json={"error": {"message": "Requested entity was not found."}})
 
-        # Drive: a doc as a Word file
-        m = re.match(r"^/drive/v3/files/([^/]+)/export$", path)
-        if host == "www.googleapis.com" and m:
-            if m.group(1) not in self.docs:
-                return httpx.Response(404, json={"error": {"message": "File not found."}})
-            return httpx.Response(200, content=b"PK fake docx: " + self.docs[m.group(1)]["text"].encode())
+        # Drive: search, file details, download, and Google's own files exported
+        if host == "www.googleapis.com" and path.startswith("/drive/v3/files"):
+            return self._drive(request, path)
 
         # Calendar
         if host == "www.googleapis.com" and path == "/calendar/v3/calendars/primary/events":
@@ -113,6 +117,34 @@ class FakeGoogle:
             found.sort(key=lambda e: _when(e["start"].get("dateTime") or e["start"].get("date")))
             return httpx.Response(200, json={"items": found})
         return httpx.Response(404, json={"error": {"message": f"Fake Google doesn't know {method} {host}{path}"}})
+
+    def _all_files(self) -> dict[str, dict]:
+        files = {fid: {"name": d["title"], "mimeType": "application/vnd.google-apps.document"} for fid, d in self.docs.items()}
+        files |= {fid: {"name": s["title"], "mimeType": "application/vnd.google-apps.spreadsheet"} for fid, s in self.sheets.items()}
+        return files | {fid: {k: v for k, v in f.items() if k != "data"} for fid, f in self.files.items()}
+
+    def _drive(self, request: httpx.Request, path: str) -> httpx.Response:
+        files = self._all_files()
+        if path == "/drive/v3/files":
+            words = re.findall(r"name contains '((?:[^'\\]|\\.)*)'", request.url.params.get("q", ""))
+            found = [
+                {"id": fid, **f, "modifiedTime": "2026-10-01T09:00:00Z", "webViewLink": f"https://drive.google.com/file/d/{fid}/view"}
+                for fid, f in files.items()
+                if all(w.casefold() in f["name"].casefold() for w in words)
+            ]
+            return httpx.Response(200, json={"files": found})
+        m = re.match(r"^/drive/v3/files/([^/]+)(/export)?$", path)
+        if not m or m.group(1) not in files:
+            return httpx.Response(404, json={"error": {"message": "File not found."}})
+        fid, info = m.group(1), files[m.group(1)]
+        if m.group(2):
+            text = self.docs.get(fid, {}).get("text", "")
+            return httpx.Response(200, content=f"exported as {request.url.params.get('mimeType')}: {text}".encode())
+        if request.url.params.get("alt") == "media":
+            if info["mimeType"].startswith("application/vnd.google-apps."):
+                return httpx.Response(403, json={"error": {"message": "Only files with binary content can be downloaded."}})
+            return httpx.Response(200, content=self.files[fid]["data"])
+        return httpx.Response(200, json={"id": fid, **info})
 
 
 def _when(text: str | None) -> datetime:

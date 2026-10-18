@@ -69,8 +69,8 @@ def me(monkeypatch):
     get_settings.cache_clear()
 
 
-def send(context, where="gmail", words="email me the AI news", doc_link="", subject="AI news", body=BODY):
-    return asyncio.run(send_to_me_for(context, where, subject, body, words, doc_link))
+def send(context, where="gmail", words="email me the AI news", file_link="", subject="AI news", body=BODY, as_pdf=False):
+    return asyncio.run(send_to_me_for(context, where, subject, body, words, file_link, as_pdf))
 
 
 def test_gmail_gets_what_you_asked_for(me):
@@ -96,7 +96,7 @@ def test_a_google_doc_goes_as_a_word_file(me):
     auth._save("you@example.com", "fake-refresh", SCOPES)
     link = "https://docs.google.com/document/d/doc-plan/edit"
     answer = send(said("make my research plan a doc and send it on whatsapp and gmail"), "whatsapp", "send it on whatsapp", link)
-    assert "with the Word file 'Research plan.docx'" in answer
+    assert "with the file 'Research plan.docx'" in answer
     document = wa["sent"][1]
     assert document["type"] == "document" and document["document"] == {"id": "media-1", "filename": "Research plan.docx"}
     assert b"AI tutor for Urdu speakers" in wa["uploads"][0]
@@ -179,7 +179,8 @@ def test_without_gmail_or_whatsapp_it_says_what_to_set_up(monkeypatch):
 
 
 def test_there_is_no_way_to_send_to_someone_else():
-    assert list(inspect.signature(send_to_me_for).parameters) == ["context", "where", "subject", "message", "your_words", "doc_link"]
+    assert list(inspect.signature(send_to_me_for).parameters) == [
+        "context", "where", "subject", "message", "your_words", "file_link", "as_pdf"]
     assert list(inspect.signature(mailer.send_to_self).parameters) == ["subject", "text", "body_html", "attachments"]
 
 

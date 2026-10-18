@@ -931,8 +931,8 @@ function GoogleConnection() {
         )}
         {data.configured && !data.connected && (
           <p className="text-xs text-muted">
-            Asks only for: files the app creates, reading your Docs and Sheets, and your calendar events. Never your
-            whole Drive or your Gmail.
+            Asks only for: files the app creates, finding and reading your Drive files (read-only: never changes or
+            deletes them), and your calendar events. Never your Gmail.
           </p>
         )}
         {message && (

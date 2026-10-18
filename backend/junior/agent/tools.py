@@ -1121,19 +1121,18 @@ def _whatsapp_ready() -> bool:
     return bool(s.whatsapp_token and s.whatsapp_phone_number_id and s.whatsapp_owner_number)
 
 
-async def _doc_as_word(doc_link: str) -> tuple[tuple[str, bytes, str] | None, str]:
-    """A Google Doc as a Word file to attach, or (None, why not: then the link goes instead)."""
+async def _drive_file(file_link: str, as_pdf: bool) -> tuple[tuple[str, bytes, str] | None, str]:
+    """A Drive file to attach (Google's own files exported), or (None, why not: then the link goes instead)."""
     from junior.google import auth
     from junior.google.auth import GoogleError
-    from junior.google.docs import DOCX, export_docx
+    from junior.google.drive import fetch
 
     if not auth.is_connected():
-        return None, "Google isn't connected, so the doc's link was sent instead of the file"
+        return None, "Google isn't connected, so the link was sent instead of the file"
     try:
-        filename, data = await export_docx(doc_link)
+        return await fetch(file_link, as_pdf), ""
     except GoogleError as e:
-        return None, f"the doc couldn't be attached as a file ({e}), so its link was sent instead"
-    return (filename, data, DOCX), ""
+        return None, f"the file couldn't be attached ({e}), so its link was sent instead"
 
 
 async def send_to_me_for(
@@ -1142,7 +1141,8 @@ async def send_to_me_for(
     subject: str,
     message: str,
     your_words: str,
-    doc_link: str = "",
+    file_link: str = "",
+    as_pdf: bool = False,
 ) -> str:
     """Send the user something they asked for, by Gmail or WhatsApp: only ever to their own address or number."""
     from junior import gate
@@ -1164,10 +1164,10 @@ async def send_to_me_for(
         return refusal
 
     attachment, note = (None, "")
-    if doc_link.strip():
-        attachment, note = await _doc_as_word(doc_link)
+    if file_link.strip():
+        attachment, note = await _drive_file(file_link, as_pdf)
         if attachment is None:
-            message = f"{message.rstrip()}\n\n{doc_link.strip()}"
+            message = f"{message.rstrip()}\n\n{file_link.strip()}"
     try:
         if where == "gmail":
             from junior.mailer import send_to_self
@@ -1192,7 +1192,7 @@ async def send_to_me_for(
         gate.failed(context, action, reason)
         return f"NOT sent: {reason}. Offer the other way (Gmail or WhatsApp)."
     gate.done(context, action, {"subject": subject[:200], "characters": len(message), "file": attachment[0] if attachment else ""})
-    done = f"Sent to {sent_to}" + (f" with the Word file {attachment[0]!r}" if attachment else "") + "."
+    done = f"Sent to {sent_to}" + (f" with the file {attachment[0]!r}" if attachment else "") + "."
     return done + (f" Note: {note}." if note else "") + " Tell the user in one line."
 
 
@@ -1203,19 +1203,23 @@ async def send_to_me(
     subject: str,
     message: str,
     your_words: str,
-    doc_link: str = "",
+    file_link: str = "",
+    as_pdf: bool = False,
 ) -> str:
-    """Send the user something they asked for, on Gmail or WhatsApp: news, a draft, notes, a plan, or a Google Doc
-    (attached as a Word file). It always goes to their own Gmail or their own WhatsApp; nobody else.
+    """Send the user something they asked for, on Gmail or WhatsApp: news, a draft, notes, a plan, or a file from
+    their Google Drive (their CV, a PDF, a doc you made). It always goes to their own Gmail or their own WhatsApp;
+    nobody else.
 
     Args:
         where: "gmail" or "whatsapp", as they asked ("email me" / "mail me" = gmail; "WhatsApp me" = whatsapp).
         subject: A short, clear subject (the email's subject; a bold first line on WhatsApp).
         message: The full content, ready to read: plain text with light markdown (**bold**, - bullets) and full links.
         your_words: The user's exact words asking you to send it (copied word for word), e.g. "email me the AI news".
-        doc_link: A Google Doc's link to attach as a Word (.docx) file (a doc you created with google_doc_create).
+        file_link: A Google Drive file's link to attach (from drive_search, or a doc you made with google_doc_create).
+            PDFs, Word files and images go as they are; Google Docs go as Word, Sheets as Excel, Slides as PowerPoint.
+        as_pdf: Send a Google Doc or Slides as PDF instead (when they ask for a PDF).
     """
-    return await send_to_me_for(ctx.context, where, subject, message, your_words, doc_link)
+    return await send_to_me_for(ctx.context, where, subject, message, your_words, file_link, as_pdf)
 
 
 TOOL_FACTORIES["email"] = lambda: [send_to_me]

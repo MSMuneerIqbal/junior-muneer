@@ -5,8 +5,9 @@
     GET    /api/google/status       set up? connected? which account? anything you didn't allow?
     DELETE /api/google/connection   disconnect (also asks Google to revoke the app's access)
 
-Only these permissions are asked for: files the app itself creates (not your whole Drive), reading your
-Docs and Sheets, your calendar's events, and your email address. The app's OAuth client comes from your
+Only these permissions are asked for: files the app itself creates, finding and reading your Drive files
+(read-only: never change, move or delete), reading your Docs and Sheets, your calendar's events, and your
+email address. The app's OAuth client comes from your
 own Google Cloud project (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in backend/.env). The refresh token
 is encrypted in the database (junior/secrets.py) and never sent to the browser.
 """
@@ -40,6 +41,7 @@ SCOPES = {
     "openid": "your sign-in",
     "email": "your email address",
     "https://www.googleapis.com/auth/drive.file": "creating Docs and Sheets in your Drive",
+    "https://www.googleapis.com/auth/drive.readonly": "finding and sending you files from your Drive (read-only)",
     "https://www.googleapis.com/auth/documents.readonly": "reading your Google Docs",
     "https://www.googleapis.com/auth/spreadsheets.readonly": "reading your Google Sheets",
     "https://www.googleapis.com/auth/calendar.events": "reading and adding your calendar events",
