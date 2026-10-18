@@ -8,15 +8,14 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
 
 - **Accepted:** Phase 0 (text chat), 1 (voice + live calls), 2 (social by copy and paste: profile, playbooks,
   permissions + mode menu, approvals, Paste box, writing team, Social Media Manager, images, style memory, planned posts),
-  2b (news agents) and 5 (Freelance by paste: job scoring + scam signs, proposals with screening answers in their own
+  2b (news agents), 7 (full power: checklist, background tasks, what happened + briefing, smarter memory, your feeds) and
+  5 (Freelance by paste: job scoring + scam signs, proposals with screening answers in their own
   boxes, client replies with warning signs, Fiverr orders, the Freelance page; P5-09 skipped).
 - **Paused by Muneer:** Phase 3 (social APIs; P3-01 sender base and P3-02 Facebook code are ready), Phase 4 (Gmail; P5-01
   and P5-03 wait for it), Phase 6 after P6-01 (GitHub connects in the app by GitHub's device login, `junior/github/`;
   the in-app button needs his OAuth App client ID in `GITHUB_CLIENT_ID`).
-- **Now: Phase 7 (full power):** P7-01 checklist (`update_plan`), P7-02 background tasks (`junior/background.py`),
-  P7-03 "what happened" + morning briefing (`junior/reports.py`), P7-04 smarter memory (`junior/memory_tidy.py`) and
-  P7-05 your feeds (`junior/feeds.py`) built; next P7-06 (Muneer's acceptance test, then push).
-- Last pushed to GitHub (`main`) on 2026-10-16 (Phase 5 accepted).
+- **Now: Phase 8 (WhatsApp + VPS, 24/7)**, starting with P8-01 (Docker).
+- Last pushed to GitHub (`main`) on 2026-10-18 (Phase 7 accepted).
 
 ## Safety rules (never break)
 
