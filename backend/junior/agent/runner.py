@@ -9,6 +9,7 @@ Tools may add their own events through TurnContext.pending_events.
 
 import asyncio
 import json
+import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any
@@ -24,6 +25,7 @@ from agents import (
 from agents.items import ModelResponse, TResponseInputItem
 
 from junior.agent.context import ModelUsage, TurnContext
+from junior.agent.style import no_emojis
 from junior.audit import audit
 from junior.costs import BudgetExceeded
 from junior.models import ModelRouter
@@ -206,8 +208,10 @@ async def stream_turn(
         if isinstance(event, RawResponsesStreamEvent):
             data = event.data
             if data.type == "response.output_text.delta" and data.delta:
-                text_parts.append(data.delta)
-                yield {"type": "delta", "text": data.delta}
+                piece = no_emojis(data.delta)  # he never uses emojis (agent/style.py)
+                text_parts.append(piece)
+                if piece:
+                    yield {"type": "delta", "text": piece}
             elif data.type in ("response.output_item.added", "response.output_item.done"):
                 # Web search runs inside the model response: show it while it runs.
                 step = _web_search_step(data.item)
@@ -230,7 +234,8 @@ async def stream_turn(
             yield e
 
     final = result.final_output
-    text = final if isinstance(final, str) and final else "".join(text_parts)
+    text = no_emojis(final) if isinstance(final, str) and final else "".join(text_parts)
+    text = re.sub(r"[ \t]{2,}", " ", text).replace(" \n", "\n")
     yield {
         "type": "final",
         "result": TurnResult(text=text, usage=context.usage, steps=list(steps.values())),

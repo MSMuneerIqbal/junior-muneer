@@ -6,6 +6,7 @@ from agents import Agent, Model, OpenAIChatCompletionsModel, OpenAIResponsesMode
 from openai import AsyncOpenAI
 
 from junior.agent.context import TurnContext
+from junior.agent.style import mode_note
 from junior.agent.tools import build_tools
 from junior.ai_client import ai_client
 from junior.config import get_settings
@@ -20,7 +21,7 @@ ModelProvider = Callable[[str], Model]
 
 LANGUAGE_RULES = {
     "match": "match me: reply in the language and script of my latest message",
-    "english": "always reply in English",
+    "english": "reply in easy, everyday English (use Urdu only when I ask for it in that message)",
     "urdu": "always reply in Urdu, in the script I use (Urdu script or Roman Urdu)",
 }
 
@@ -88,6 +89,7 @@ def render_instructions(spec: AgentSpec, s: dict, query: str = "") -> str:
         memories=memories_for_prompt(query, s["timezone"]) if "memory" in spec.tools else "",
         profile=profile_for_chat() if "{{profile}}" in spec.instructions else "",
         status=_status(s),
+        mode=mode_note(query),
     )
 
 
