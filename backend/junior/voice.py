@@ -193,11 +193,16 @@ async def transcribe(
     seconds: float | None = Form(default=None),
 ) -> dict:
     """Your recording -> text. The recording is kept so you can play it back."""
-    content_type = (audio.content_type or "").split(";")[0].strip().lower()
+    return await transcribe_bytes(request.app.state.voice, await audio.read(), audio.content_type or "", seconds)
+
+
+async def transcribe_bytes(voice_factory, data: bytes, content_type: str, seconds: float | None = None) -> dict:
+    """A recording (from the dashboard or a WhatsApp voice note) -> saved file + text.
+    Raises HTTPException with a plain message when it can't."""
+    content_type = content_type.split(";")[0].strip().lower()
     ext = AUDIO_TYPES.get(content_type)
     if ext is None:
         raise HTTPException(415, f"Unsupported audio type {content_type!r}")
-    data = await audio.read()
     if not data:
         raise HTTPException(400, "The recording is empty.")
     if len(data) > MAX_UPLOAD_BYTES:
@@ -214,7 +219,7 @@ async def transcribe(
     model_router = get_router()
     model = model_router.audio_model("transcribe")
     try:
-        voice: VoiceClient = request.app.state.voice()
+        voice: VoiceClient = voice_factory()
         prompt = TRANSCRIBE_PROMPT.format(name=get_setting("user_name"))
         language = "ur" if get_setting("language") == "urdu" else None
         result = await voice.transcribe(path, model, prompt, language)

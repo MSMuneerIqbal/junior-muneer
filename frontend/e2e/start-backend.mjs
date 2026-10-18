@@ -23,10 +23,15 @@ const child = spawn(python, ["-m", "uvicorn", "junior.main:app", "--port", "8100
     ARTIFICIAL_ANALYSIS_API_KEY: "",
     META_APP_ID: "",
     GITHUB_TOKEN: "",
+    // A pretend WhatsApp for the e2e test (FAKE_AI + WHATSAPP_TOKEN=fake): nothing leaves this PC.
+    WHATSAPP_TOKEN: "fake",
+    WHATSAPP_PHONE_NUMBER_ID: "100200300",
+    WHATSAPP_VERIFY_TOKEN: "e2e-verify",
+    WHATSAPP_OWNER_NUMBER: "923001112233",
     GITHUB_CLIENT_ID: "fake", // a pretend GitHub for the Connect GitHub test
     GITHUB_AUTH: "",
     GITHUB_USER: "",
-    META_APP_SECRET: "",
+    META_APP_SECRET: "e2e-secret", // signs the pretend WhatsApp messages in the e2e test
     META_PAGE_ID: "",
     META_PAGE_TOKEN: "",
     META_IG_USER_ID: "",

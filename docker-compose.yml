@@ -13,6 +13,7 @@ services:
     environment:
       DATA_DIR: /app/data
       FRONTEND_ORIGIN: https://${DOMAIN:?set DOMAIN in deploy.env}
+      PUBLIC_HOSTS: ${DOMAIN}
     volumes:
       - ./data:/app/data
     restart: unless-stopped

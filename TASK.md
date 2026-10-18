@@ -383,5 +383,25 @@ Read-only: these agents never post or send anything. News pages are outside cont
        in chat). Then I install Docker, copy the app, set the login and start it.
 - [ ] **P8-03** Move data and settings; reconnect the API logins (Meta, LinkedIn, Gmail) on the server
 - [ ] **P8-04** WhatsApp Business API (separate phone number): chat, voice notes and approvals, saved in the same chat history
+  - **Built (before the server, by your choice):** chat and voice notes on WhatsApp, answered in a WhatsApp chat in the same
+    history (🟢 in the chat list); drafts come with buttons (Posted ✓ or Approve, and Reject); background results are sent
+    there too. Only your own number is answered, only messages signed by Meta are accepted, and from outside addresses only
+    the webhook answers (the rest of the app stays private even with a tunnel). `connect.bat whatsapp`, Settings → Connections.
+  - **Your steps to try it on your PC (about 15 minutes, free; Meta gives a free test number):**
+    1. developers.facebook.com → My Apps → your **Junior Muneer** app (or Create app → type **Business**) → **Add product:
+       WhatsApp** → Set up.
+    2. **WhatsApp → API Setup:** note the **Phone number ID** of the test number. Under **To**, add **your own WhatsApp
+       number** and enter the code WhatsApp sends you.
+    3. **A token that lasts:** business.facebook.com → Settings → Users → **System users** → Add (Admin) → **Generate
+       token** for the Junior Muneer app with `whatsapp_business_messaging` and `whatsapp_business_management`, expiry
+       **Never**. (The 24-hour token on the API Setup page also works for a first try.)
+    4. In the project folder: `connect.bat whatsapp`, paste the token, the phone number ID and your number. It checks them
+       with Meta and prints a **verify token**. Then restart (stop.bat, start.bat).
+    5. **A tunnel** (a public https address for your PC): `winget install --id Cloudflare.cloudflared`, then
+       `cloudflared tunnel --url http://localhost:8000`. It prints an address like `https://xxxx.trycloudflare.com`.
+    6. **WhatsApp → Configuration → Webhook → Edit:** Callback URL `https://xxxx.trycloudflare.com/api/whatsapp/webhook`,
+       the verify token from step 4 → **Verify and save**. Under **Webhook fields**, subscribe to **messages**.
+    7. From your phone, send "Salam" to the test number on WhatsApp. Junior answers there, and the chat shows on the
+       dashboard. (A quick tunnel's address changes each time you start it: repeat step 6 then. On the server it's fixed.)
 - [ ] **P8-05** Monitoring and automatic restarts
 - [ ] **P8-06** Your one-week test + push

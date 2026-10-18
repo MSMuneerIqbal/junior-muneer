@@ -51,13 +51,25 @@ def _github() -> dict:
             "connect": "device" if get_settings().github_client_id else "", "source": where, "account": stored_account()}
 
 
+def _whatsapp() -> dict:
+    from junior.whatsapp import configured
+
+    on = configured()
+    return {"key": "whatsapp", "label": "WhatsApp (chat with Junior)", "action": "", "how": "connect.bat whatsapp", "ready": True,
+            "connected": on, "sender": "WhatsApp Cloud API" if on else ""}
+
+
 @router.get("/api/connections")
 def connections(request: Request) -> list[dict]:
-    return [*request.app.state.senders.platforms(), _github()]
+    return [*request.app.state.senders.platforms(), _github(), _whatsapp()]
 
 
 @router.post("/api/connections/{key}/check")
 async def check_connection(key: str, request: Request) -> dict:
+    if key == "whatsapp":
+        from junior.whatsapp import client, configured
+
+        return {"key": key, "result": await client().check() if configured() else "Not connected. Run connect.bat whatsapp."}
     if key == "github":
         import asyncio
 

@@ -379,6 +379,7 @@ class ChatService:
         self, task_id: int, conversation_id: int, title: str, request: str, paste: dict | None
     ) -> None:
         from junior.background import finish_task
+        from junior.whatsapp import post_to_whatsapp
 
         settings = all_settings()
         context = TurnContext(conversation_id=conversation_id, settings=settings, paste=paste, user_text=request)
@@ -409,6 +410,7 @@ class ChatService:
             attach_to_message(context.approval_ids, message_id)
             self._audit_run(conversation_id, context, "ok", background_task=task_id)
             finish_task(task_id, "done", message_id, cost_usd=result.cost_usd)
+            await post_to_whatsapp(conversation_id, result.text)  # started from WhatsApp: the result goes there too
         except Exception as e:  # posted to the chat; details in the log
             if isinstance(e, APIConnectionError):
                 why = no_answer_message(e)
@@ -422,6 +424,7 @@ class ChatService:
             failed = TurnResult(text=f"**I couldn't finish “{title}” in the background.** {why}", usage=[])
             message_id = self._finish(conversation_id, failed)
             finish_task(task_id, "failed", message_id, error=why, cost_usd=sum(u.cost_usd for u in context.usage))
+            await post_to_whatsapp(conversation_id, failed.text)
 
 
 # Running background jobs (kept so they aren't garbage-collected mid-way).

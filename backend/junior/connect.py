@@ -3,7 +3,8 @@
 Tokens never go through the browser: you paste them here, they're exchanged with the platform and
 saved in backend/.env (which is never committed). Restart the backend afterwards.
 
-    github  GitHub: a fine-grained personal access token (see TASK.md, P6-01)
+    github    GitHub: a fine-grained personal access token (see TASK.md, P6-01)
+    whatsapp  WhatsApp: chat with Junior Muneer from your phone (see TASK.md, P8-04)
     meta    Facebook Page (and, later, Instagram): app ID, app secret and a short-lived user token
             from Meta's Graph API Explorer -> a long-lived Page token
     check   tests the saved connections
@@ -134,6 +135,36 @@ def connect_github() -> None:
     print("Restart the backend (stop.bat, then start.bat), then check it in Settings → Connections.")
 
 
+def connect_whatsapp() -> None:
+    import secrets
+
+    from junior.whatsapp import WhatsApp, digits
+
+    s = get_settings()
+    print("Connect WhatsApp (see TASK.md, P8-04, for where to find these in your Meta app).\n")
+    token = getpass.getpass("WhatsApp access token (hidden): ").strip()
+    phone_id = input("Phone number ID (digits, from WhatsApp > API Setup): ").strip()
+    owner = digits(input("Your own WhatsApp number, with country code (e.g. 923001234567): "))
+    secret = s.meta_app_secret or getpass.getpass("Meta app secret (hidden; App settings > Basic): ").strip()
+    if not (token and phone_id.isdigit() and 10 <= len(owner) <= 15 and secret):
+        raise SystemExit("Something's missing or not right (the phone number ID and your number are digits). Nothing was saved.")
+    result = asyncio.run(WhatsApp(token, phone_id, s.meta_graph_version).check())
+    if not result.startswith("Connected"):
+        raise SystemExit(f"{result} Nothing was saved.")
+    verify = s.whatsapp_verify_token or secrets.token_urlsafe(24)
+    set_env(
+        {"WHATSAPP_TOKEN": token, "WHATSAPP_PHONE_NUMBER_ID": phone_id, "WHATSAPP_OWNER_NUMBER": owner,
+         "WHATSAPP_VERIFY_TOKEN": verify, "META_APP_SECRET": secret},
+        heading="WhatsApp (written by connect.bat whatsapp)",
+    )
+    print(f"\n{result} Saved in backend/.env (token {masked(token)}).")
+    print("\nNow in your Meta app: WhatsApp > Configuration > Webhook > Edit:")
+    print("  Callback URL:  https://<your address>/api/whatsapp/webhook   (your tunnel's address now, the server's later)")
+    print(f"  Verify token:  {verify}")
+    print("Then press Verify and save, and under Webhook fields subscribe to 'messages'.")
+    print("Restart the backend (stop.bat, then start.bat) first, so it can answer Meta's check.")
+
+
 def check() -> None:
     s = get_settings()
     from junior.github.connection import saved_token
@@ -152,6 +183,8 @@ def main(argv: list[str]) -> None:
         connect_meta()
     elif command == "github":
         connect_github()
+    elif command == "whatsapp":
+        connect_whatsapp()
     elif command == "check":
         check()
     else:

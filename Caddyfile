@@ -2,12 +2,18 @@
 {$DOMAIN} {
 	encode gzip
 
-	# Everything needs your login; the browser remembers it for the API and the chat too.
-	basic_auth {
-		{$LOGIN_USER} {$LOGIN_PASSWORD_HASH}
+	# Meta delivers WhatsApp messages here and can't log in: the backend checks Meta's signature instead.
+	handle /api/whatsapp/webhook {
+		reverse_proxy backend:8000
 	}
 
-	@backend path /api/* /ws/* /health
-	reverse_proxy @backend backend:8000
-	reverse_proxy frontend:3000
+	handle {
+		# Everything else needs your login; the browser remembers it for the API and the chat too.
+		basic_auth {
+			{$LOGIN_USER} {$LOGIN_PASSWORD_HASH}
+		}
+		@backend path /api/* /ws/* /health
+		reverse_proxy @backend backend:8000
+		reverse_proxy frontend:3000
+	}
 }

@@ -15,7 +15,8 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
   and P5-03 wait for it), Phase 6 after P6-01 (GitHub connects in the app by GitHub's device login, `junior/github/`;
   the in-app button needs his OAuth App client ID in `GITHUB_CLIENT_ID`).
 - **Now: Phase 8 (WhatsApp + VPS, 24/7)**: P8-01 Docker files done (`docker-compose.yml`, Caddy with HTTPS + login);
-  P8-02 waits for his VPS and domain.
+  P8-02 waits for his VPS and domain. P8-04 WhatsApp code done (`junior/whatsapp.py`, `junior/hosts.py`); waits for his
+  Meta WhatsApp setup + a cloudflared tunnel to try it on his PC (steps in TASK.md).
 - Last pushed to GitHub (`main`) on 2026-10-18 (Phase 7 accepted).
 
 ## Safety rules (never break)

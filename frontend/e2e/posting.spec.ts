@@ -46,7 +46,11 @@ test("Settings shows which platforms are connected and can check them", async ({
   await page.goto("/settings#connections");
   const section = page.getByRole("region", { name: "Connections" }).or(page.locator("#connections"));
   await expect(section.getByText("Connected (fake, for trying it out)")).toBeVisible();
-  await section.getByRole("button", { name: "Check" }).click();
-  await expect(section.getByRole("status")).toHaveText("Connected.");
+  const checks = section.getByRole("button", { name: "Check" });
+  await checks.first().click(); // the Facebook Page
+  await expect(section.getByRole("status").first()).toHaveText("Connected.");
   await expect(section.getByText("Coming soon").first()).toBeVisible();
+  // WhatsApp (a pretend one in the test backend)
+  await checks.nth(1).click();
+  await expect(section.getByText("Connected: Junior Muneer (fake) (+1 555 0100).")).toBeVisible();
 });

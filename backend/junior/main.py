@@ -48,6 +48,8 @@ from junior.reports import morning_briefing
 from junior.memory_tidy import weekly_tidy
 from junior.feeds import feeds_if_due
 from junior.feeds import router as feeds_router
+from junior.whatsapp import router as whatsapp_router
+from junior.hosts import LocalOnly
 from junior.reports import router as reports_router
 from junior.senders.registry import SenderRegistry, set_current
 from junior.settings_api import router as settings_router
@@ -128,6 +130,7 @@ def create_app(
                 await scheduler
 
     app = FastAPI(title="Junior Muneer", version=__version__, lifespan=lifespan)
+    app.add_middleware(LocalOnly)  # only the WhatsApp webhook answers to outside addresses
     app.add_middleware(
         CORSMiddleware,
         # The dashboard may be opened as localhost or 127.0.0.1.
@@ -164,6 +167,7 @@ def create_app(
     app.include_router(tasks_router)
     app.include_router(reports_router)
     app.include_router(feeds_router)
+    app.include_router(whatsapp_router)
     app.include_router(images_router)
     return app
 

@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     meta_page_token: str = ""
     meta_ig_user_id: str = ""
     meta_graph_version: str = "v26.0"
+    # Phase 8: WhatsApp (written by connect.bat whatsapp; never committed). Uses META_APP_SECRET to check Meta's signature.
+    whatsapp_token: str = ""
+    whatsapp_phone_number_id: str = ""
+    whatsapp_verify_token: str = ""
+    whatsapp_owner_number: str = ""  # only this number is answered (international format)
     # Phase 6: the app's GitHub OAuth App (public client ID, device flow on): people connect their
     # own GitHub in the app. Not a secret.
     github_client_id: str = ""
@@ -39,6 +44,8 @@ class Settings(BaseSettings):
     data_dir: Path = Path("data")
     log_level: str = "INFO"
     backend_host: str = "127.0.0.1"
+    # Addresses besides your PC that may use the whole backend: your server's domain (comma-separated).
+    public_hosts: str = ""
     backend_port: int = 8000
     frontend_origin: str = "http://localhost:3000"
     # The background scheduler (daily backups). Tests switch it off.
