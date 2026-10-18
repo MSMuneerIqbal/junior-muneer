@@ -59,6 +59,8 @@ class FakeGoogle:
                     for r in body.get("requests", []):
                         if "insertText" in r:
                             doc["text"] += r["insertText"]["text"]
+                        else:
+                            doc.setdefault("styles", []).append(r)
                     return httpx.Response(200, json={"documentId": m.group(1)})
                 content = [{"paragraph": {"elements": [{"textRun": {"content": line + "\n"}}]}} for line in doc["text"].split("\n")]
                 return httpx.Response(200, json={"documentId": m.group(1), "title": doc["title"], "body": {"content": content}})
@@ -69,18 +71,22 @@ class FakeGoogle:
             if method == "POST" and path == "/v4/spreadsheets":
                 sheet_id = self._id("sheet")
                 tab = body.get("sheets", [{}])[0].get("properties", {}).get("title", "Sheet1")
-                self.sheets[sheet_id] = {"title": body["properties"]["title"], "tabs": {tab: []}}
+                self.sheets[sheet_id] = {"title": body["properties"]["title"], "tabs": {tab: []}, "value_input": None}
                 return httpx.Response(200, json={"spreadsheetId": sheet_id,
                                                  "spreadsheetUrl": f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit"})
-            m = re.match(r"^/v4/spreadsheets/([^/]+)(?:/values/(.+))?$", path)
+            m = re.match(r"^/v4/spreadsheets/([^/:]+)(?:(:batchUpdate)|/values/(.+))?$", path)
             if m and m.group(1) in self.sheets:
                 sheet = self.sheets[m.group(1)]
-                if m.group(2) is None:
+                if m.group(2):
+                    sheet.setdefault("formatting", []).extend(body.get("requests", []))
+                    return httpx.Response(200, json={"spreadsheetId": m.group(1)})
+                if m.group(3) is None:
                     return httpx.Response(200, json={"properties": {"title": sheet["title"]},
                                                      "sheets": [{"properties": {"title": t}} for t in sheet["tabs"]]})
-                tab = m.group(2).split("!")[0].strip("'")
+                tab = m.group(3).split("!")[0].strip("'")
                 if method == "PUT":
                     sheet["tabs"][tab] = body["values"]
+                    sheet["value_input"] = request.url.params.get("valueInputOption")
                     return httpx.Response(200, json={"updatedRows": len(body["values"])})
                 return httpx.Response(200, json={"values": sheet["tabs"].get(tab, [])})
             return httpx.Response(404, json={"error": {"message": "Requested entity was not found."}})

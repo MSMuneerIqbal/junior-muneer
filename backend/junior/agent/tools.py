@@ -1149,3 +1149,12 @@ async def email_me(ctx: Ctx, subject: str, body: str, your_words: str) -> str:
 
 
 TOOL_FACTORIES["email"] = lambda: [email_me]
+
+
+def _google_tools() -> list[Tool]:
+    from junior.google.tools import GOOGLE_TOOLS
+
+    return list(GOOGLE_TOOLS)
+
+
+TOOL_FACTORIES["google"] = _google_tools
