@@ -17,8 +17,13 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
 - **Now: Phase 8 (WhatsApp + VPS, 24/7)**: P8-01 Docker files done (`docker-compose.yml`, Caddy with HTTPS + login);
   P8-02 waits for his VPS and domain. P8-04 WhatsApp works live on his PC (`junior/whatsapp.py`, `junior/hosts.py`): text/voice replies,
   session settings, ngrok fixed address via `tunnel.bat` (Meta webhook points to his ngrok-free.dev domain).
-  Test token lasts 24h: a permanent System User token is still to do.
-- Last pushed to GitHub (`main`) on 2026-10-18 (Phase 7 accepted).
+  Permanent System User token in place; `start.bat` also starts the tunnel.
+- **Extras built 2026-10-18 (pushed):** settings from chat (`settings_chat.py`); email to yourself through Gmail SMTP
+  + App Password (`mailer.py`), daily top 5 AI news by email (`news/mail.py`); **the gate** (`gate.py`: every tool
+  action checked, logged, limited); **Google Docs/Sheets/Calendar** through Google's own APIs (`junior/google/`,
+  Connect Google in Settings; Workspace MCP needs a paid Workspace account), `send_to_me` (Gmail or WhatsApp, a Doc
+  as a Word file). New outside apps plug into the gate.
+- Last pushed to GitHub (`main`) on 2026-10-18 (Google Docs, Sheets, Calendar).
 
 ## Safety rules (never break)
 
