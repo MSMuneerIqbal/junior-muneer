@@ -181,6 +181,8 @@ export type Settings = {
   news_digest_time: string;
   briefing_enabled: boolean;
   briefing_time: string;
+  whatsapp_session_hours: number;
+  whatsapp_carry_summary: boolean;
 };
 
 export type ChatSummary = {

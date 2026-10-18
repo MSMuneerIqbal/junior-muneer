@@ -35,7 +35,7 @@ router = APIRouter()
 GRAPH = "https://graph.facebook.com"
 MAX_CHARS = 3900  # WhatsApp allows 4096 per message
 DRAFT_PREVIEW = 900  # a draft's text in its approval message (buttons can't carry more than 1024)
-SAME_CHAT_HOURS = 12  # a new WhatsApp chat after this long quiet
+CARRY_MESSAGES = 8  # a short previous chat is carried over as its last few messages
 
 # Tests set this; FAKE_AI with WHATSAPP_TOKEN=fake uses a pretend WhatsApp (sent messages kept in FAKE_SENT).
 TRANSPORT: httpx.AsyncBaseTransport | None = None
@@ -199,8 +199,31 @@ def client() -> WhatsApp:
 # ---- your WhatsApp chat ----------------------------------------------------------------
 
 
+def carried_summary(previous: Conversation) -> str:
+    """What the new chat should know of the previous one: its running summary (long chats have one),
+    or its last few messages (short chats). No AI cost: both are already there."""
+    from junior.db import Message
+
+    if previous.summary:
+        return f"Earlier WhatsApp chat ({previous.title}), summarized:\n{previous.summary}"
+    with session_scope() as s:
+        recent = s.scalars(
+            select(Message)
+            .where(Message.conversation_id == previous.id, Message.source.in_(("user", "assistant")))
+            .order_by(Message.id.desc())
+            .limit(CARRY_MESSAGES)
+        ).all()
+        lines = [f"{'You' if m.role == 'user' else 'Junior Muneer'}: {' '.join(m.content.split())[:300]}" for m in reversed(recent)]
+    return f"Earlier WhatsApp chat ({previous.title}), last messages:\n" + "\n".join(lines) if lines else ""
+
+
 def whatsapp_chat(now: datetime | None = None) -> int:
-    """The current WhatsApp chat (busy in the last 12 hours), or a new one."""
+    """The current WhatsApp chat, or a new one after your quiet time (Settings: 6, 12 or 24 hours, or every
+    message). A new chat can start with a summary of the previous one, so the thread isn't lost."""
+    from junior.settings_store import all_settings
+
+    settings = all_settings()
+    hours = int(settings.get("whatsapp_session_hours", 12))
     now = now or utcnow()
     with session_scope() as s:
         convo = s.scalars(
@@ -209,13 +232,16 @@ def whatsapp_chat(now: datetime | None = None) -> int:
         updated = None
         if convo is not None:
             updated = convo.updated_at if convo.updated_at.tzinfo else convo.updated_at.replace(tzinfo=UTC)
-        if convo is None or now - updated > timedelta(hours=SAME_CHAT_HOURS):
-            from junior.settings_store import get_setting
-
-            local = now.astimezone(zone(get_setting("timezone")))
-            convo = Conversation(title=f"WhatsApp · {local.strftime('%a %d %b')}", kind="whatsapp")
-            s.add(convo)
-            s.flush()
+        if convo is not None and hours > 0 and now - updated <= timedelta(hours=hours):
+            return convo.id
+        previous = convo
+        local = now.astimezone(zone(settings["timezone"]))
+        title = f"WhatsApp · {local.strftime('%a %d %b')}" + (f", {local.strftime('%H:%M')}" if hours == 0 else "")
+        convo = Conversation(title=title, kind="whatsapp")
+        if previous is not None and settings.get("whatsapp_carry_summary", True):
+            convo.summary = carried_summary(previous) or None
+        s.add(convo)
+        s.flush()
         return convo.id
 
 

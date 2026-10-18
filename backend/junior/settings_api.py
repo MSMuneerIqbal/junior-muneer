@@ -39,6 +39,8 @@ class SettingsUpdate(BaseModel):
     news_digest_time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
     briefing_enabled: bool | None = None
     memory_tidy_enabled: bool | None = None
+    whatsapp_session_hours: Literal[0, 6, 12, 24] | None = None
+    whatsapp_carry_summary: bool | None = None
     briefing_time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
 
     @field_validator("main_model", "helper_model")

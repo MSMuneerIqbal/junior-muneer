@@ -262,3 +262,46 @@ def test_a_typed_request_for_voice_gets_voice(wa):
         sent = wait_for(wa, 2)
         assert "upload" in sent[0] and sent[1]["type"] == "audio"
         assert not any(m.get("type") == "text" for m in wa)
+
+
+def test_session_length_and_the_carried_summary(wa):
+    from datetime import UTC, datetime, timedelta
+
+    from junior.db import Message
+    from junior.settings_store import set_setting
+    from junior.whatsapp import whatsapp_chat
+
+    with app(ScriptedModel([])):
+        now = datetime.now(UTC)
+        first = whatsapp_chat(now)
+        with session_scope() as s:
+            s.add_all([Message(conversation_id=first, role="user", source="user", content="My client is Sam from Dubai"),
+                       Message(conversation_id=first, role="assistant", source="assistant", content="Noted, Sam from Dubai.")])
+            s.get(Conversation, first).updated_at = now
+        assert whatsapp_chat(now + timedelta(hours=11)) == first  # 12 hours (the default): same chat
+
+        set_setting("whatsapp_session_hours", 6)
+        second = whatsapp_chat(now + timedelta(hours=7))  # quiet for 7 > 6 hours: a new chat...
+        assert second != first
+        with session_scope() as s:
+            carried = s.get(Conversation, second).summary
+        assert "Earlier WhatsApp chat" in carried and "You: My client is Sam from Dubai" in carried  # ...with the thread
+
+        set_setting("whatsapp_carry_summary", False)
+        set_setting("whatsapp_session_hours", 0)  # every message: always a new chat
+        third = whatsapp_chat(now + timedelta(hours=7, minutes=1))
+        with session_scope() as s:
+            assert third != second and not s.get(Conversation, third).summary  # carrying switched off
+
+        set_setting("whatsapp_carry_summary", True)
+        with session_scope() as s:
+            s.get(Conversation, third).summary = "Talked about the clinic proposal."  # a long chat has its own summary
+        fourth = whatsapp_chat(now + timedelta(hours=8))
+        with session_scope() as s:
+            assert "summarized:\nTalked about the clinic proposal." in s.get(Conversation, fourth).summary
+
+
+def test_session_settings_are_checked():
+    with app(ScriptedModel([])) as c:
+        assert c.patch("/api/settings", json={"whatsapp_session_hours": 24}).json()["whatsapp_session_hours"] == 24
+        assert c.patch("/api/settings", json={"whatsapp_session_hours": 5}).status_code == 422

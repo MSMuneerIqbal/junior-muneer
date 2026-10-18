@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     whatsapp_phone_number_id: str = ""
     whatsapp_verify_token: str = ""
     whatsapp_owner_number: str = ""  # only this number is answered (international format)
+    # A fixed public address for WhatsApp on your PC (tunnel.bat): your free ngrok account.
+    ngrok_authtoken: str = ""
+    ngrok_domain: str = ""
     # Phase 6: the app's GitHub OAuth App (public client ID, device flow on): people connect their
     # own GitHub in the app. Not a secret.
     github_client_id: str = ""

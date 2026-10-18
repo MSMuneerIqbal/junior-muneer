@@ -49,6 +49,8 @@ def test_defaults(client):
         "briefing_enabled": True,
         "briefing_time": "08:00",
         "memory_tidy_enabled": True,
+        "whatsapp_session_hours": 12,
+        "whatsapp_carry_summary": True,
     }
 
 

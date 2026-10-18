@@ -43,6 +43,10 @@ DEFAULTS: dict[str, Any] = {
     # Phase 7: the weekly memory tidy-up (duplicates and outdated memories are archived, restorable).
     "memory_tidy_enabled": True,
     "memory_tidied_at": "",
+    # Phase 8: WhatsApp sessions. A new WhatsApp chat starts after this many quiet hours (0: every message),
+    # and the new chat can start with a summary of the previous one.
+    "whatsapp_session_hours": 12,
+    "whatsapp_carry_summary": True,
     # Phase 7: when your own feeds were last read (every 3 hours).
     "feeds_read_at": "",
     # Permission rules (/api/permissions): ask_all · rules, and your rule per action type.

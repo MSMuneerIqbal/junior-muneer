@@ -43,6 +43,7 @@ const SECTIONS = [
   { id: "voice", title: "Voice" },
   { id: "calls", title: "Live calls" },
   { id: "connections", title: "Connections" },
+  { id: "whatsapp", title: "WhatsApp" },
   { id: "posting", title: "Posting" },
   { id: "news", title: "News" },
   { id: "permissions", title: "Permissions" },
@@ -585,6 +586,35 @@ function SettingsForm({ initial }: { initial: Settings }) {
             onChange={(e) => set("api_posts_per_day", Number(e.target.value))}
             className={`${input} w-28`}
             aria-label="Posts per platform per day"
+          />
+        </Row>
+      </Section>
+
+      <Section id="whatsapp" title="WhatsApp" description="How your WhatsApp messages are grouped into chats (each shows with 🟢 in your chat list).">
+        <Row
+          label="Start a new chat"
+          hint="Within one chat Junior Muneer remembers what you said. Your saved memories work in every chat."
+        >
+          <select
+            value={String(form.whatsapp_session_hours)}
+            onChange={(e) => set("whatsapp_session_hours", Number(e.target.value))}
+            className={`${input} max-w-sm`}
+            aria-label="Start a new WhatsApp chat"
+          >
+            <option value="6">After 6 quiet hours</option>
+            <option value="12">After 12 quiet hours</option>
+            <option value="24">After 24 quiet hours</option>
+            <option value="0">With every message</option>
+          </select>
+        </Row>
+        <Row
+          label="Carry the thread over"
+          hint="A new chat starts with a summary of the previous one (its last messages, or its summary if it was long). No extra cost."
+        >
+          <Toggle
+            checked={form.whatsapp_carry_summary}
+            onChange={(v) => set("whatsapp_carry_summary", v)}
+            label="Start a new WhatsApp chat with a summary of the previous one"
           />
         </Row>
       </Section>
