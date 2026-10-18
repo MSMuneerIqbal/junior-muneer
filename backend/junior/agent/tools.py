@@ -1114,41 +1114,111 @@ TOOL_FACTORIES["settings"] = lambda: [my_settings, change_setting]
 
 # ---- Email to yourself ---------------------------------------------------------------
 
-async def email_me_for(context: TurnContext, subject: str, body: str, your_words: str) -> str:
-    """Email the user (their own Gmail only) something they asked for: news, a draft, notes, a plan."""
-    from junior import gate
-    from junior.mailer import MailError, configured, send_to_self
+def _whatsapp_ready() -> bool:
+    from junior.config import get_settings
 
-    if not configured():
-        return (
-            "NOT sent: Gmail isn't set up yet. Tell the user to add GMAIL_ADDRESS and GMAIL_APP_PASSWORD "
-            "(a Google App Password) to backend/.env and restart."
-        )
-    if refusal := gate.check(context, "gmail.to_self", your_words=your_words):
-        return refusal
+    s = get_settings()
+    return bool(s.whatsapp_token and s.whatsapp_phone_number_id and s.whatsapp_owner_number)
+
+
+async def _doc_as_word(doc_link: str) -> tuple[tuple[str, bytes, str] | None, str]:
+    """A Google Doc as a Word file to attach, or (None, why not: then the link goes instead)."""
+    from junior.google import auth
+    from junior.google.auth import GoogleError
+    from junior.google.docs import DOCX, export_docx
+
+    if not auth.is_connected():
+        return None, "Google isn't connected, so the doc's link was sent instead of the file"
     try:
-        address = await send_to_self(subject, body)
-    except MailError as e:
-        gate.failed(context, "gmail.to_self", str(e))
-        return f"NOT sent: {e}"
-    gate.done(context, "gmail.to_self", {"subject": subject[:200], "characters": len(body)})
-    return f"Sent to {address} with the subject {subject!r}. Tell the user in one line."
+        filename, data = await export_docx(doc_link)
+    except GoogleError as e:
+        return None, f"the doc couldn't be attached as a file ({e}), so its link was sent instead"
+    return (filename, data, DOCX), ""
+
+
+async def send_to_me_for(
+    context: TurnContext,
+    where: str,
+    subject: str,
+    message: str,
+    your_words: str,
+    doc_link: str = "",
+) -> str:
+    """Send the user something they asked for, by Gmail or WhatsApp: only ever to their own address or number."""
+    from junior import gate
+
+    if where not in ("gmail", "whatsapp"):
+        return "NOT sent: where must be gmail or whatsapp."
+    action = "gmail.to_self" if where == "gmail" else "whatsapp.to_self"
+    if where == "gmail":
+        from junior.mailer import configured
+
+        if not configured():
+            return (
+                "NOT sent: Gmail isn't set up yet. Tell the user to add GMAIL_ADDRESS and GMAIL_APP_PASSWORD "
+                "(a Google App Password) to backend/.env and restart."
+            )
+    elif not _whatsapp_ready():
+        return "NOT sent: WhatsApp isn't connected (Settings → Connections)."
+    if refusal := gate.check(context, action, your_words=your_words):
+        return refusal
+
+    attachment, note = (None, "")
+    if doc_link.strip():
+        attachment, note = await _doc_as_word(doc_link)
+        if attachment is None:
+            message = f"{message.rstrip()}\n\n{doc_link.strip()}"
+    try:
+        if where == "gmail":
+            from junior.mailer import send_to_self
+
+            sent_to = await send_to_self(subject, message, attachments=[attachment] if attachment else None)
+        else:
+            from junior.config import get_settings
+            from junior.whatsapp import client
+
+            owner = get_settings().whatsapp_owner_number
+            wa = client()
+            text = f"*{subject.strip()}*\n\n{message}" if subject.strip() else message
+            await wa.send_text(owner, text)
+            if attachment:
+                filename, data, mime = attachment
+                await wa.send_document(owner, data, filename, mime)
+            sent_to = "their WhatsApp"
+    except Exception as e:  # noqa: BLE001 - Gmail and WhatsApp fail in many ways; say what happened
+        reason = str(e)
+        if "131047" in reason or "re-engagement" in reason.lower():
+            reason = "WhatsApp only lets the app message you within 24 hours of your last WhatsApp message to it"
+        gate.failed(context, action, reason)
+        return f"NOT sent: {reason}. Offer the other way (Gmail or WhatsApp)."
+    gate.done(context, action, {"subject": subject[:200], "characters": len(message), "file": attachment[0] if attachment else ""})
+    done = f"Sent to {sent_to}" + (f" with the Word file {attachment[0]!r}" if attachment else "") + "."
+    return done + (f" Note: {note}." if note else "") + " Tell the user in one line."
 
 
 @function_tool
-async def email_me(ctx: Ctx, subject: str, body: str, your_words: str) -> str:
-    """Email the user something they asked you to send them: news, a draft, notes, a plan, anything. It always goes
-    to their own Gmail (no other address is possible).
+async def send_to_me(
+    ctx: Ctx,
+    where: Literal["gmail", "whatsapp"],
+    subject: str,
+    message: str,
+    your_words: str,
+    doc_link: str = "",
+) -> str:
+    """Send the user something they asked for, on Gmail or WhatsApp: news, a draft, notes, a plan, or a Google Doc
+    (attached as a Word file). It always goes to their own Gmail or their own WhatsApp; nobody else.
 
     Args:
-        subject: A short, clear subject line.
-        body: The full content, ready to read: plain text with light markdown (**bold**, - bullets) and full links.
-        your_words: The user's exact words asking for the email (copied word for word), e.g. "email me the AI news".
+        where: "gmail" or "whatsapp", as they asked ("email me" / "mail me" = gmail; "WhatsApp me" = whatsapp).
+        subject: A short, clear subject (the email's subject; a bold first line on WhatsApp).
+        message: The full content, ready to read: plain text with light markdown (**bold**, - bullets) and full links.
+        your_words: The user's exact words asking you to send it (copied word for word), e.g. "email me the AI news".
+        doc_link: A Google Doc's link to attach as a Word (.docx) file (a doc you created with google_doc_create).
     """
-    return await email_me_for(ctx.context, subject, body, your_words)
+    return await send_to_me_for(ctx.context, where, subject, message, your_words, doc_link)
 
 
-TOOL_FACTORIES["email"] = lambda: [email_me]
+TOOL_FACTORIES["email"] = lambda: [send_to_me]
 
 
 def _google_tools() -> list[Tool]:

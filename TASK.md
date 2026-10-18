@@ -421,6 +421,26 @@ Read-only: these agents never post or send anything. News pages are outside cont
     "More news"), and after the morning digest the AI top 5 is emailed (`junior/news/mail.py`, rule `gmail.news_to_self`,
     Settings → News: on/off and "Send it now").
   - **Your step:** turn on 2-Step Verification, make an App Password at https://myaccount.google.com/apppasswords
-    (name it "Junior Muneer"), paste it after `GMAIL_APP_PASSWORD=` in backend/.env, restart.
+    (name it "Junior Muneer"), paste it after `GMAIL_APP_PASSWORD=` in backend/.env, restart. **Done 2026-10-18.**
+- [x] **Extra: the gate** (`junior/gate.py`): every action a tool takes passes one check (Plan mode, your own words,
+  your Ask/Auto/Deny rule, pause, at most 5 per message), is logged in Activity, and what's read is fenced.
+  New apps (an API now, an MCP server later) plug into it.
+- [x] **Extra: Google Docs, Sheets and Calendar** through Google's own APIs (Google's Workspace MCP servers need a paid
+  Workspace account and a preview program; personal Gmail isn't supported there). `junior/google/`.
+  - **Connect Google** (Settings → Connections): Google's consent page, PKCE, the login encrypted; asks only for files
+    the app creates (`drive.file`), reading Docs and Sheets, calendar events, your email. Disconnect revokes it.
+  - **Tools:** `google_doc_create` / `google_doc_read`, `google_sheet_create` (plain-text cells: no formulas from
+    the web) / `google_sheet_read`, `calendar_add_event` (your calendar only, nobody invited) / `calendar_events`;
+    today's events in the morning briefing. `send_to_me` (Gmail or WhatsApp, a Doc as a Word file) replaces `email_me`.
+  - **Your steps (about 10 minutes):**
+    1. https://console.cloud.google.com → new project "Junior Muneer".
+    2. APIs & Services → Library: enable **Google Docs API**, **Google Sheets API**, **Google Calendar API**,
+       **Google Drive API**.
+    3. Google Auth Platform (OAuth consent screen): app name Junior Muneer, your email; Audience **External**; add your
+       Gmail as a test user; then **Publish app** (In production), so the login doesn't expire after 7 days. Google
+       will show "unverified app" when you connect: that's your own app, click Advanced → Go to Junior Muneer.
+    4. Clients → Create client → **Web application**; Authorized redirect URI
+       `http://127.0.0.1:8000/api/google/callback`. Copy the Client ID and Client secret into backend/.env
+       (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`), restart, then Settings → Connections → **Connect Google**.
 - [ ] **P8-05** Monitoring and automatic restarts
 - [ ] **P8-06** Your one-week test + push

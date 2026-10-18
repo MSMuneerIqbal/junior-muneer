@@ -168,6 +168,16 @@ async def access_token() -> str:
 
 async def call(method: str, url: str, **kwargs) -> dict:
     """One call to a Google API, as JSON. Raises GoogleError with a plain reason."""
+    r = await _request(method, url, **kwargs)
+    return r.json() if r.content else {}
+
+
+async def download(url: str, **kwargs) -> bytes:
+    """A file from a Google API (e.g. a doc exported as Word), as bytes."""
+    return (await _request("GET", url, **kwargs)).content
+
+
+async def _request(method: str, url: str, **kwargs) -> httpx.Response:
     headers = {"Authorization": f"Bearer {await access_token()}"}
     try:
         async with client(headers=headers) as c:
@@ -186,7 +196,7 @@ async def call(method: str, url: str, **kwargs) -> dict:
         raise GoogleError("Google couldn't find it. Check the link, and that it's shared with your account.")
     if r.status_code >= 400:
         raise GoogleError(f"Google said no ({r.status_code}: {_message(r)}).")
-    return r.json() if r.content else {}
+    return r
 
 
 def _message(r: httpx.Response) -> str:

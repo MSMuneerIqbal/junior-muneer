@@ -79,6 +79,8 @@ CATALOG: dict[str, ActionType] = {
            "Replies answer outside content, so they always wait for you."),
         _t("gmail.to_self", "Email yourself what you ask for (news, drafts, notes)", "Email", "auto",
            note="Only ever to your own Gmail address, and only when you ask. Ask or Deny stops it."),
+        _t("whatsapp.to_self", "WhatsApp yourself what you ask for (text, documents)", "WhatsApp", "auto",
+           note="Only ever to your own WhatsApp number, and only when you ask."),
         _t("gmail.news_to_self", "Email yourself the daily top 5 AI news", "Email", "auto",
            note="Only ever to your own Gmail address. Ask or Deny stops the email."),
         _t("google.docs.create", "Create a Google Doc in your Drive", "Google", "auto",

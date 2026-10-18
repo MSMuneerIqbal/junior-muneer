@@ -138,17 +138,27 @@ class WhatsApp:
             },
         })
 
-    async def send_audio(self, to: str, data: bytes, mime: str = "audio/mpeg") -> None:
-        """A spoken answer: upload the file to WhatsApp, then send it."""
+    async def _upload(self, data: bytes, filename: str, mime: str) -> str:
         async with self._client() as c:
             r = await c.post(
                 f"{self.phone_id}/media",
                 data={"messaging_product": "whatsapp", "type": mime},
-                files={"file": ("answer.mp3", data, mime)},
+                files={"file": (filename, data, mime)},
             )
         if r.status_code >= 400:
-            raise RuntimeError(f"WhatsApp didn't take the audio ({r.status_code}): {r.text[:200]}")
-        await self._send(to, {"type": "audio", "audio": {"id": r.json()["id"]}})
+            raise RuntimeError(f"WhatsApp didn't take the file ({r.status_code}): {r.text[:200]}")
+        return r.json()["id"]
+
+    async def send_audio(self, to: str, data: bytes, mime: str = "audio/mpeg") -> None:
+        """A spoken answer: upload the file to WhatsApp, then send it."""
+        await self._send(to, {"type": "audio", "audio": {"id": await self._upload(data, "answer.mp3", mime)}})
+
+    async def send_document(self, to: str, data: bytes, filename: str, mime: str, caption: str = "") -> None:
+        """A file (a Word document, a PDF...): upload it, then send it with its name."""
+        document = {"id": await self._upload(data, filename, mime), "filename": filename}
+        if caption:
+            document["caption"] = caption[:1024]
+        await self._send(to, {"type": "document", "document": document})
 
     async def download(self, media_id: str) -> tuple[bytes, str]:
         """A voice note: its address first, then the file (both need the token)."""

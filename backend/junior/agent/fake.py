@@ -164,10 +164,11 @@ class FakeModel(Model):
             return [assistant_message(f"(fake AI) Tool said: {last.get('output')}")], False
         if "search" in text.lower() and "web_search" in tool_names:
             return [function_call("web_search", {"query": text}, call_id="fake-search")], False
-        if text.lower().startswith("email me ") and "email_me" in tool_names:
-            words = text[len("email me ") :].strip()
-            args = {"subject": f"From Junior Muneer: {words[:60]}", "body": f"(fake AI) {words}", "your_words": text}
-            return [function_call("email_me", args, call_id="fake-email")], False
+        if text.lower().startswith(("email me ", "whatsapp me ")) and "send_to_me" in tool_names:
+            where, words = text.split(" ", 2)[0].lower(), text.split(" ", 2)[2].strip()
+            args = {"where": "gmail" if where == "email" else "whatsapp", "subject": f"From Junior Muneer: {words[:60]}",
+                    "message": f"(fake AI) {words}", "your_words": text}
+            return [function_call("send_to_me", args, call_id="fake-send")], False
         if text.lower().startswith("remember "):
             words = text[len("remember ") :].strip()
             return [

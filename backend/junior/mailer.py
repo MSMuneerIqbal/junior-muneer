@@ -87,7 +87,13 @@ def _wrap(body_html: str) -> str:
     )
 
 
-async def send_to_self(subject: str, text: str, body_html: str | None = None) -> str:
+Attachment = tuple[str, bytes, str]  # file name, content, type (e.g. "application/pdf")
+MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024  # Gmail takes up to 25 MB, a little less after encoding
+
+
+async def send_to_self(
+    subject: str, text: str, body_html: str | None = None, attachments: list[Attachment] | None = None
+) -> str:
     """Email yourself. `text` is the plain version (light markdown is fine); HTML is made from it unless given.
     Raises MailError with the reason when it can't."""
     if not configured():
@@ -102,6 +108,12 @@ async def send_to_self(subject: str, text: str, body_html: str | None = None) ->
     message["To"] = address
     message.set_content(text)
     message.add_alternative(_wrap(body_html or markdown_html(text)), subtype="html")
+    attachments = attachments or []
+    if sum(len(data) for _, data, _ in attachments) > MAX_ATTACHMENT_BYTES:
+        raise MailError("The files are too big for one email (over 20 MB).")
+    for filename, data, mime in attachments:
+        maintype, _, subtype = mime.partition("/")
+        message.add_attachment(data, maintype=maintype, subtype=subtype or "octet-stream", filename=filename)
     try:
         await asyncio.to_thread(_sender(), message)
     except smtplib.SMTPAuthenticationError:

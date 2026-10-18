@@ -2,9 +2,11 @@
 
 import re
 
-from junior.google.auth import GoogleError, call
+from junior.google.auth import GoogleError, call, download
 
 DOCS = "https://docs.googleapis.com/v1/documents"
+EXPORT = "https://www.googleapis.com/drive/v3/files/{id}/export"
+DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 MAX_READ_CHARS = 20_000
 MAX_WRITE_CHARS = 100_000
 _ID = re.compile(r"/document/d/([A-Za-z0-9_-]+)")
@@ -75,6 +77,16 @@ async def create_doc(title: str, content: str) -> tuple[str, str]:
         requests = [{"insertText": {"location": {"index": 1}, "text": text}}, *styles]
         await call("POST", f"{DOCS}/{document_id}:batchUpdate", json={"requests": requests})
     return document_id, doc_link(document_id)
+
+
+async def export_docx(link: str) -> tuple[str, bytes]:
+    """A doc as a Word file: (file name, content). Works for docs the app created (its Drive permission covers
+    only those); for your other docs, Google says no and the link is sent instead."""
+    document_id = doc_id(link)
+    title = (await call("GET", f"{DOCS}/{document_id}", params={"fields": "title"})).get("title", "Document")
+    data = await download(EXPORT.format(id=document_id), params={"mimeType": DOCX})
+    safe = re.sub(r'[\\/:*?"<>|]+', " ", title).strip()[:80] or "Document"
+    return f"{safe}.docx", data
 
 
 def _text_of(elements: list[dict]) -> str:
