@@ -19,8 +19,13 @@ def find_ngrok() -> str:
     found = shutil.which("ngrok")
     if found:
         return found
-    links = Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Links" / "ngrok.exe"
-    return str(links) if links.exists() else ""
+    winget = Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet"
+    links = winget / "Links" / "ngrok.exe"
+    if links.exists():
+        return str(links)
+    # Sometimes winget installs without the shortcut: look in its package folder.
+    packages = sorted((winget / "Packages").glob("Ngrok.Ngrok*/ngrok.exe")) if (winget / "Packages").exists() else []
+    return str(packages[0]) if packages else ""
 
 
 def main() -> None:
@@ -34,7 +39,7 @@ def main() -> None:
     print(f"WhatsApp webhook address (put it in Meta once): https://{domain}/api/whatsapp/webhook")
     print("Keep this window open while you use WhatsApp with Junior Muneer. Ctrl+C stops it.\n")
     env = {**os.environ, "NGROK_AUTHTOKEN": s.ngrok_authtoken}  # not on the command line
-    subprocess.run([ngrok, "http", f"--url=https://{domain}", f"127.0.0.1:{s.backend_port}"], env=env, check=False)
+    subprocess.run([ngrok, "http", f"--domain={domain}", f"127.0.0.1:{s.backend_port}"], env=env, check=False)
 
 
 if __name__ == "__main__":
