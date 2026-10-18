@@ -186,8 +186,8 @@ def test_drafts_come_with_buttons_and_a_tap_marks_them(wa):
 
 def test_other_message_types_get_a_plain_answer(wa):
     with app(ScriptedModel([])) as c:
-        signed(c, message({"from": OWNER, "id": "wamid.img", "type": "image", "image": {"id": "x"}}))
-        assert "text and voice notes" in wait_for(wa, 1)[0]["text"]["body"]
+        signed(c, message({"from": OWNER, "id": "wamid.loc", "type": "location", "location": {"latitude": 31.5, "longitude": 74.3}}))
+        assert wait_for(wa, 1)[0]["text"]["body"] == "I can take text, voice notes, documents and photos here."
 
 
 def test_not_connected_means_no_webhook():

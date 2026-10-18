@@ -161,15 +161,15 @@ class WhatsApp:
         await self._send(to, {"type": "document", "document": document})
 
     async def download(self, media_id: str) -> tuple[bytes, str]:
-        """A voice note: its address first, then the file (both need the token)."""
+        """A voice note, document or photo you sent: its address first, then the file (both need the token)."""
         async with self._client() as c:
             meta = await c.get(media_id)
             if meta.status_code >= 400:
-                raise RuntimeError(f"Couldn't get the voice note ({meta.status_code})")
+                raise RuntimeError(f"Couldn't get the file from WhatsApp ({meta.status_code})")
             info = meta.json()
             r = await c.get(info["url"])
             if r.status_code >= 400:
-                raise RuntimeError(f"Couldn't download the voice note ({r.status_code})")
+                raise RuntimeError(f"Couldn't download the file from WhatsApp ({r.status_code})")
         return r.content, info.get("mime_type", "audio/ogg")
 
     async def check(self) -> str:
@@ -324,6 +324,29 @@ async def on_button(button_id: str) -> str:
     return f"{done}: {item.platform_label} {item.item_type}."
 
 
+async def received_file(wa: "WhatsApp", msg: dict) -> str:
+    """A document or photo you sent: keep it (junior/files.py) and make your message from its tag and caption."""
+    from junior.files import save_received
+
+    kind = msg["type"]
+    media = msg.get(kind, {})
+    data, mime = await wa.download(media["id"])
+    if kind == "image":
+        ending = {"image/png": ".png", "image/webp": ".webp"}.get(mime, ".jpg")
+        filename = f"photo {utcnow().astimezone(zone(get_settings_tz())).strftime('%Y-%m-%d %H%M')}{ending}"
+    else:
+        filename = media.get("filename") or "document"
+    _number, label = save_received(data, filename, media.get("mime_type") or mime, "whatsapp")
+    caption = (media.get("caption") or "").strip()
+    return f"{label}\n{caption}" if caption else f"{label}\n(I sent this file without saying what to do with it.)"
+
+
+def get_settings_tz() -> str:
+    from junior.settings_store import get_setting
+
+    return get_setting("timezone")
+
+
 async def handle(app: Any, msg: dict) -> None:
     """One message from WhatsApp (already checked: signed by Meta)."""
     s = get_settings()
@@ -346,10 +369,14 @@ async def handle(app: Any, msg: dict) -> None:
                     await wa.send_text(sender, "I couldn't hear that clearly. Could you say it again, or type it?")
                     return
                 await answer(app, heard["text"], heard["audio_id"], heard["seconds"])
+            elif kind in ("document", "image"):
+                await answer(app, await received_file(wa, msg))
             elif kind == "interactive" and msg.get("interactive", {}).get("type") == "button_reply":
                 await wa.send_text(sender, await on_button(msg["interactive"]["button_reply"]["id"]))
             else:
-                await wa.send_text(sender, "I can read text and voice notes here. Photos and files: please use the dashboard.")
+                await wa.send_text(sender, "I can take text, voice notes, documents and photos here.")
+        except ValueError as e:  # a file that's empty or too big
+            await wa.send_text(sender, f"I couldn't take that file: {e}")
         except HTTPException as e:  # a voice note that couldn't be transcribed
             await wa.send_text(sender, f"I couldn't use that voice note: {e.detail}")
         except Exception as e:

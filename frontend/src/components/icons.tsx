@@ -48,6 +48,14 @@ export function SendIcon(p: IconProps) {
   );
 }
 
+export function PaperclipIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M20.5 11.5l-8.3 8.3a5 5 0 0 1-7.1-7.1l8.6-8.6a3.4 3.4 0 0 1 4.8 4.8l-8.6 8.6a1.7 1.7 0 0 1-2.4-2.4l7.9-7.9" />
+    </Svg>
+  );
+}
+
 export function ClipboardIcon(p: IconProps) {
   return (
     <Svg {...p}>

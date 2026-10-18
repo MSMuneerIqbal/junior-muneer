@@ -262,7 +262,46 @@ async def drive_search(ctx: Ctx, words: str) -> str:
     return await drive_search_for(ctx.context, words)
 
 
+async def drive_save_for(context: TurnContext, file_number: int, your_words: str, folder: str = "", new_name: str = "") -> str:
+    from junior.files import mark_saved, received, safe_name
+    from junior.google.drive import save_file
+
+    action = "google.drive.save"
+    if refusal := _not_ready("drive.file") or gate.check(context, action, your_words=your_words):
+        return refusal
+    got = received(file_number)
+    if got is None:
+        return f"NOT done: there's no file {file_number} (it may have been removed). Ask them to send it again."
+    row, data = got
+    name = safe_name(new_name) if new_name.strip() else row.filename
+    if new_name.strip() and "." not in name and "." in row.filename:
+        name += "." + row.filename.rsplit(".", 1)[1]  # keep its ending (.pdf, .jpg)
+    try:
+        saved, note = await save_file(name, data, row.mime, folder)
+    except GoogleError as e:
+        gate.failed(context, action, str(e))
+        return f"NOT done: {e}"
+    link = saved.get("webViewLink", "")
+    mark_saved(file_number, link)
+    gate.done(context, action, {"file": name, "folder": folder, "link": link})
+    where = f" in {folder!r}" if folder and not note else ""
+    return f"Saved {name!r} to their Google Drive{where}: {link}" + (f"\nNote: {note}" if note else "") + "\nGive them the link."
+
+
+@function_tool
+async def drive_save(ctx: Ctx, file_number: int, your_words: str, folder: str = "", new_name: str = "") -> str:
+    """Save a file the user sent you (a message tagged "[file N: ...]") to their Google Drive, as a new file.
+
+    Args:
+        file_number: The N from the "[file N: ...]" tag.
+        your_words: The user's exact words asking you to save it (copied word for word), e.g. "save it to my drive".
+        folder: A folder to put it in, if they named one ("University", or "Work/Invoices"). Made if it doesn't exist.
+        new_name: A new name for it, if they asked for one.
+    """
+    return await drive_save_for(ctx.context, file_number, your_words, folder, new_name)
+
+
 GOOGLE_TOOLS = [
     google_doc_create, google_doc_read, google_sheet_create, google_sheet_read, calendar_add_event, calendar_events,
-    drive_search,
+    drive_search, drive_save,
 ]

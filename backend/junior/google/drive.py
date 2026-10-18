@@ -1,15 +1,19 @@
-"""Google Drive, read-only: find your files by name and fetch one to send to you (your CV, a PDF, a doc...).
+"""Google Drive: find your files by name, fetch one to send to you, and save new files you send.
 
-The permission is `drive.readonly`: the app can see and download your files, never change, move or delete them.
+Your existing files are read-only to the app (`drive.readonly`): it can see and download them, never change,
+move or delete them. Saving only ever adds new files (`drive.file`), so nothing is overwritten.
 Google's own files are exported (a Doc as Word or PDF, a Sheet as Excel, Slides as PowerPoint or PDF);
 everything else comes as it is.
 """
 
+import json
 import re
+import uuid
 
 from junior.google.auth import GoogleError, call, download
 
 FILES = "https://www.googleapis.com/drive/v3/files"
+UPLOAD = "https://www.googleapis.com/upload/drive/v3/files"
 MAX_BYTES = 20 * 1024 * 1024  # fits a Gmail attachment and a WhatsApp document
 FOLDER = "application/vnd.google-apps.folder"
 DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -53,6 +57,64 @@ def kind(mime: str) -> str:
     if mime.startswith("image/"):
         return "image"
     return mime.rsplit("/", 1)[-1] or "file"
+
+
+def _quoted(text: str) -> str:
+    return "'" + text.replace("\\", "\\\\").replace("'", "\\'") + "'"
+
+
+async def _folder_named(name: str, parent: str) -> dict | None:
+    q = f"name = {_quoted(name)} and mimeType = '{FOLDER}' and {_quoted(parent)} in parents and trashed = false"
+    got = await call("GET", FILES, params={"q": q, "pageSize": "1", "fields": "files(id,name,webViewLink)"})
+    return (got.get("files") or [None])[0]
+
+
+async def _new_folder(name: str, parent: str) -> dict:
+    return await call(
+        "POST", FILES, params={"fields": "id,name,webViewLink"},
+        json={"name": name, "mimeType": FOLDER, "parents": [parent]},
+    )
+
+
+async def _send_file(name: str, data: bytes, mime: str, parent: str) -> dict:
+    """One multipart upload: the file's details and its content together."""
+    boundary = f"junior{uuid.uuid4().hex}"
+    meta = json.dumps({"name": name, "parents": [parent]})
+    body = (
+        f"--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n{meta}\r\n"
+        f"--{boundary}\r\nContent-Type: {mime or 'application/octet-stream'}\r\n\r\n"
+    ).encode() + data + f"\r\n--{boundary}--\r\n".encode()
+    return await call(
+        "POST", UPLOAD, params={"uploadType": "multipart", "fields": "id,name,webViewLink"},
+        content=body, headers={"Content-Type": f"multipart/related; boundary={boundary}"},
+    )
+
+
+async def save_file(name: str, data: bytes, mime: str, folder: str = "") -> tuple[dict, str]:
+    """Add a new file to your Drive, in a folder if you named one ("University" or "Work/Invoices").
+    A folder that doesn't exist is made. Returns (the file, a note for you: '' or why it's somewhere else)."""
+    if len(data) > MAX_BYTES:
+        raise GoogleError("That file is too big to save from here (over 20 MB).")
+    parent, note = "root", ""
+    names = [p.strip() for p in folder.replace("\\", "/").split("/") if p.strip()][:5]
+    for part in names:
+        found = await _folder_named(part, parent)
+        parent = found["id"] if found else (await _new_folder(part, parent))["id"]
+    try:
+        return await _send_file(name, data, mime, parent), note
+    except GoogleError as e:
+        refused = "access" in str(e).lower() or "find" in str(e).lower()  # Google's 403 / 404 for the folder
+        if parent == "root" or not refused:
+            raise
+    # Your own folder: the app's permission covers only files and folders it made. Use one it made, next to yours.
+    fallback = " ".join(names) + " (Junior Muneer)"
+    found = await _folder_named(fallback, "root")
+    parent = found["id"] if found else (await _new_folder(fallback, "root"))["id"]
+    note = (
+        f"Google didn't let the app put it into your own folder {folder!r} (the app may only add to folders it made), "
+        f"so it's in a new folder {fallback!r}. You can drag it across in Drive."
+    )
+    return await _send_file(name, data, mime, parent), note
 
 
 async def search(words: str, limit: int = 10) -> list[dict]:

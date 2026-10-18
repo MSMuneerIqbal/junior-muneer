@@ -4,7 +4,8 @@ import { useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react
 import { MicButton, type VoiceMessage } from "@/components/chat/MicButton";
 import { ModeSelect } from "@/components/chat/ModeSelect";
 import { PasteBox } from "@/components/chat/PasteBox";
-import { ClipboardIcon, SendIcon } from "@/components/icons";
+import { ClipboardIcon, PaperclipIcon, SendIcon } from "@/components/icons";
+import { BACKEND_URL } from "@/lib/api";
 import { emptyPaste, LONG_PASTE_CHARS, type PasteDraft } from "@/lib/paste";
 import { urduClass } from "@/lib/urdu";
 
@@ -28,6 +29,9 @@ export function Composer({
   // Long text you pasted into the message box was moved to the Paste box (can be undone).
   const [moved, setMoved] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);
+  const picker = useRef<HTMLInputElement>(null);
+  const [attaching, setAttaching] = useState(false);
+  const [fileProblem, setFileProblem] = useState<string | null>(null);
   const pasteText = paste?.text.trim() ?? "";
   const canSend = !busy && (!!text.trim() || !!pasteText);
 
@@ -62,6 +66,29 @@ export function Composer({
     setPaste(emptyPaste(pasted.trim()));
     setMoved(true);
     box.current?.focus();
+  }
+
+  /** 📎: the file is kept by the app; its tag ("[file 3: CV.pdf (PDF, 52 KB)]") goes at the start of your message. */
+  async function attach(file: File) {
+    setAttaching(true);
+    setFileProblem(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const r = await fetch(`${BACKEND_URL}/api/files`, { method: "POST", body: form });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(body.detail ?? r.statusText);
+      setText((t) => `${body.tag}\n${t}`.trimEnd() + (t ? "" : "\n"));
+      requestAnimationFrame(() => {
+        grow();
+        box.current?.focus();
+      });
+    } catch (e) {
+      setFileProblem(e instanceof Error ? `Couldn't attach it: ${e.message}` : "Couldn't attach it");
+    } finally {
+      setAttaching(false);
+      if (picker.current) picker.current.value = "";
+    }
   }
 
   function keepAsMine() {
@@ -107,6 +134,30 @@ export function Composer({
         >
           <ClipboardIcon className="h-5 w-5" />
         </button>
+        <button
+          type="button"
+          onClick={() => picker.current?.click()}
+          disabled={attaching}
+          aria-label="Attach a file"
+          title="Attach a file (e.g. to save it to your Google Drive)"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-panel-2 hover:text-ink disabled:opacity-50"
+        >
+          {attaching ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-transparent" />
+          ) : (
+            <PaperclipIcon className="h-5 w-5" />
+          )}
+        </button>
+        <input
+          ref={picker}
+          type="file"
+          className="hidden"
+          aria-label="File to attach"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void attach(file);
+          }}
+        />
         <textarea
           ref={box}
           rows={1}
@@ -140,6 +191,11 @@ export function Composer({
       <div className="mx-auto mt-2 flex max-w-3xl flex-wrap items-center gap-x-3 gap-y-1 px-1">
         <ModeSelect />
         {notice && <p className="text-xs text-warn">{notice}</p>}
+        {fileProblem && (
+          <p role="alert" className="text-xs text-danger">
+            {fileProblem}
+          </p>
+        )}
       </div>
     </div>
   );

@@ -28,7 +28,7 @@ class FakeGoogle:
             "file-cv-2026": {"name": "Muneer Iqbal CV.pdf", "mimeType": "application/pdf", "size": "52000", "data": b"%PDF-1.7 fake CV"},
             "file-old-cv": {"name": "Muneer Iqbal CV 2024.docx", "size": "40000",
                             "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "data": b"PK old"},
-            "folder-work": {"name": "Work", "mimeType": "application/vnd.google-apps.folder", "data": b""},
+            "folder-work": {"name": "Work", "mimeType": "application/vnd.google-apps.folder", "data": b""},  # yours
         }
         self.events: list[dict] = []
         self.revoked: list[str] = []
@@ -99,7 +99,14 @@ class FakeGoogle:
                 return httpx.Response(200, json={"values": sheet["tabs"].get(tab, [])})
             return httpx.Response(404, json={"error": {"message": "Requested entity was not found."}})
 
-        # Drive: search, file details, download, and Google's own files exported
+        # Drive: search, file details, download, Google's own files exported, new folders and uploads
+        if host == "www.googleapis.com" and path == "/upload/drive/v3/files":
+            return self._upload(request)
+        if host == "www.googleapis.com" and path == "/drive/v3/files" and method == "POST":
+            fid = self._id("folder")
+            self.files[fid] = {"name": body["name"], "mimeType": body["mimeType"], "parents": body.get("parents", ["root"]),
+                               "app": True, "data": b""}
+            return httpx.Response(200, json={"id": fid, "name": body["name"], "webViewLink": f"https://drive.google.com/drive/folders/{fid}"})
         if host == "www.googleapis.com" and path.startswith("/drive/v3/files"):
             return self._drive(request, path)
 
@@ -126,11 +133,19 @@ class FakeGoogle:
     def _drive(self, request: httpx.Request, path: str) -> httpx.Response:
         files = self._all_files()
         if path == "/drive/v3/files":
-            words = re.findall(r"name contains '((?:[^'\\]|\\.)*)'", request.url.params.get("q", ""))
+            q = request.url.params.get("q", "")
+            words = re.findall(r"name contains '((?:[^'\\]|\\.)*)'", q)
+            exact = re.findall(r"name = '((?:[^'\\]|\\.)*)'", q)
+            mime = re.findall(r"mimeType = '([^']*)'", q)
+            parent = re.findall(r"'([^']*)' in parents", q)
             found = [
-                {"id": fid, **f, "modifiedTime": "2026-10-01T09:00:00Z", "webViewLink": f"https://drive.google.com/file/d/{fid}/view"}
+                {"id": fid, **{k: v for k, v in f.items() if k not in ("parents", "app")},
+                 "modifiedTime": "2026-10-01T09:00:00Z", "webViewLink": f"https://drive.google.com/file/d/{fid}/view"}
                 for fid, f in files.items()
                 if all(w.casefold() in f["name"].casefold() for w in words)
+                and all(f["name"] == e.replace("\\'", "'") for e in exact)
+                and all(f["mimeType"] == m for m in mime)
+                and all(p in f.get("parents", ["root"]) for p in parent)
             ]
             return httpx.Response(200, json={"files": found})
         m = re.match(r"^/drive/v3/files/([^/]+)(/export)?$", path)
@@ -144,7 +159,22 @@ class FakeGoogle:
             if info["mimeType"].startswith("application/vnd.google-apps."):
                 return httpx.Response(403, json={"error": {"message": "Only files with binary content can be downloaded."}})
             return httpx.Response(200, content=self.files[fid]["data"])
-        return httpx.Response(200, json={"id": fid, **info})
+        return httpx.Response(200, json={"id": fid, **{k: v for k, v in info.items() if k not in ("parents", "app")}})
+
+    def _upload(self, request: httpx.Request) -> httpx.Response:
+        boundary = request.headers["content-type"].split("boundary=")[1]
+        parts = request.content.split(f"--{boundary}".encode())
+        meta = json.loads(parts[1].split(b"\r\n\r\n", 1)[1].strip())
+        head, data = parts[2].split(b"\r\n\r\n", 1)
+        parent = meta.get("parents", ["root"])[0]
+        folder = self.files.get(parent)
+        if parent != "root" and not (folder and folder.get("app")):
+            # The app may only add to folders it made (drive.file); Google answers as if it can't see yours.
+            return httpx.Response(404, json={"error": {"message": f"File not found: {parent}."}})
+        fid = self._id("upload")
+        mime = head.decode().split("Content-Type:")[1].strip()
+        self.files[fid] = {"name": meta["name"], "mimeType": mime, "parents": [parent], "app": True, "data": data[: -len(b"\r\n")]}
+        return httpx.Response(200, json={"id": fid, "name": meta["name"], "webViewLink": f"https://drive.google.com/file/d/{fid}/view"})
 
 
 def _when(text: str | None) -> datetime:

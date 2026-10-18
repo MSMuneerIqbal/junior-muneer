@@ -432,6 +432,10 @@ Read-only: these agents never post or send anything. News pages are outside cont
   - **Tools:** `google_doc_create` / `google_doc_read`, `google_sheet_create` (plain-text cells: no formulas from
     the web) / `google_sheet_read`, `calendar_add_event` (your calendar only, nobody invited) / `calendar_events`;
     today's events in the morning briefing. `send_to_me` (Gmail or WhatsApp, a Doc as a Word file) replaces `email_me`.
+  - **Drive (added 2026-10-18):** `drive_search` finds your files by name (read-only `drive.readonly`), `send_to_me`
+    sends any Drive file; files you send (WhatsApp documents and photos, 📎 in the chat; `junior/files.py`, kept in
+    data/files) are saved with `drive_save` (new files only, folders made as needed; your own folders: the app may
+    only add to folders it made, so it says so and uses "<name> (Junior Muneer)").
   - **Your steps (about 10 minutes):**
     1. https://console.cloud.google.com → new project "Junior Muneer".
     2. APIs & Services → Library: enable **Google Docs API**, **Google Sheets API**, **Google Calendar API**,

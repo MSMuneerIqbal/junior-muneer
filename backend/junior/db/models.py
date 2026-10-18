@@ -325,6 +325,23 @@ class Connection(Base):
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
+class ReceivedFile(Base):
+    """A file you sent Junior Muneer (on WhatsApp or with 📎 in the chat). Kept in data/files until you say
+    what to do with it (e.g. save it to your Google Drive)."""
+
+    __tablename__ = "received_files"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    conversation_id: Mapped[int | None] = mapped_column(ForeignKey("conversations.id", ondelete="SET NULL"), nullable=True)
+    source: Mapped[str] = mapped_column(String(20))  # whatsapp · chat
+    filename: Mapped[str] = mapped_column(String(200))
+    mime: Mapped[str] = mapped_column(String(120))
+    size: Mapped[int] = mapped_column(Integer)
+    stored_as: Mapped[str] = mapped_column(String(80))  # its name in data/files
+    drive_link: Mapped[str] = mapped_column(String(300), default="")  # once saved to your Drive
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
 class Paste(Base):
     """Text you pasted from another site. Outside content: data, never instructions."""
 

@@ -87,6 +87,8 @@ CATALOG: dict[str, ActionType] = {
            note="A new doc only; your existing docs are only read."),
         _t("google.sheets.create", "Create a Google Sheet in your Drive", "Google", "auto",
            note="A new sheet only; your existing sheets are only read."),
+        _t("google.drive.save", "Save a file you sent to your Google Drive", "Google", "auto",
+           note="Only adds new files; never changes or deletes yours."),
         _t("google.calendar.create", "Add an event to your Google Calendar", "Google", "auto",
            note="Only when you ask, on your own calendar; nobody is invited."),
         _t("github.issue.create", "Create a GitHub issue", "GitHub", "ask"),

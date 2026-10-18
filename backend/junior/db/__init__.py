@@ -20,6 +20,7 @@ from junior.db.models import (
     NewsDigest,
     Order,
     Paste,
+    ReceivedFile,
     Setting,
     Usage,
 )
@@ -43,6 +44,7 @@ __all__ = [
     "NewsDigest",
     "Order",
     "Paste",
+    "ReceivedFile",
     "Setting",
     "Usage",
     "get_engine",
