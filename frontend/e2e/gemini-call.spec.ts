@@ -25,6 +25,13 @@ test("Settings: the voice engine and Gemini's voice", async ({ page }, testInfo)
   const engine = page.getByRole("radiogroup", { name: "Voice engine" });
   await expect(engine.getByRole("radio", { name: /OpenAI Realtime/ })).toHaveAttribute("aria-checked", "true");
   await engine.getByRole("radio", { name: /Gemini 3\.8 Live/ }).click();
-  await expect(page.getByRole("combobox", { name: "Gemini voice" })).toHaveValue("Charon");
+  const voices = page.getByRole("radiogroup", { name: "Gemini voice" });
+  await expect(voices.getByRole("radio", { name: /Charon/ })).toHaveAttribute("aria-checked", "true");
+  await voices.getByRole("radio", { name: /Kore/ }).click();
+  await expect(voices.getByRole("radio", { name: /Kore/ })).toHaveAttribute("aria-checked", "true");
+  // ▶ plays a sample the pretend Gemini makes (a WAV from the backend).
+  const sample = page.waitForResponse((r) => r.url().includes("/api/voice/gemini-preview/Puck.wav"));
+  await voices.getByRole("button", { name: "Play a sample of Puck" }).click();
+  expect((await sample).headers()["content-type"]).toContain("audio/wav");
   await page.getByRole("button", { name: "Discard" }).click();
 });

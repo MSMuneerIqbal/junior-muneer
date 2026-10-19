@@ -346,14 +346,14 @@ function usePreview() {
   const [playing, setPlaying] = useState<string | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   useEffect(() => () => audio.current?.pause(), []);
-  function play(voice: string, accent: string) {
+  function play(voice: string, url: string) {
     audio.current?.pause();
     if (playing === voice || loading === voice) {
       setPlaying(null);
       setLoading(null);
       return;
     }
-    const el = new Audio(`${BACKEND_URL}/api/voice/preview/${voice}/${accent}.mp3`);
+    const el = new Audio(url);
     audio.current = el;
     setLoading(voice);
     setPlaying(null);
@@ -408,9 +408,70 @@ function VoicePicker({
             </button>
             <button
               type="button"
-              onClick={() => preview.play(v, accent)}
+              onClick={() => preview.play(v, `${BACKEND_URL}/api/voice/preview/${v}/${accent}.mp3`)}
               aria-label={`${playing ? "Stop" : "Play"} a sample of ${v}`}
               title="Hear a short Urdu + English sample"
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs ${
+                playing ? "border-accent bg-accent text-accent-fg" : "border-line hover:bg-panel"
+              }`}
+            >
+              {busy ? "…" : playing ? "■" : "▶"}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Google's own short descriptions of its Live voices.
+const GEMINI_VOICES: { value: Settings["gemini_voice"]; sub: string }[] = [
+  { value: "Charon", sub: "Male · calm, deep" },
+  { value: "Puck", sub: "Male · upbeat" },
+  { value: "Orus", sub: "Male · firm" },
+  { value: "Fenrir", sub: "Male · lively" },
+  { value: "Kore", sub: "Female · firm" },
+  { value: "Aoede", sub: "Female · breezy" },
+  { value: "Leda", sub: "Female · youthful" },
+  { value: "Zephyr", sub: "Female · bright" },
+];
+
+function GeminiVoicePicker({
+  value,
+  onChange,
+}: {
+  value: Settings["gemini_voice"];
+  onChange: (v: Settings["gemini_voice"]) => void;
+}) {
+  const preview = usePreview();
+  return (
+    <div role="radiogroup" aria-label="Gemini voice" className="grid grid-cols-2 gap-2 @lg:grid-cols-3 @4xl:grid-cols-4">
+      {GEMINI_VOICES.map(({ value: v, sub }) => {
+        const on = v === value;
+        const busy = preview.loading === v;
+        const playing = preview.playing === v;
+        return (
+          <div
+            key={v}
+            className={`flex items-center gap-2 rounded-xl border p-2 pl-3 transition ${
+              on ? "border-accent bg-accent-soft ring-1 ring-accent" : "border-line hover:bg-panel-2"
+            }`}
+          >
+            <button
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => onChange(v)}
+              className="min-w-0 flex-1 text-left"
+            >
+              <span className="block text-sm font-medium">{v}</span>
+              <span className="block text-[11px] text-muted">{sub}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => preview.play(v, `${BACKEND_URL}/api/voice/gemini-preview/${v}.wav`)}
+              aria-label={`${playing ? "Stop" : "Play"} a sample of ${v}`}
+              title="Hear a short Urdu + English sample (the first time takes a few seconds)"
               className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs ${
                 playing ? "border-accent bg-accent text-accent-fg" : "border-line hover:bg-panel"
               }`}
@@ -697,19 +758,12 @@ function SettingsForm({ initial }: { initial: Settings }) {
           />
         </Row>
         {form.voice_provider_model !== "openai-realtime" && (
-          <Row label="Gemini voice" hint="Gemini has its own voices. It speaks Urdu and English in Pakistani style either way.">
-            <select
-              value={form.gemini_voice}
-              onChange={(e) => set("gemini_voice", e.target.value as Settings["gemini_voice"])}
-              className={`${input} max-w-xs`}
-              aria-label="Gemini voice"
-            >
-              {["Charon", "Puck", "Orus", "Fenrir", "Kore", "Aoede", "Leda", "Zephyr"].map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
+          <Row
+            wide
+            label="Gemini voice"
+            hint="Gemini has its own voices. Press ▶ to hear one; he speaks Urdu and English in Pakistani style either way."
+          >
+            <GeminiVoicePicker value={form.gemini_voice} onChange={(v) => set("gemini_voice", v)} />
           </Row>
         )}
         <Row label="Call quality" hint="For OpenAI Realtime only.">

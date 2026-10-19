@@ -64,6 +64,9 @@ class FakeGemini:
     async def send_audio(self, session, data):
         self.audio.append(data)
 
+    async def send_text(self, session, text):
+        self.texts = getattr(self, "texts", []) + [text]
+
     async def send_tool_responses(self, session, responses):
         self.tool_responses.append(responses)
 
@@ -206,3 +209,34 @@ def test_the_settings_and_limits_say_which_engine(gemini):
         assert limits["engine"] == "gemini" and limits["model"] == "gemini-3.8-live" and limits["gemini_ready"] is True
         assert c.patch("/api/settings", json={"voice_provider_model": "gemini-9"}).status_code == 422
     assert session_config("x", "Puck")["speech_config"]["voice_config"]["prebuilt_voice_config"]["voice_name"] == "Puck"
+
+
+def test_gemini_voice_samples_are_made_once_kept_and_counted(gemini, monkeypatch):
+    fake = FakeGemini([turn(said="Assalam-o-Alaikum!", audio=b"\x01\x00" * 2400)])
+    monkeypatch.setattr(gemini_live, "GATEWAY", fake)
+    with TestClient(create_app()) as c:
+        r = c.get("/api/voice/gemini-preview/Kore.wav")
+        assert r.status_code == 200 and r.headers["content-type"] == "audio/wav"
+        assert r.content[:4] == b"RIFF" and r.content[8:12] == b"WAVE"
+        model, config = fake.configs[0]
+        assert model == gemini_live.SAMPLE_MODEL
+        assert config["speech_config"]["voice_config"]["prebuilt_voice_config"]["voice_name"] == "Kore"
+        assert "tools" not in config  # a sample only speaks: no tools, no search
+        assert fake.texts == [gemini_live.SAMPLE_TEXT]
+        assert c.get("/api/voice/gemini-preview/Kore.wav").content == r.content  # kept: Gemini isn't asked again
+        assert len(fake.configs) == 1
+        with session_scope() as s:
+            used = s.scalars(select(Usage).where(Usage.model == gemini_live.SAMPLE_MODEL)).all()
+            assert len(used) == 1 and used[0].cost_usd > 0
+        assert c.get("/api/voice/gemini-preview/Nobody.wav").status_code == 404
+
+
+def test_gemini_voice_sample_without_a_key_says_so(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "")
+    get_settings.cache_clear()
+    try:
+        with TestClient(create_app()) as c:
+            r = c.get("/api/voice/gemini-preview/Puck.wav")
+            assert r.status_code == 503 and "GEMINI_API_KEY" in r.json()["detail"]
+    finally:
+        get_settings.cache_clear()

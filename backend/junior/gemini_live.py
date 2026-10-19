@@ -133,6 +133,10 @@ class GeminiGateway:
         await session.send_realtime_input(audio=types.Blob(data=data, mime_type=INPUT_MIME))
 
     @staticmethod
+    async def send_text(session, text: str) -> None:
+        await session.send_realtime_input(text=text)
+
+    @staticmethod
     async def send_tool_responses(session, responses: list[dict]) -> None:
         from google.genai import types
 
@@ -170,6 +174,10 @@ class FakeGemini:
             content(turn_complete=True),
         ):
             await session["queue"].put(message)
+
+    @staticmethod
+    async def send_text(session, text: str) -> None:
+        await FakeGemini.send_audio(session, b"")
 
     @staticmethod
     async def send_tool_responses(session, responses: list[dict]) -> None:
@@ -425,3 +433,86 @@ async def gemini_call(ws: WebSocket) -> None:
             await ws.close()
         except Exception:
             pass
+
+
+# ---- voice samples (Settings → Live calls → Gemini voice) ---------------------------------
+
+GEMINI_VOICES = ("Charon", "Puck", "Orus", "Fenrir", "Kore", "Aoede", "Leda", "Zephyr")
+SAMPLE_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"  # the cheapest Live model; the voices are the same
+SAMPLE_TEXT = "Assalam-o-Alaikum! Main Junior Muneer hoon, aap ka dost. Hello! I'm Junior Muneer, your friendly assistant."
+SAMPLE_INSTRUCTION = (
+    "You read text aloud for a voice sample. Say the user's text exactly, word for word, warmly, in Pakistani Urdu "
+    "and English pronunciation. Say nothing else."
+)
+SAMPLE_TIMEOUT_SECONDS = 30
+
+
+def wav(pcm: bytes, rate: int = 24000) -> bytes:
+    """16-bit mono PCM as a WAV file the browser can play."""
+    import io
+    import wave
+
+    out = io.BytesIO()
+    with wave.open(out, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(pcm)
+    return out.getvalue()
+
+
+async def sample_audio(voice: str) -> tuple[bytes, float]:
+    """Gemini says the sample line in this voice: (24 kHz PCM, cost in $)."""
+    gw = gateway()
+    config = {
+        "response_modalities": ["AUDIO"],
+        "system_instruction": SAMPLE_INSTRUCTION,
+        "speech_config": {"voice_config": {"prebuilt_voice_config": {"voice_name": voice}}},
+    }
+    prices = get_router().audio_price(SAMPLE_MODEL)
+    pcm, cost = bytearray(), 0.0
+    async with asyncio.timeout(SAMPLE_TIMEOUT_SECONDS), gw.connect(SAMPLE_MODEL, config) as session:
+        await gw.send_text(session, SAMPLE_TEXT)
+        async for message in receive(gw, session):
+            content = getattr(message, "server_content", None)
+            for part in getattr(getattr(content, "model_turn", None), "parts", None) or []:
+                blob = getattr(part, "inline_data", None)
+                if blob is not None and blob.data:
+                    pcm.extend(blob.data)
+            usage = getattr(message, "usage_metadata", None)
+            if usage is not None:
+                cost += turn_cost(usage, prices)
+            if getattr(content, "turn_complete", False):
+                break
+    return bytes(pcm), cost
+
+
+@router.get("/api/voice/gemini-preview/{voice}.wav")
+async def gemini_preview(voice: str):
+    """A short Urdu + English sample of a Gemini voice, made once and kept."""
+    from fastapi import HTTPException
+    from fastapi.responses import FileResponse
+
+    from junior.voice import audio_dir, record_audio_usage
+
+    if voice not in GEMINI_VOICES:
+        raise HTTPException(404, "Unknown Gemini voice")
+    path = audio_dir() / f"preview-gemini-{voice}.wav"
+    if path.exists():
+        return FileResponse(path, media_type="audio/wav")
+    if not get_settings().gemini_api_key:
+        raise HTTPException(503, "Gemini needs GEMINI_API_KEY in backend/.env, then a restart.")
+    try:
+        budget_left()
+    except BudgetExceeded as e:
+        raise HTTPException(429, str(e)) from None
+    try:
+        pcm, cost = await sample_audio(voice)
+    except Exception as e:
+        log.exception("Gemini voice sample failed")
+        raise HTTPException(502, f"Couldn't make the sample: {e}") from None
+    if not pcm:
+        raise HTTPException(502, "Gemini sent no audio for the sample.")
+    path.write_bytes(wav(pcm))
+    record_audio_usage("speaker", SAMPLE_MODEL, "voice", len(pcm) / 48000, cost)
+    return FileResponse(path, media_type="audio/wav")
