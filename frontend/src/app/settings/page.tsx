@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { GitHubConnect } from "@/components/GitHubConnect";
 import { BACKEND_URL, fetcher, send } from "@/lib/api";
@@ -36,19 +37,41 @@ type Permissions = {
   types: { type: string; label: string; group: string; rule: Rule; default: Rule; locked: boolean; note: string }[];
 };
 
-const SECTIONS = [
-  { id: "profile", title: "Profile" },
-  { id: "budget", title: "Budget" },
-  { id: "models", title: "Models" },
-  { id: "voice", title: "Voice" },
-  { id: "calls", title: "Live calls" },
-  { id: "connections", title: "Connections" },
-  { id: "whatsapp", title: "WhatsApp" },
-  { id: "posting", title: "Posting" },
-  { id: "news", title: "News" },
-  { id: "permissions", title: "Permissions" },
-  { id: "advanced", title: "Advanced" },
-] as const;
+// The left menu: one section shows at a time. "#news" in the address opens that section.
+type SectionId =
+  | "profile" | "budget" | "models" | "voice" | "calls" | "connections" | "whatsapp" | "posting" | "news" | "permissions" | "advanced";
+type MenuItem = { id: SectionId; title: string; icon: string };
+const GROUPS: { title: string; items: MenuItem[] }[] = [
+  { title: "Account", items: [{ id: "profile", title: "Profile", icon: "◉" }, { id: "budget", title: "Budget", icon: "$" }] },
+  {
+    title: "AI",
+    items: [
+      { id: "models", title: "Models", icon: "◆" },
+      { id: "voice", title: "Voice", icon: "♪" },
+      { id: "calls", title: "Live calls", icon: "☏" },
+    ],
+  },
+  {
+    title: "Channels",
+    items: [
+      { id: "connections", title: "Connections", icon: "⇄" },
+      { id: "whatsapp", title: "WhatsApp", icon: "✆" },
+      { id: "posting", title: "Posting", icon: "↗" },
+    ],
+  },
+  { title: "Automation", items: [{ id: "news", title: "News & email", icon: "✉" }] },
+  {
+    title: "Safety",
+    items: [
+      { id: "permissions", title: "Permissions", icon: "⛨" },
+      { id: "advanced", title: "Advanced", icon: "⚙" },
+    ],
+  },
+];
+const SECTIONS: MenuItem[] = GROUPS.flatMap((g) => g.items);
+const isSection = (id: string): id is SectionId => SECTIONS.some((s) => s.id === id);
+
+const ActiveSection = createContext<SectionId>("profile");
 
 // ---- building blocks ---------------------------------------------------------------
 
@@ -63,11 +86,20 @@ function Section({
   description: string;
   children: ReactNode;
 }) {
+  // Every section stays mounted (its state and checks keep working); only the chosen one shows.
+  const active = useContext(ActiveSection) === id;
   return (
-    <section id={id} className="@container scroll-mt-20 rounded-2xl border border-line bg-panel shadow-sm">
-      <header className="border-b border-line px-6 py-4">
-        <h2 className="text-base font-semibold">{title}</h2>
-        <p className="mt-0.5 text-sm text-muted">{description}</p>
+    <section
+      id={id}
+      hidden={!active}
+      aria-labelledby={`${id}-title`}
+      className="@container rounded-2xl border border-line bg-panel shadow-sm"
+    >
+      <header className="border-b border-line px-6 py-5">
+        <h2 id={`${id}-title`} className="text-lg font-semibold tracking-tight">
+          {title}
+        </h2>
+        <p className="mt-1 text-sm text-muted">{description}</p>
       </header>
       <div className="divide-y divide-line">{children}</div>
     </section>
@@ -674,7 +706,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
         </Row>
       </Section>
 
-      <Section id="news" title="News" description="The AI-News-Agent and the Social-News-Agent (official sources only).">
+      <Section id="news" title="News & email" description="Morning news, the top 5 by email, your Gmail inbox and the morning briefing.">
         <Row
           label="Morning digests"
           hint="Both digests are built each morning, so news questions are answered in seconds. Skipped while paused or when the daily cap is reached."
@@ -1120,32 +1152,100 @@ function AdvancedSection() {
 
 // ---- page -----------------------------------------------------------------------------
 
+/** The section in the address (#news), or Profile. Follows the back and forward buttons. */
+function useActiveSection(): [SectionId, (id: SectionId) => void] {
+  const [active, setActive] = useState<SectionId>("profile");
+  useEffect(() => {
+    const read = () => {
+      const id = window.location.hash.slice(1);
+      setActive(isSection(id) ? id : "profile");
+    };
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, []);
+  const choose = (id: SectionId) => {
+    setActive(id);
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${id}`);
+  };
+  return [active, choose];
+}
+
 export default function SettingsPage() {
   const { data, error } = useSWR<Settings>(SETTINGS_KEY, fetcher);
+  const [active, choose] = useActiveSection();
+  const current = SECTIONS.find((s) => s.id === active)!;
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-8">
-        <header className="mb-5">
-          <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-          <p className="mt-1 text-sm text-muted">Changes apply from your next message or call.</p>
+    <ActiveSection.Provider value={active}>
+      <div className="flex h-dvh flex-col bg-bg">
+        <header className="flex shrink-0 items-center gap-3 border-b border-line bg-panel px-4 py-3 sm:px-6">
+          <Link href="/" className="rounded-lg px-2 py-1 text-sm text-muted hover:bg-panel-2 hover:text-ink">
+            ← Back to Junior
+          </Link>
+          <span className="h-5 w-px bg-line" aria-hidden />
+          <h1 className="text-base font-semibold tracking-tight">Settings</h1>
+          <span className="ml-auto hidden text-xs text-muted sm:inline">Changes apply from your next message or call.</span>
         </header>
-        <nav
-          aria-label="Settings sections"
-          className="sticky top-0 z-10 -mx-1 mb-6 flex gap-1.5 overflow-x-auto bg-bg/90 px-1 py-2 backdrop-blur"
-        >
-          {SECTIONS.map((s) => (
-            <a
-              key={s.id}
-              href={`#${s.id}`}
-              className="shrink-0 rounded-full border border-line bg-panel px-3.5 py-1.5 text-sm text-muted hover:border-muted hover:text-ink"
-            >
-              {s.title}
-            </a>
-          ))}
-        </nav>
-        {error && <p className="text-danger">Couldn&apos;t load settings: {error.message}</p>}
-        {data && <SettingsForm initial={data} />}
+
+        <div className="flex min-h-0 flex-1">
+          <nav aria-label="Settings sections" className="hidden w-60 shrink-0 overflow-y-auto border-r border-line bg-panel px-3 py-5 md:block">
+            {GROUPS.map((group) => (
+              <div key={group.title} className="mb-5">
+                <p className="mb-1.5 px-3 text-[11px] font-semibold tracking-wider text-muted uppercase">{group.title}</p>
+                <ul className="flex flex-col gap-0.5">
+                  {group.items.map((s) => (
+                    <li key={s.id}>
+                      <button
+                        type="button"
+                        onClick={() => choose(s.id)}
+                        aria-current={active === s.id ? "page" : undefined}
+                        className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition ${
+                          active === s.id ? "bg-accent-soft font-medium text-ink" : "text-muted hover:bg-panel-2 hover:text-ink"
+                        }`}
+                      >
+                        <span aria-hidden className="w-4 text-center text-xs opacity-80">
+                          {s.icon}
+                        </span>
+                        {s.title}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </nav>
+
+          <main className="min-w-0 flex-1 overflow-y-auto">
+            <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
+              {/* Phones: the menu becomes a picker. */}
+              <label className="mb-5 flex flex-col gap-1 md:hidden">
+                <span className="text-xs text-muted">Section</span>
+                <select
+                  value={active}
+                  onChange={(e) => choose(e.target.value as SectionId)}
+                  aria-label="Settings section"
+                  className="rounded-lg border border-line bg-panel px-3 py-2 text-sm"
+                >
+                  {GROUPS.map((g) => (
+                    <optgroup key={g.title} label={g.title}>
+                      {g.items.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.title}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </label>
+              <p className="sr-only" aria-live="polite">
+                {current.title}
+              </p>
+              {error && <p className="text-danger">Couldn&apos;t load settings: {error.message}</p>}
+              {data && <SettingsForm initial={data} />}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </ActiveSection.Provider>
   );
 }
