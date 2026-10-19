@@ -202,3 +202,14 @@ def test_lookups_in_calls_use_openai_even_when_deepseek_is_chosen():
 
     aio.run(go())
     assert used == ["gpt-6.1-sol"]
+
+
+def test_a_turn_that_never_ends_is_stopped_at_the_overall_limit(monkeypatch):
+    """Even OpenAI (no first-words limit) can't hang a chat forever: the whole answer has a time limit."""
+    import junior.chat.service as service
+
+    monkeypatch.setattr(service, "TURN_SECONDS", 1)
+    with TestClient(create_app(model_provider=lambda: (lambda name: StalledModel()))) as client:
+        events = chat(client, "hi")
+    assert events[-1]["type"] == "error"
+    assert "took over" in events[-1]["message"] and "background task" in events[-1]["message"]

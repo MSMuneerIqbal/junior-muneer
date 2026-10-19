@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 from collections.abc import AsyncIterator, Callable
 from typing import Any
 
@@ -29,6 +30,7 @@ MAIN_AGENT = "junior_muneer"
 # Other providers (e.g. DeepSeek) can queue requests for minutes when busy.
 FIRST_WORDS_SECONDS = 20  # no first words by then: answer with OpenAI instead
 STALL_SECONDS = 60  # silence mid-answer for this long: give up
+TURN_SECONDS = 600  # one answer may take at most 10 minutes (tools included); then it stops instead of hanging
 SUMMARY_SECONDS = 90
 TITLE_LENGTH = 60
 
@@ -242,17 +244,25 @@ class ChatService:
             stream = stream_turn(agent, model_name, router, items, context, budget)
             other_provider = router.provider_of(model_name) != "openai"
             first = True
+            deadline = time.monotonic() + TURN_SECONDS
             while True:
                 try:
+                    left = max(deadline - time.monotonic(), 0.001)
                     if other_provider:
                         # Other providers (DeepSeek) can stall for minutes when busy.
                         limit = FIRST_WORDS_SECONDS if first else STALL_SECONDS
-                        event = await asyncio.wait_for(anext(stream), limit)
+                        event = await asyncio.wait_for(anext(stream), min(limit, left))
                     else:
-                        event = await anext(stream)
+                        event = await asyncio.wait_for(anext(stream), left)
                 except StopAsyncIteration:
                     break
                 except Exception as e:
+                    if isinstance(e, TimeoutError) and time.monotonic() >= deadline:
+                        await stream.aclose()
+                        raise RuntimeError(
+                            f"This answer took over {TURN_SECONDS // 60} minutes, so I stopped it. "
+                            "Please try again, or ask for it as a background task."
+                        ) from None
                     # Another provider (DeepSeek, Gemini) silent, rate-limited (free tiers) or down before any
                     # words: OpenAI answers instead. Anything else, or OpenAI itself failing, goes up as before.
                     limited = isinstance(e, (RateLimitError, InternalServerError, APIConnectionError))

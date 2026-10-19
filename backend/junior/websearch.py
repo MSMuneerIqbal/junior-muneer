@@ -11,6 +11,7 @@ If DeepSeek or Gemini search fails or isn't set up, that question goes to OpenAI
 Results are web pages: outside text, fenced, data never instructions.
 """
 
+import asyncio
 import logging
 import uuid
 from typing import Any
@@ -80,6 +81,7 @@ def results_text(results: list[dict]) -> str:
 # Gemini 2.5 Flash: Google Search is free on it with a free-tier key (1,500 a day); on Gemini 3 models a free key
 # has no search quota (tested 2026-10-20). It also reads links (URL context) in the same request.
 GEMINI_SEARCH_MODEL = "gemini:gemini-2.5-flash"
+GEMINI_SEARCH_SECONDS = 45  # Google hanging: give up, and OpenAI searches instead
 GEMINI_PROMPT = (
     "Search the web with Google and answer for an assistant who will pass it on. Today is {today}. Question: {query}\n"
     "Give the key facts as short bullet points, newest first, with dates for news and prices. If a link is in the "
@@ -105,10 +107,13 @@ async def gemini_search(query: str, context) -> str:
 
         client = genai.Client(api_key=key)
     try:
-        response = await client.aio.models.generate_content(
-            model=ModelRouter.bare(GEMINI_SEARCH_MODEL),
-            contents=GEMINI_PROMPT.format(today=date.today().isoformat(), query=query[:500]),
-            config={"tools": [{"google_search": {}}, {"url_context": {}}]},
+        response = await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model=ModelRouter.bare(GEMINI_SEARCH_MODEL),
+                contents=GEMINI_PROMPT.format(today=date.today().isoformat(), query=query[:500]),
+                config={"tools": [{"google_search": {}}, {"url_context": {}}]},
+            ),
+            GEMINI_SEARCH_SECONDS,
         )
     except Exception as e:  # noqa: BLE001 - rate limits, a bad key, Google down: OpenAI searches instead
         raise SearchError(f"Gemini search failed ({type(e).__name__}: {str(e)[:120]})") from None

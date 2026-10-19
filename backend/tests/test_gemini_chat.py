@@ -218,3 +218,16 @@ def test_spend_shows_gemini(keys, monkeypatch):
         today = c.get("/api/usage/today").json()
     assert today["by_provider"]["gemini"] == pytest.approx(0.007)
     assert today["web_search"]["gemini"] == pytest.approx(0.001)
+
+
+def test_a_hanging_gemini_search_gives_up_and_openai_searches(keys, monkeypatch):
+    class Hanging(FakeGeminiClient):
+        async def _generate(self, model, contents, config):
+            await asyncio.sleep(3600)
+
+    monkeypatch.setattr(websearch, "GEMINI_CLIENT", Hanging())
+    monkeypatch.setattr(websearch, "GEMINI_SEARCH_SECONDS", 0.2)
+    with TestClient(create_app()):
+        set_setting("web_search_provider", "gemini")
+        text, ctx = search("anything")
+    assert text == "OpenAI researcher: findings." and ctx.helpers.asked == ["web_researcher"]
