@@ -47,8 +47,11 @@ def test_connect_opens_googles_consent_page_with_only_what_we_need(google):
     scopes = q["scope"][0].split()
     assert "https://www.googleapis.com/auth/drive.file" in scopes
     assert "https://www.googleapis.com/auth/drive.readonly" in scopes  # finding your files: read-only
-    # Never anything that can change or delete your existing files, or read your Gmail.
-    assert not any(s.endswith(("/drive", "gmail.readonly", "/documents", "/spreadsheets")) for s in scopes)
+    assert "https://www.googleapis.com/auth/gmail.readonly" in scopes  # reading your mail
+    assert "https://www.googleapis.com/auth/gmail.compose" in scopes  # drafts, sent only after you approve
+    # Never anything that can change or delete your existing files, or delete or rearrange your mail.
+    assert not any(s.endswith(("/drive", "/documents", "/spreadsheets", "gmail.modify")) or s == "https://mail.google.com/"
+                   for s in scopes)
 
 
 def test_signing_in_saves_the_login_encrypted(google):
@@ -85,7 +88,8 @@ def test_permissions_you_unticked_are_named(google):
     sign_in(client)
     missing = client.get("/api/google/status").json()["missing"]
     assert missing == ["finding and sending you files from your Drive (read-only)", "reading your Google Docs",
-                       "reading your Google Sheets", "reading and adding your calendar events"]
+                       "reading your Google Sheets", "reading and adding your calendar events", "reading your Gmail",
+                       "making Gmail drafts and sending the ones you approve"]
     assert not auth.has_scope("calendar.events") and auth.has_scope("drive.file")
 
 

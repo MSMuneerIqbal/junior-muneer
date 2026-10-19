@@ -208,6 +208,13 @@ def briefing_prompt(settings: dict, now: datetime | None = None, calendar: str =
     ]
     if calendar:
         parts.append("### Today on their Google Calendar\n" + calendar)
+    from datetime import timedelta
+
+    from junior.inbox import important_since
+
+    if emails := important_since((now or datetime.now(UTC)) - timedelta(hours=24)):
+        parts.append("### Important emails in the last 24 hours\n" + "\n".join(
+            f"- email {e.id}: {e.summary or e.subject} (from {e.from_name or e.from_address})" for e in emails))
     if headlines := news_headlines():
         parts.append("### Latest news headlines (from today's digests)\n" + headlines)
     return "\n\n".join(parts)

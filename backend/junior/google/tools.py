@@ -364,7 +364,162 @@ async def drive_folder(ctx: Ctx, name: str) -> str:
     return await drive_folder_for(ctx.context, name)
 
 
+# ---- Gmail -------------------------------------------------------------------------------
+
+
+def _gmail_ready(scope: str) -> str | None:
+    if refusal := _not_ready("drive.file"):  # Google set up and connected at all
+        return refusal
+    if not auth.has_scope(scope):
+        return "NOT done: Gmail isn't allowed yet. Tell the user to use Connect again in Settings → Connections and tick Gmail."
+    return None
+
+
+def _email_row(number: int):
+    from junior.db import Email, session_scope
+
+    with session_scope() as s:
+        row = s.get(Email, number)
+        if row is not None:
+            s.expunge(row)
+        return row
+
+
+async def gmail_search_for(context: TurnContext, query: str, limit: int = 10) -> str:
+    from junior.google.gmail import search
+
+    if refusal := _gmail_ready("gmail.readonly"):
+        return refusal
+    try:
+        found = await search(query, limit)
+    except GoogleError as e:
+        return f"Couldn't search Gmail: {e}"
+    if not found:
+        return f"No emails match {query!r}."
+    lines = "\n".join(
+        f"- [{m['id']}] {m['date'][:16].replace('T', ' ')} from {m['from_name'] or m['from_address']} <{m['from_address']}>: "
+        f"{m['subject']} | {m['snippet'][:160]}"
+        for m in found
+    )
+    return gate.fence(context, lines, "emails in their Gmail (id in brackets)")
+
+
+async def gmail_read_for(context: TurnContext, email: str) -> str:
+    from junior.google.gmail import read
+
+    if refusal := _gmail_ready("gmail.readonly"):
+        return refusal
+    email = email.strip()
+    if email.isdigit() and (row := _email_row(int(email))) is not None:
+        email = row.gmail_id  # "email 12" from the inbox list or an alert
+    try:
+        m = await read(email)
+    except GoogleError as e:
+        return f"Couldn't read it: {e}"
+    files = f"\nAttachments: {', '.join(m['attachments'])}" if m["attachments"] else ""
+    text = (f"From: {m['from_name']} <{m['from_address']}>\nTo: {m['to']}\n" + (f"Cc: {m['cc']}\n" if m["cc"] else "")
+            + f"Date: {m['date']}\nSubject: {m['subject']}{files}\n\n{m['body'] or m['snippet']}")
+    return gate.fence(context, text, f"an email from {m['from_address']}") + f"\nOpen in Gmail: {m['link']}"
+
+
+async def gmail_draft_for(
+    context: TurnContext, to: str, subject: str, body: str, your_words: str, reply_to: str = "", cc: str = ""
+) -> str:
+    from junior.approvals import ApprovalError, create_item
+    from junior.google.gmail import make_draft, read, valid_addresses
+
+    if refusal := _gmail_ready("gmail.compose") or gate.check(context, "gmail.draft", your_words=your_words):
+        return refusal
+    thread_id = in_reply_to = references = ""
+    if reply_to.strip():
+        if refusal := _gmail_ready("gmail.readonly"):
+            return refusal
+        target = reply_to.strip()
+        if target.isdigit() and (row := _email_row(int(target))) is not None:
+            target = row.gmail_id
+        try:
+            original = await read(target)
+        except GoogleError as e:
+            return f"NOT done: couldn't open the email to reply to ({e})."
+        to = to.strip() or original["from_address"]
+        subject = subject.strip() or original["subject"]
+        if not subject.lower().startswith("re:"):
+            subject = f"Re: {subject}"
+        thread_id, in_reply_to, references = original["thread_id"], original["message_id_header"], original["references"]
+    try:
+        recipients = valid_addresses(to)
+        valid_addresses(cc)
+    except GoogleError as e:
+        return f"NOT done: {e} Ask them for the right address."
+    if not recipients:
+        return "NOT done: who should it go to? Ask them for the email address."
+    if len(recipients) + len(valid_addresses(cc)) > 10:
+        return "NOT done: at most 10 people per email."
+    try:
+        draft_id = await make_draft(to, subject, body, cc, thread_id, in_reply_to, references)
+    except GoogleError as e:
+        gate.failed(context, "gmail.draft", str(e))
+        return f"NOT done: {e}"
+    reply = bool(reply_to.strip())
+    try:
+        item = create_item(
+            kind="api", platform="email", item_type="reply" if reply else "email",
+            action_type="gmail.reply" if reply else "gmail.send", text=body,
+            title=f"To {', '.join(recipients)}: {subject}"[:200],
+            from_outside=reply or context.outside_content_seen, conversation_id=context.conversation_id,
+            meta={"to": to, "cc": cc, "subject": subject, "thread_id": thread_id, "in_reply_to": in_reply_to,
+                  "references": references, "draft_id": draft_id, "reply_to": reply_to.strip()},
+        )
+    except ApprovalError as e:
+        return f"NOT done: {e}"
+    gate.done(context, "gmail.draft", {"to": to, "subject": subject[:200], "item": item.id})
+    context.approval_ids.append(item.id)
+    context.pending_events.append({"type": "approval", "item": item.model_dump(mode="json")})
+    return (
+        f"Drafted (approval item {item.id}, also in their Gmail Drafts). It shows as a card with Approve and Reject; "
+        "nothing is sent until they approve it. Tell them in one line who it's to and the subject; don't repeat the text."
+    )
+
+
+@function_tool
+async def gmail_search(ctx: Ctx, query: str, limit: int = 10) -> str:
+    """Search the user's Gmail ("emails from Ali", "unread this week", "the invoice from Acme"). Returns each email's
+    id, date, sender, subject and a snippet. Read one in full with gmail_read.
+
+    Args:
+        query: A Gmail search, e.g. "from:ali@acme.com", "is:unread newer_than:3d", "subject:invoice", or plain words.
+        limit: How many to show (1 to 25).
+    """
+    return await gmail_search_for(ctx.context, query, limit)
+
+
+@function_tool
+async def gmail_read(ctx: Ctx, email: str) -> str:
+    """Read one email in full: from gmail_search (its id in brackets), or "email N" from an alert or the Inbox page.
+
+    Args:
+        email: The email's id, or its number N from "email N".
+    """
+    return await gmail_read_for(ctx.context, email)
+
+
+@function_tool
+async def gmail_draft(ctx: Ctx, to: str, subject: str, body: str, your_words: str, reply_to: str = "", cc: str = "") -> str:
+    """Write an email for the user to someone else, or a reply. It goes into their Gmail Drafts and shows as a card:
+    it's sent only when they approve it. Write the complete email, ready to send, signed with their name.
+
+    Args:
+        to: The recipient's email address (several separated by commas). For a reply, leave empty to answer the sender.
+        subject: The subject. For a reply, leave empty to keep "Re: <their subject>".
+        body: The full email text, ready to send. No placeholders like [name].
+        your_words: The user's exact words asking for this email (copied word for word).
+        reply_to: For a reply: the email's id from gmail_search, or its number N from "email N".
+        cc: Anyone to copy, if they said.
+    """
+    return await gmail_draft_for(ctx.context, to, subject, body, your_words, reply_to, cc)
+
+
 GOOGLE_TOOLS = [
     google_doc_create, google_doc_read, google_sheet_create, google_sheet_read, calendar_add_event, calendar_events,
-    drive_search, drive_save, drive_read, drive_folder,
+    drive_search, drive_save, drive_read, drive_folder, gmail_search, gmail_read, gmail_draft,
 ]

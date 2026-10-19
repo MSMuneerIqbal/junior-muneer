@@ -50,6 +50,8 @@ def test_defaults(client):
         "briefing_time": "08:00",
         "memory_tidy_enabled": True,
         "news_email_enabled": True,
+        "email_watch_enabled": True,
+        "email_notify_whatsapp": True,
         "whatsapp_session_hours": 12,
         "whatsapp_carry_summary": True,
     }

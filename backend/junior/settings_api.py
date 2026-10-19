@@ -38,6 +38,8 @@ class SettingsUpdate(BaseModel):
     news_digest_enabled: bool | None = None
     news_digest_time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
     news_email_enabled: bool | None = None
+    email_watch_enabled: bool | None = None
+    email_notify_whatsapp: bool | None = None
     briefing_enabled: bool | None = None
     memory_tidy_enabled: bool | None = None
     whatsapp_session_hours: Literal[0, 6, 12, 24] | None = None
@@ -67,7 +69,8 @@ class SettingsUpdate(BaseModel):
 
 
 # Edited through their own pages and endpoints (/api/profile, /api/permissions).
-NOT_HERE = {"profile", "permission_mode", "permission_rules", "memory_tidied_at", "feeds_read_at", "news_emailed_on"}
+NOT_HERE = {"profile", "permission_mode", "permission_rules", "memory_tidied_at", "feeds_read_at", "news_emailed_on",
+            "email_checked_at", "email_watch_since", "email_alerts_waiting"}
 
 
 @router.get("/api/settings")

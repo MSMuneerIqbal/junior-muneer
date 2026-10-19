@@ -297,6 +297,8 @@ def _team_answer(schema: str, prompt: str) -> dict:
         return _fake_digest(prompt)
     if "TidyOut" in schema:
         return _fake_tidy(prompt)
+    if "EmailSort" in schema:
+        return _fake_email_sort(prompt)
     if "Draft" in schema:
         who = "(fake Writer, revised)" if "## The Checker sent it back" in prompt else "(fake Writer)"
         listed = prompt.split("## Screening questions (", 1)[1].split("\n## ", 1)[0] if "## Screening questions (" in prompt else ""
@@ -317,6 +319,19 @@ def _team_answer(schema: str, prompt: str) -> dict:
     draft = prompt.split("<draft>\n", 1)[-1].split("\n</draft>", 1)[0]
     text = draft.replace("(fake Writer, revised)", "(fake Humanizer)").replace("(fake Writer)", "(fake Humanizer)")
     return {"text": text, "changes": ["Simpler words"]}
+
+
+def _fake_email_sort(prompt: str) -> dict:
+    """The fake Email Agent: a quote request or a sign-in alert is important; anything else isn't."""
+    sender = re.search(r"^From: (.*)$", prompt, re.MULTILINE)
+    subject = re.search(r"^Subject: (.*)$", prompt, re.MULTILINE)
+    text = prompt.lower()
+    scam = "verify your account" in text and "password" in text
+    important = scam or any(w in text for w in ("quote", "new sign-in", "interview"))
+    category = "client" if "quote" in text else "security" if "sign-in" in text or scam else "other"
+    summary = f"(fake) {sender.group(1) if sender else 'someone'}: {subject.group(1) if subject else ''}"
+    return {"category": category, "important": important, "summary": ("Looks like a scam: " if scam else "") + summary,
+            "why": "(fake) needs a reply" if important else "(fake) nothing to do", "suspicious": scam}
 
 
 def _fake_tidy(prompt: str) -> dict:

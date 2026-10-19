@@ -180,7 +180,7 @@ def test_drafts_come_with_buttons_and_a_tap_marks_them(wa):
 
         signed(c, message({"from": OWNER, "id": "wamid.b", "type": "interactive",
                            "interactive": {"type": "button_reply", "button_reply": {"id": f"posted:{item_id}", "title": "Posted ✓"}}}))
-        assert wait_for(wa, 3)[2]["text"]["body"] == "Marked as posted ✓: LinkedIn post."
+        assert wait_for(wa, 3)[2]["text"]["body"] == "Marked as posted: LinkedIn post."
         assert c.get(f"/api/approvals/{item_id}").json()["status"] == "posted"
 
 

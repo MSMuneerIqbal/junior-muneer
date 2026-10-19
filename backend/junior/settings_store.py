@@ -40,6 +40,12 @@ DEFAULTS: dict[str, Any] = {
     # The day's top 5 AI news emailed to your Gmail after the morning digest (needs GMAIL_* in backend/.env).
     "news_email_enabled": True,
     "news_emailed_on": "",
+    # Phase 4: the email watcher sorts new Gmail every 5 minutes; important ones go to your WhatsApp.
+    "email_watch_enabled": True,
+    "email_notify_whatsapp": True,
+    "email_checked_at": "",
+    "email_watch_since": "",
+    "email_alerts_waiting": [],
     # Phase 7: the morning briefing (yesterday, today's agenda, news), once a day at this local time.
     "briefing_enabled": True,
     "briefing_time": "08:00",

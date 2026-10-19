@@ -53,12 +53,15 @@ async def send_item(item_id: int, senders: SenderRegistry) -> ApprovalOut:
         if not problems and sender is None:
             problems.append(f"{label} isn't connected yet. Connect it in Settings, or copy it and post it yourself.")
         if problems:
+            # Saved before raising: raising inside this block would undo it, and the card couldn't show why.
             item.meta = {**item.meta, "blocked": problems}
-            audit("action", "send_blocked", result="blocked",
-                  detail={"id": item_id, "type": item.action_type, "problems": problems})
-            raise SendError(problems[0])
-        attempt = int(item.meta.get("attempts", 0)) + 1
-        out = Outgoing(item.id, item.action_type, item.platform, item.item_type, text, _images(item.id), dict(item.meta))
+            action_type = item.action_type
+        else:
+            attempt = int(item.meta.get("attempts", 0)) + 1
+            out = Outgoing(item.id, item.action_type, item.platform, item.item_type, text, _images(item.id), dict(item.meta))
+    if problems:
+        audit("action", "send_blocked", result="blocked", detail={"id": item_id, "type": action_type, "problems": problems})
+        raise SendError(problems[0])
 
     try:
         run_id = claim_run(f"approval-{item_id}-attempt-{attempt}", out.action_type)

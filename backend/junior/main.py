@@ -27,6 +27,7 @@ from junior.freelance.jobs import router as jobs_router
 from junior.freelance.orders import router as orders_router
 from junior.github.oauth import router as github_router
 from junior.files import router as files_router
+from junior.inbox import router as inbox_router
 from junior.google.auth import router as google_router
 from junior.ideas import router as ideas_router
 from junior.images import router as images_router
@@ -70,6 +71,9 @@ def default_senders(settings) -> SenderRegistry:
         registry.add(
             FacebookPageSender(settings.meta_page_id, settings.meta_page_token, settings.meta_app_secret, settings.meta_graph_version)
         )
+    from junior.senders.gmail import GmailSender
+
+    registry.add(GmailSender())  # sends only when Google is connected with Gmail drafts allowed
     if settings.fake_ai and not registry.for_action("facebook.page.post"):
         from junior.senders.fake import FakeSender
 
@@ -122,8 +126,13 @@ def create_app(
         async def tidy_job() -> None:
             await weekly_tidy(app.state.registry, model_provider)
 
+        async def email_job() -> None:
+            from junior.inbox import check_inbox
+
+            await check_inbox(app.state.registry, model_provider)
+
         scheduler = (
-            asyncio.create_task(scheduler_loop(extra=[("morning news", news_job), ("morning briefing", briefing_job), ("memory tidy-up", tidy_job), ("your feeds", feeds_if_due)]))
+            asyncio.create_task(scheduler_loop(extra=[("morning news", news_job), ("morning briefing", briefing_job), ("memory tidy-up", tidy_job), ("your feeds", feeds_if_due), ("email watcher", email_job)]))
             if get_settings().scheduler_enabled
             else None
         )
@@ -171,6 +180,7 @@ def create_app(
     app.include_router(github_router)
     app.include_router(google_router)
     app.include_router(files_router)
+    app.include_router(inbox_router)
     app.include_router(tasks_router)
     app.include_router(reports_router)
     app.include_router(feeds_router)

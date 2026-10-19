@@ -1,6 +1,7 @@
 """A pretend Google (FAKE_AI with GOOGLE_CLIENT_ID=fake, and the tests): sign-in, Docs, Sheets, Drive export and
 Calendar, kept in memory. Nothing leaves the PC."""
 
+import base64
 import json
 import re
 from datetime import UTC, datetime
@@ -12,7 +13,8 @@ SCOPES = (
     "openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive.file "
     "https://www.googleapis.com/auth/drive.readonly "
     "https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/spreadsheets.readonly "
-    "https://www.googleapis.com/auth/calendar.events"
+    "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.readonly "
+    "https://www.googleapis.com/auth/gmail.compose"
 )
 
 
@@ -34,6 +36,17 @@ class FakeGoogle:
             "folder-work": {"name": "Work", "mimeType": "application/vnd.google-apps.folder", "data": b""},  # yours
         }
         self.events: list[dict] = []
+        now = int(datetime.now(UTC).timestamp())
+        self.mail: list[dict] = [
+            {"id": "msg0001client", "threadId": "thr0001", "labels": ["INBOX", "UNREAD"], "at": now - 3600,
+             "from": "Ali Khan <ali@acme.com>", "to": "you@example.com", "subject": "Quote for a chatbot",
+             "message_id": "<ali-1@acme.com>", "body": "Hi Muneer, can you send a quote for a support chatbot by Friday? Thanks, Ali"},
+            {"id": "msg0002promo", "threadId": "thr0002", "labels": ["INBOX", "CATEGORY_PROMOTIONS"], "at": now - 1800,
+             "from": "Shop <deals@shop.example>", "to": "you@example.com", "subject": "50% off today",
+             "message_id": "<deal@shop.example>", "html": "<p>Big <b>sale</b> today</p>"},
+        ]
+        self.drafts: dict[str, dict] = {}
+        self.sent: list[dict] = []
         self.revoked: list[str] = []
         self.scopes = SCOPES
         self.n = 0
@@ -113,6 +126,9 @@ class FakeGoogle:
         if host == "www.googleapis.com" and path.startswith("/drive/v3/files"):
             return self._drive(request, path)
 
+        if host == "gmail.googleapis.com":
+            return self._gmail(request, path.removeprefix("/gmail/v1/users/me"), body)
+
         # Calendar
         if host == "www.googleapis.com" and path == "/calendar/v3/calendars/primary/events":
             if method == "POST":
@@ -127,6 +143,62 @@ class FakeGoogle:
             found.sort(key=lambda e: _when(e["start"].get("dateTime") or e["start"].get("date")))
             return httpx.Response(200, json={"items": found})
         return httpx.Response(404, json={"error": {"message": f"Fake Google doesn't know {method} {host}{path}"}})
+
+    def add_mail(self, **mail) -> None:
+        """A new email arrives (tests)."""
+        self.mail.append({"labels": ["INBOX", "UNREAD"], "at": int(datetime.now(UTC).timestamp()), "threadId": mail["id"],
+                          "to": "you@example.com", "message_id": f"<{mail['id']}@x>", **mail})
+
+    def _message(self, m: dict) -> dict:
+        from email.utils import formatdate
+
+        headers = [{"name": k, "value": v} for k, v in (("From", m["from"]), ("To", m["to"]), ("Subject", m["subject"]),
+                                                        ("Date", formatdate(m["at"])), ("Message-ID", m["message_id"]))]
+        part = ("text/html", m["html"]) if "html" in m else ("text/plain", m.get("body", ""))
+        data = base64.urlsafe_b64encode(part[1].encode()).decode().rstrip("=")
+        return {"id": m["id"], "threadId": m["threadId"], "labelIds": m["labels"], "snippet": re.sub("<[^>]+>", "", part[1])[:100],
+                "internalDate": str(m["at"] * 1000),
+                "payload": {"mimeType": "multipart/alternative", "headers": headers,
+                            "parts": [{"mimeType": part[0], "body": {"data": data}}]}}
+
+    def _gmail(self, request: httpx.Request, path: str, body: dict) -> httpx.Response:
+        method = request.method
+        if path == "/profile":
+            return httpx.Response(200, json={"emailAddress": "you@example.com"})
+        if path == "/messages" and method == "GET":
+            q = request.url.params.get("q", "")
+            after = int(m.group(1)) if (m := re.search(r"after:(\d+)", q)) else 0
+            sender = m.group(1).lower() if (m := re.search(r"from:(\S+)", q)) else ""
+            words = [w for w in q.split() if ":" not in w]
+            found = [m for m in sorted(self.mail, key=lambda m: -m["at"])
+                     if m["at"] > after and sender in m["from"].lower()
+                     and all(w.lower() in (m["subject"] + m.get("body", "")).lower() for w in words)]
+            limit = int(request.url.params.get("maxResults", "10"))
+            return httpx.Response(200, json={"messages": [{"id": m["id"], "threadId": m["threadId"]} for m in found[:limit]]})
+        if (m := re.match(r"^/messages/([A-Za-z0-9]+)$", path)) and method == "GET":
+            mail = next((x for x in self.mail if x["id"] == m.group(1)), None)
+            if mail is None:
+                return httpx.Response(404, json={"error": {"message": "Requested entity was not found."}})
+            return httpx.Response(200, json=self._message(mail))
+        if path == "/drafts" and method == "POST":
+            draft_id = self._id("draft")
+            self.drafts[draft_id] = body["message"]
+            return httpx.Response(200, json={"id": draft_id, "message": {"id": f"m-{draft_id}"}})
+        if (m := re.match(r"^/drafts/([\w-]+)$", path)) and method == "PUT":
+            if m.group(1) not in self.drafts:
+                return httpx.Response(404, json={"error": {"message": "Requested entity was not found."}})
+            self.drafts[m.group(1)] = body["message"]
+            return httpx.Response(200, json={"id": m.group(1)})
+        if path == "/drafts/send":
+            message = self.drafts.pop(body["id"], None)
+            if message is None:
+                return httpx.Response(404, json={"error": {"message": "Requested entity was not found."}})
+            self.sent.append(message)
+            return httpx.Response(200, json={"id": f"sent{len(self.sent)}", "threadId": message.get("threadId", "")})
+        if path == "/messages/send":
+            self.sent.append(body)
+            return httpx.Response(200, json={"id": f"sent{len(self.sent)}", "threadId": body.get("threadId", "")})
+        return httpx.Response(404, json={"error": {"message": f"Fake Gmail doesn't know {method} {path}"}})
 
     def _all_files(self) -> dict[str, dict]:
         files = {fid: {"name": d["title"], "mimeType": "application/vnd.google-apps.document"} for fid, d in self.docs.items()}

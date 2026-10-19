@@ -325,6 +325,29 @@ class Connection(Base):
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
+class Email(Base):
+    """An email in your Gmail inbox that the watcher sorted (Phase 4). The email itself stays in Gmail;
+    this keeps who, what, the sort and a one-line summary. Outside content: data, never instructions."""
+
+    __tablename__ = "emails"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    gmail_id: Mapped[str] = mapped_column(String(40), unique=True)
+    thread_id: Mapped[str] = mapped_column(String(40), default="")
+    from_name: Mapped[str] = mapped_column(String(200), default="")
+    from_address: Mapped[str] = mapped_column(String(200), default="")
+    subject: Mapped[str] = mapped_column(String(300), default="")
+    snippet: Mapped[str] = mapped_column(Text, default="")
+    received_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True, index=True)
+    # client · freelance · work · study · money · security · personal · newsletter · promotion · social · other
+    category: Mapped[str] = mapped_column(String(20), default="other")
+    important: Mapped[bool] = mapped_column(Boolean, default=False)
+    summary: Mapped[str] = mapped_column(Text, default="")
+    why: Mapped[str] = mapped_column(String(300), default="")
+    notified_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
 class ReceivedFile(Base):
     """A file you sent Junior Muneer (on WhatsApp or with 📎 in the chat). Kept in data/files until you say
     what to do with it (e.g. save it to your Google Drive)."""

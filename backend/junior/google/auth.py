@@ -6,8 +6,8 @@
     DELETE /api/google/connection   disconnect (also asks Google to revoke the app's access)
 
 Only these permissions are asked for: files the app itself creates, finding and reading your Drive files
-(read-only: never change, move or delete), reading your Docs and Sheets, your calendar's events, and your
-email address. The app's OAuth client comes from your
+(read-only: never change, move or delete), reading your Docs and Sheets, your calendar's events, reading your
+Gmail and making drafts (sent only after you approve each one), and your email address. The app's OAuth client comes from your
 own Google Cloud project (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in backend/.env). The refresh token
 is encrypted in the database (junior/secrets.py) and never sent to the browser.
 """
@@ -45,6 +45,8 @@ SCOPES = {
     "https://www.googleapis.com/auth/documents.readonly": "reading your Google Docs",
     "https://www.googleapis.com/auth/spreadsheets.readonly": "reading your Google Sheets",
     "https://www.googleapis.com/auth/calendar.events": "reading and adding your calendar events",
+    "https://www.googleapis.com/auth/gmail.readonly": "reading your Gmail",
+    "https://www.googleapis.com/auth/gmail.compose": "making Gmail drafts and sending the ones you approve",
 }
 _ALIASES = {"https://www.googleapis.com/auth/userinfo.email": "email"}
 

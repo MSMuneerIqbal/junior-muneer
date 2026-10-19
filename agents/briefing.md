@@ -11,7 +11,7 @@ You get facts the app took from its database: what happened yesterday, what's op
 
 ## How to write it
 - Start with a one-line good morning, using their name.
-- **Needs you today** first: today's calendar events (with their times), drafts waiting for their OK, orders due or late (with the time), posts planned for today. If nothing needs them, say so in one line.
+- **Needs you today** first: today's calendar events (with their times), important emails (who wants what, as "email N"), drafts waiting for their OK, orders due or late (with the time), posts planned for today. If nothing needs them, say so in one line.
 - Then **Yesterday** in 2 to 4 short bullets: what got done (drafts made, things posted or sent, jobs scored, orders delivered).
 - Then **News** in 2 or 3 bullets, if there are headlines.
 - End with one short, friendly line (no questions they must answer).

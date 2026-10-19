@@ -273,6 +273,8 @@ async def send_drafts(to: str, items: list[dict]) -> None:
         text = item["text"] if len(item["text"]) <= DRAFT_PREVIEW else item["text"][:DRAFT_PREVIEW] + "…"
         score = f" · {item['meta']['score']}/10" if item.get("meta", {}).get("score") is not None else ""
         body = f"{item['platform_label']} {item['item_type']}{score}\n\n{text}"
+        if item.get("platform") == "email":  # who it goes to, and that Approve sends it
+            body = f"Email {item['title']}\n\n{text}\n\nApprove sends it from your Gmail."
         await client().send_buttons(to, body, _buttons(item))
 
 
@@ -304,14 +306,20 @@ async def answer(app: Any, text: str, audio_id: str | None = None, audio_seconds
     if not spoken:
         await client().send_text(owner, reply or problem or "I couldn't answer that just now. Please try again.")
     await send_drafts(owner, drafts)
+    try:
+        from junior.inbox import deliver_waiting
+
+        await deliver_waiting()  # email alerts that waited for WhatsApp's 24-hour window
+    except Exception:
+        log.exception("Couldn't deliver waiting email alerts")
 
 
-async def on_button(button_id: str) -> str:
-    """Your tap on a draft's button -> the same action as on the dashboard."""
+async def on_button(button_id: str, app: Any = None) -> str:
+    """Your tap on a draft's button -> the same action as on the dashboard (Approve also sends it, like there)."""
     from junior.approvals import ApprovalError, approve_item, mark_posted, reject_item
 
     action, _, number = button_id.partition(":")
-    actions = {"posted": (mark_posted, "Marked as posted ✓"), "approve": (approve_item, "Approved ✓"), "reject": (reject_item, "Rejected")}
+    actions = {"posted": (mark_posted, "Marked as posted"), "approve": (approve_item, "Approved"), "reject": (reject_item, "Rejected")}
     if action not in actions or not number.isdigit():
         return "I didn't understand that button."
     fn, done = actions[action]
@@ -321,6 +329,17 @@ async def on_button(button_id: str) -> str:
         return "That draft isn't there anymore."
     except ApprovalError as e:
         return f"Couldn't do that: {e}"
+    senders = getattr(getattr(app, "state", None), "senders", None)
+    if action == "approve" and senders is not None and item.action_type and senders.for_action(item.action_type):
+        from junior.senders.dispatch import SendError, send_item
+
+        try:
+            item = await send_item(item.id, senders)
+        except SendError as e:
+            return f"Approved, but not sent: {e}"
+        if item.status == "posted":
+            return f"Sent: {item.title}."
+        return f"Approved, but it didn't go out: {item.meta.get('last_error', 'check the dashboard')}."
     return f"{done}: {item.platform_label} {item.item_type}."
 
 
@@ -372,7 +391,7 @@ async def handle(app: Any, msg: dict) -> None:
             elif kind in ("document", "image"):
                 await answer(app, await received_file(wa, msg))
             elif kind == "interactive" and msg.get("interactive", {}).get("type") == "button_reply":
-                await wa.send_text(sender, await on_button(msg["interactive"]["button_reply"]["id"]))
+                await wa.send_text(sender, await on_button(msg["interactive"]["button_reply"]["id"], app))
             else:
                 await wa.send_text(sender, "I can take text, voice notes, documents and photos here.")
         except ValueError as e:  # a file that's empty or too big
