@@ -844,9 +844,13 @@ def call_limits() -> dict:
     settings = all_settings()
     used = call_seconds_today(settings["timezone"]) / 60
     allowed = float(settings["call_minutes_per_day"])
+    engine = settings.get("voice_provider_model", "openai-realtime")
     return {
         "minutes_used": round(used, 1),
         "minutes_allowed": allowed,
         "minutes_left": round(max(allowed - used, 0), 1),
-        "model": get_router().audio_model("realtime"),
+        "model": engine if engine != "openai-realtime" else get_router().audio_model("realtime"),
+        # Which engine the call button uses: OpenAI over WebRTC, or Gemini Live over /ws/call/gemini.
+        "engine": "gemini" if engine.startswith("gemini") else "openai",
+        "gemini_ready": bool(get_settings().gemini_api_key),
     }

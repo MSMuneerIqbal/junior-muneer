@@ -17,6 +17,7 @@ from junior.audit import router as audit_router
 from junior.backup import router as backup_router
 from junior.calls import CallManager, OpenAIRealtime, RealtimeGateway
 from junior.calls import router as calls_router
+from junior.gemini_live import router as gemini_router
 from junior.chat.api import router as chat_router
 from junior.chat.service import ChatService
 from junior.config import get_settings
@@ -168,6 +169,7 @@ def create_app(
     app.include_router(settings_router)
     app.include_router(voice_router)
     app.include_router(calls_router)
+    app.include_router(gemini_router)
     app.include_router(profile_router)
     app.include_router(playbooks_router)
     app.include_router(permissions_router)

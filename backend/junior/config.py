@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     ai_timeout_seconds: float = 120.0
     # Optional: other providers' keys (see [providers] in agents/models.toml).
     deepseek_api_key: str = ""
+    # Optional: Google Gemini API key, for live calls with Gemini Live (Settings → Live calls → Voice engine).
+    gemini_api_key: str = ""
     # Phase 3: your Facebook Page (written by connect.bat meta; never committed).
     meta_app_id: str = ""
     meta_app_secret: str = ""

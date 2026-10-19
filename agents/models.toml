@@ -76,6 +76,21 @@ text_input = 4.00
 text_cached_input = 0.40
 text_output = 24.00
 
+# Live calls with Google Gemini Live (Settings → Live calls → Voice engine), per 1M tokens.
+# From ai.google.dev/gemini-api/docs/pricing (checked 2026-10-20). Google Search in Gemini 3 calls:
+# 5,000 free a month, then $14 per 1,000 (not counted here).
+[audio_prices."gemini-3.8-live"]
+audio_input = 3.00
+audio_output = 12.00
+text_input = 0.75
+text_output = 4.50
+
+[audio_prices."gemini-2.5-flash-native-audio-preview-12-2025"]
+audio_input = 3.00
+audio_output = 12.00
+text_input = 0.50
+text_output = 2.00   # not listed separately; the audio models' text output is small
+
 # Other providers (text only; voice and web search stay on OpenAI).
 # A model from a provider is written "provider:model", e.g. "deepseek:deepseek-flash".
 # Choose them in Settings -> Models, or here in [tiers] / [agents].

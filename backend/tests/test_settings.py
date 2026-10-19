@@ -44,6 +44,8 @@ def test_defaults(client):
         "main_model": "",
         "helper_model": "",
         "web_search_provider": "openai",
+        "voice_provider_model": "openai-realtime",
+        "gemini_voice": "Charon",
         "vision_provider": "openai",
         "api_posts_per_day": 5,
         "news_digest_enabled": True,

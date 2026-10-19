@@ -23,6 +23,10 @@ DEFAULTS: dict[str, Any] = {
     "call_minutes_per_day": 30,
     # natural (full realtime model) · economy (mini)
     "call_quality": "natural",
+    # Which engine runs live calls: OpenAI Realtime (above), or Google Gemini Live (needs GEMINI_API_KEY).
+    "voice_provider_model": "openai-realtime",
+    # Gemini Live's voice (Gemini has its own voices).
+    "gemini_voice": "Charon",
     # patient · balanced · quick: how soon he answers when you pause
     "turn_taking": "balanced",
     # headset · laptop · off: noise reduction to suit your microphone in calls
