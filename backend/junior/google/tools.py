@@ -473,6 +473,22 @@ async def gmail_draft_for(
     except ApprovalError as e:
         return f"NOT done: {e}"
     gate.done(context, "gmail.draft", {"to": to, "subject": subject[:200], "item": item.id})
+    if item.status == "approved":
+        # Their rule for this kind of email is Auto: it goes out now, through the same Safety Guard and sender.
+        from junior.senders.dispatch import SendError, send_item
+        from junior.senders.registry import CURRENT
+
+        try:
+            item = await send_item(item.id, CURRENT)
+        except SendError as e:
+            context.approval_ids.append(item.id)
+            context.pending_events.append({"type": "approval", "item": item.model_dump(mode="json")})
+            return f"Their rule is Auto, but it wasn't sent: {e} It's in their Gmail Drafts and the card shows it. Tell them why in one line."
+        context.approval_ids.append(item.id)
+        context.pending_events.append({"type": "approval", "item": item.model_dump(mode="json")})
+        if item.status == "posted":
+            return f"Sent from their Gmail to {to} (their rule for new emails is Auto). Tell them in one line who it went to and the subject."
+        return f"Their rule is Auto, but Gmail didn't confirm it: {item.meta.get('last_error', '')}. Tell them to check their Sent folder."
     context.approval_ids.append(item.id)
     context.pending_events.append({"type": "approval", "item": item.model_dump(mode="json")})
     return (

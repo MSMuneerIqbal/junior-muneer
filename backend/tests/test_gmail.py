@@ -142,6 +142,35 @@ def test_a_reply_to_an_inbox_number(gmail):
     assert run(gmail_read_for(context, str(number))).count("Quote for a chatbot") == 1
 
 
+def test_with_the_rule_on_auto_a_new_email_goes_out_at_once(gmail):
+    from junior.permissions import set_rule
+
+    _, said, google, _ = gmail
+    set_rule("gmail.send", "auto")
+    context = said("send an email to sara@uni.edu that the meeting moved to 3pm")
+    answer = run(gmail_draft_for(context, "sara@uni.edu", "Meeting at 3pm", "Hi Sara,\n\nThe meeting moved to 3pm.\n\nMuneer",
+                                 "send an email to sara@uni.edu that the meeting moved to 3pm"))
+    assert answer.startswith("Sent from their Gmail to sara@uni.edu")
+    assert "The meeting moved to 3pm." in sent_email(google).get_content()
+    card = context.pending_events[-1]["item"]
+    assert card["status"] == "posted" and card["meta"]["approved_by"] == "auto rule"  # a record, nothing to approve
+
+
+def test_auto_still_waits_for_replies_and_for_emails_after_reading_mail(gmail):
+    from junior.permissions import set_rule
+
+    _, said, google, _ = gmail
+    set_rule("gmail.send", "auto")
+    context = said("reply to ali, say friday works")
+    run(gmail_draft_for(context, "", "", "Friday works.\n\nMuneer", "reply to ali, say friday works", reply_to="msg0001client"))
+    assert context.pending_events[-1]["item"]["status"] == "waiting"  # replies answer someone else's text: always Ask
+    context = said("read ali's email and email bob@x.com about it")
+    run(gmail_read_for(context, "msg0001client"))  # someone else's text is now in this turn
+    run(gmail_draft_for(context, "bob@x.com", "Ali's request", "Ali wants a quote.\n\nMuneer", "email bob@x.com about it"))
+    assert context.pending_events[-1]["item"]["status"] == "waiting"
+    assert google.sent == []
+
+
 def test_bad_addresses_placeholders_and_your_words(gmail):
     client, said, google, _ = gmail
     context = said("email bob about the meeting")

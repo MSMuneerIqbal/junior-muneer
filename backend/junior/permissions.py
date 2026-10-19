@@ -76,7 +76,7 @@ CATALOG: dict[str, ActionType] = {
         _t("gmail.draft", "Make a Gmail draft (it waits for your OK to send)", "Email", "auto",
            note="Only a draft in your Gmail Drafts; sending is the next rule."),
         _t("gmail.send", "Send a new email", "Email", "ask",
-           note="Auto is possible but not recommended."),
+           note="Auto: he sends it as soon as you ask, no card to approve. Ask: a draft waits for your Approve."),
         _t("gmail.reply", "Reply to an email", "Email", "ask", True,
            "Replies answer outside content, so they always wait for you."),
         _t("gmail.to_self", "Email yourself what you ask for (news, drafts, notes)", "Email", "auto",
