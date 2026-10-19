@@ -4,6 +4,13 @@
 # Caddy gives the site HTTPS automatically and asks for your login before anything loads.
 # Your keys stay in backend/.env (never in an image); your data stays in ./data on the server.
 
+# Logs: at most 3 files of 10 MB per service, so months of logs can't fill the server's disk.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   backend:
     build:
@@ -17,12 +24,14 @@ services:
     volumes:
       - ./data:/app/data
     restart: unless-stopped
+    logging: *logging
 
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
     restart: unless-stopped
+    logging: *logging
 
   caddy:
     image: caddy:2
@@ -41,6 +50,7 @@ services:
       - backend
       - frontend
     restart: unless-stopped
+    logging: *logging
 
 volumes:
   caddy_data:
