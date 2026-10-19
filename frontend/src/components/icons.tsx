@@ -48,6 +48,71 @@ export function SendIcon(p: IconProps) {
   );
 }
 
+/** Line icons for the Settings menu, by name. */
+const SETTINGS_PATHS: Record<string, React.ReactNode> = {
+  profile: (
+    <>
+      <circle cx="12" cy="8.5" r="3.5" />
+      <path d="M5 20a7 7 0 0 1 14 0" />
+    </>
+  ),
+  budget: (
+    <>
+      <rect x="3" y="6" width="18" height="13" rx="2.5" />
+      <path d="M3 10h18M16 14.5h2" />
+    </>
+  ),
+  models: (
+    <>
+      <rect x="6.5" y="6.5" width="11" height="11" rx="2" />
+      <path d="M9.5 3v3.5M14.5 3v3.5M9.5 17.5V21M14.5 17.5V21M3 9.5h3.5M3 14.5h3.5M17.5 9.5H21M17.5 14.5H21" />
+    </>
+  ),
+  voice: (
+    <>
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
+    </>
+  ),
+  calls: <path d="M5 4h3.5l1.5 4-2 1.5a10 10 0 0 0 6.5 6.5l1.5-2 4 1.5V19a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />,
+  connections: (
+    <>
+      <path d="M9 15l6-6" />
+      <path d="M10.5 6.5l1.8-1.8a4 4 0 0 1 5.7 5.7l-1.8 1.8M13.5 17.5l-1.8 1.8a4 4 0 0 1-5.7-5.7l1.8-1.8" />
+    </>
+  ),
+  whatsapp: <path d="M4 20l1.3-4A8 8 0 1 1 8.4 19L4 20z" />,
+  posting: (
+    <>
+      <path d="M21 3L10 14" />
+      <path d="M21 3l-7 18-4-7-7-4 18-7z" />
+    </>
+  ),
+  news: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2.5" />
+      <path d="M3.5 6.5l8.5 6.5 8.5-6.5" />
+    </>
+  ),
+  permissions: (
+    <>
+      <path d="M12 3l7.5 3v5.5c0 4.5-3.2 8.3-7.5 9.5-4.3-1.2-7.5-5-7.5-9.5V6L12 3z" />
+      <path d="M9 12l2 2 4-4" />
+    </>
+  ),
+  advanced: (
+    <>
+      <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+      <circle cx="16" cy="7" r="2" />
+      <circle cx="10" cy="17" r="2" />
+    </>
+  ),
+};
+
+export function SettingsIcon({ name, ...p }: IconProps & { name: string }) {
+  return <Svg {...p}>{SETTINGS_PATHS[name]}</Svg>;
+}
+
 export function PaperclipIcon(p: IconProps) {
   return (
     <Svg {...p}>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { GitHubConnect } from "@/components/GitHubConnect";
+import { SettingsIcon } from "@/components/icons";
 import { BACKEND_URL, fetcher, send } from "@/lib/api";
 import { PERMISSIONS_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
 import type { Settings } from "@/lib/types";
@@ -40,31 +41,31 @@ type Permissions = {
 // The left menu: one section shows at a time. "#news" in the address opens that section.
 type SectionId =
   | "profile" | "budget" | "models" | "voice" | "calls" | "connections" | "whatsapp" | "posting" | "news" | "permissions" | "advanced";
-type MenuItem = { id: SectionId; title: string; icon: string };
+type MenuItem = { id: SectionId; title: string }; // its icon: SettingsIcon by id
 const GROUPS: { title: string; items: MenuItem[] }[] = [
-  { title: "Account", items: [{ id: "profile", title: "Profile", icon: "◉" }, { id: "budget", title: "Budget", icon: "$" }] },
+  { title: "Account", items: [{ id: "profile", title: "Profile" }, { id: "budget", title: "Budget" }] },
   {
     title: "AI",
     items: [
-      { id: "models", title: "Models", icon: "◆" },
-      { id: "voice", title: "Voice", icon: "♪" },
-      { id: "calls", title: "Live calls", icon: "☏" },
+      { id: "models", title: "Models" },
+      { id: "voice", title: "Voice" },
+      { id: "calls", title: "Live calls" },
     ],
   },
   {
     title: "Channels",
     items: [
-      { id: "connections", title: "Connections", icon: "⇄" },
-      { id: "whatsapp", title: "WhatsApp", icon: "✆" },
-      { id: "posting", title: "Posting", icon: "↗" },
+      { id: "connections", title: "Connections" },
+      { id: "whatsapp", title: "WhatsApp" },
+      { id: "posting", title: "Posting" },
     ],
   },
-  { title: "Automation", items: [{ id: "news", title: "News & email", icon: "✉" }] },
+  { title: "Automation", items: [{ id: "news", title: "News & email" }] },
   {
     title: "Safety",
     items: [
-      { id: "permissions", title: "Permissions", icon: "⛨" },
-      { id: "advanced", title: "Advanced", icon: "⚙" },
+      { id: "permissions", title: "Permissions" },
+      { id: "advanced", title: "Advanced" },
     ],
   },
 ];
@@ -89,32 +90,40 @@ function Section({
   // Every section stays mounted (its state and checks keep working); only the chosen one shows.
   const active = useContext(ActiveSection) === id;
   return (
-    <section
-      id={id}
-      hidden={!active}
-      aria-labelledby={`${id}-title`}
-      className="@container rounded-2xl border border-line bg-panel shadow-sm"
-    >
-      <header className="border-b border-line px-6 py-5">
-        <h2 id={`${id}-title`} className="text-lg font-semibold tracking-tight">
+    // Flat, like Claude's own settings: a title, then rows split by thin lines.
+    <section id={id} hidden={!active} aria-labelledby={`${id}-title`} className="@container">
+      <header className="pb-2">
+        <h2 id={`${id}-title`} className="text-[17px] font-semibold">
           {title}
         </h2>
-        <p className="mt-1 text-sm text-muted">{description}</p>
+        <p className="mt-1 text-[14px] leading-relaxed text-muted">{description}</p>
       </header>
       <div className="divide-y divide-line">{children}</div>
     </section>
   );
 }
 
-/** One setting: label and explanation on the left, the control on the right. */
-function Row({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
-  return (
-    <div className="grid gap-3 px-6 py-5 @3xl:grid-cols-[13rem_1fr] @3xl:gap-8">
-      <div>
-        <p className="text-sm font-medium">{label}</p>
-        {hint && <p className="mt-1 text-xs leading-relaxed text-muted">{hint}</p>}
+/** One setting: label and explanation on the left, the control on the right.
+ *  `wide` controls (model cards, voices, lists) go under the label, full width. */
+function Row({ label, hint, wide, children }: { label: string; hint?: ReactNode; wide?: boolean; children: ReactNode }) {
+  const text = (
+    <div className="min-w-0">
+      <p className="text-[15px] font-medium">{label}</p>
+      {hint && <p className="mt-1 text-[14px] leading-relaxed text-muted">{hint}</p>}
+    </div>
+  );
+  if (wide) {
+    return (
+      <div className="flex flex-col gap-4 py-5">
+        {text}
+        <div className="min-w-0">{children}</div>
       </div>
-      <div className="min-w-0">{children}</div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-3 py-5 @2xl:flex-row @2xl:items-center @2xl:justify-between @2xl:gap-10">
+      <div className="@2xl:max-w-[60%]">{text}</div>
+      <div className="min-w-0 @2xl:flex @2xl:shrink-0 @2xl:justify-end">{children}</div>
     </div>
   );
 }
@@ -532,6 +541,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
         {models ? (
           <>
             <Row
+              wide
               label="Chat model"
               hint="For typed messages. Prices are US$ per 1 million tokens, in / out (a message is usually under 2,000)."
             >
@@ -543,7 +553,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
                 onChange={(m) => set("main_model", m)}
               />
             </Row>
-            <Row label="Helper model" hint="Summarizes long chats in the background. A cheap model is fine.">
+            <Row wide label="Helper model" hint="Summarizes long chats in the background. A cheap model is fine.">
               <ModelPicker
                 label="Helper model"
                 value={form.helper_model}
@@ -559,7 +569,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
       </Section>
 
       <Section id="voice" title="Voice" description="How he sounds when he speaks to you.">
-        <Row label="His voice" hint="Used for spoken answers and live calls. Press ▶ to hear each one.">
+        <Row wide label="His voice" hint="Used for spoken answers and live calls. Press ▶ to hear each one.">
           <VoicePicker
             voices={voices ?? [form.tts_voice]}
             value={form.tts_voice}
@@ -867,7 +877,7 @@ function ConnectionRow({ p }: { p: Platform }) {
   }
   const inApp = p.source === "app";
   return (
-    <Row label={p.label}>
+    <Row wide label={p.label}>
       <div className="flex flex-col gap-1.5 text-sm">
         <div className="flex flex-wrap items-center gap-2">
           {p.connected ? (
@@ -944,7 +954,7 @@ function GoogleConnection() {
 
   if (!data) return null;
   return (
-    <Row label="Google (Docs, Sheets, Calendar)">
+    <Row wide label="Google (Docs, Sheets, Calendar, Drive, Gmail)">
       <div className="flex flex-col gap-1.5 text-sm">
         <div className="flex flex-wrap items-center gap-2">
           {data.connected ? (
@@ -1055,7 +1065,7 @@ function PermissionsSection() {
             />
           </Row>
           {groups.map((group) => (
-            <Row key={group} label={group}>
+            <Row wide key={group} label={group}>
               <ul className="divide-y divide-line rounded-xl border border-line">
                 {data.types
                   .filter((t) => t.group === group)
@@ -1188,10 +1198,10 @@ export default function SettingsPage() {
         </header>
 
         <div className="flex min-h-0 flex-1">
-          <nav aria-label="Settings sections" className="hidden w-60 shrink-0 overflow-y-auto border-r border-line bg-panel px-3 py-5 md:block">
+          <nav aria-label="Settings sections" className="hidden w-64 shrink-0 overflow-y-auto border-r border-line px-3 py-5 md:block">
             {GROUPS.map((group) => (
               <div key={group.title} className="mb-5">
-                <p className="mb-1.5 px-3 text-[11px] font-semibold tracking-wider text-muted uppercase">{group.title}</p>
+                <p className="mb-1 px-3 text-[13px] text-muted">{group.title}</p>
                 <ul className="flex flex-col gap-0.5">
                   {group.items.map((s) => (
                     <li key={s.id}>
@@ -1199,13 +1209,11 @@ export default function SettingsPage() {
                         type="button"
                         onClick={() => choose(s.id)}
                         aria-current={active === s.id ? "page" : undefined}
-                        className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition ${
-                          active === s.id ? "bg-accent-soft font-medium text-ink" : "text-muted hover:bg-panel-2 hover:text-ink"
+                        className={`flex w-full items-center gap-3 rounded-lg px-3 py-[7px] text-left text-[15px] transition ${
+                          active === s.id ? "bg-panel-2 text-ink" : "text-ink/80 hover:bg-panel-2/60 hover:text-ink"
                         }`}
                       >
-                        <span aria-hidden className="w-4 text-center text-xs opacity-80">
-                          {s.icon}
-                        </span>
+                        <SettingsIcon name={s.id} className="h-[18px] w-[18px] shrink-0 opacity-90" />
                         {s.title}
                       </button>
                     </li>

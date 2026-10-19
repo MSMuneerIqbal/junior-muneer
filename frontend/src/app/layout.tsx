@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Gulzar } from "next/font/google";
+import { Geist_Mono, Gulzar, Inter } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
 import "./globals.css";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+// Inter: the closest free match to Claude's own interface font.
+const uiSans = Inter({ variable: "--font-ui", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 // Gulzar: a clear Nastaliq designed in the style of Noori Nastaliq.
 const urdu = Gulzar({ variable: "--font-urdu", subsets: ["arabic"], weight: "400" });
@@ -26,7 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${urdu.variable} h-full antialiased`}
+      className={`${uiSans.variable} ${geistMono.variable} ${urdu.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />

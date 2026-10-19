@@ -76,8 +76,8 @@
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
   --color-ok: var(--ok);
-  /* Latin text uses Geist; Urdu letters fall through to Noto Nastaliq Urdu. */
-  --font-sans: var(--font-geist-sans), var(--font-urdu), system-ui, sans-serif;
+  /* Latin text uses Inter (close to Claude's own font); Urdu letters fall through to Gulzar. */
+  --font-sans: var(--font-ui), var(--font-urdu), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
@@ -95,9 +95,9 @@ body {
 /* Urdu (Nastaliq) reads best a little larger, with room between lines.
    Added by lib/urdu.ts wherever text contains Urdu letters. */
 .urdu {
-  /* The Urdu font first: otherwise "Geist Fallback" (Arial) draws the Urdu letters in a
-     thin Naskh style. English words inside Urdu text still use Geist. */
-  font-family: var(--font-urdu), var(--font-geist-sans), system-ui, sans-serif;
+  /* The Urdu font first: otherwise the Latin font's fallback (Arial) draws the Urdu letters in a
+     thin Naskh style. English words inside Urdu text still use Inter. */
+  font-family: var(--font-urdu), var(--font-ui), system-ui, sans-serif;
   font-size: 1.18em;
   line-height: 2.1;
 }
