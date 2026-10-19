@@ -61,6 +61,19 @@ def usage_today() -> dict:
                 .group_by(Usage.agent)
             ).all()
         )
+        by_model = s.execute(
+            select(Usage.agent, Usage.model, func.sum(Usage.cost_usd)).where(Usage.created_at >= since).group_by(Usage.agent, Usage.model)
+        ).all()
+    # Who you paid: DeepSeek models are written "deepseek:..."; everything else (text, voice, calls) is OpenAI.
+    by_provider: dict[str, float] = defaultdict(float)
+    # Web search by engine: OpenAI's goes through the web_researcher helper; DeepSeek's is its Search API.
+    web_search = {"openai": 0.0, "deepseek": 0.0}
+    for agent, model, cost in by_model:
+        by_provider["deepseek" if (model or "").startswith("deepseek") else "openai"] += cost or 0.0
+        if agent == "web_researcher":
+            web_search["openai"] += cost or 0.0
+        elif model == "deepseek:search":
+            web_search["deepseek"] += cost or 0.0
     spent = sum(by_mode.values())
     cap = float(settings["daily_cap_usd"])
     return {
@@ -70,6 +83,9 @@ def usage_today() -> dict:
         "cap_reached": spent >= cap,
         "by_mode": {k: round(v, 6) for k, v in by_mode.items()},
         "by_agent": {k: round(v, 6) for k, v in by_agent.items()},
+        "by_provider": {k: round(v, 6) for k, v in sorted(by_provider.items())},
+        "web_search": {k: round(v, 6) for k, v in web_search.items()},
+        "web_search_engine": settings["web_search_provider"],
     }
 
 

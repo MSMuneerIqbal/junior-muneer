@@ -147,6 +147,9 @@ export type UsageToday = {
   cap_reached: boolean;
   by_mode: Record<string, number>;
   by_agent: Record<string, number>;
+  by_provider?: Record<string, number>;
+  web_search?: { openai: number; deepseek: number };
+  web_search_engine?: "openai" | "deepseek";
 };
 
 export type Activity = {

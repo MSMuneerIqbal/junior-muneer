@@ -100,6 +100,26 @@ def test_without_a_deepseek_key_openai_searches(search, monkeypatch):
     assert calls == [] and helpers.asked
 
 
+def test_spend_today_shows_each_provider_and_each_search_engine(search):
+    from junior.agent.context import ModelUsage
+    from junior.chat.history import save_usage
+    from junior.db import session_scope
+
+    set_setting("web_search_provider", "deepseek")
+    with session_scope() as s:
+        save_usage(s, [
+            ModelUsage("junior_muneer", "deepseek:deepseek-flash", 1000, 0, 200, 0, 0.0005),
+            ModelUsage("web_search", "deepseek:search", 0, 0, 0, 1, 0.00075),
+            ModelUsage("web_researcher", "gpt-6-luna", 3000, 0, 300, 1, 0.0105),
+            ModelUsage("speaker", "gpt-4o-mini-tts", 0, 0, 0, 0, 0.002),
+        ], None, None)
+    with TestClient(create_app()) as c:
+        today = c.get("/api/usage/today").json()
+    assert today["by_provider"] == {"deepseek": 0.00125, "openai": 0.0125}
+    assert today["web_search"] == {"openai": 0.0105, "deepseek": 0.00075}
+    assert today["web_search_engine"] == "deepseek"
+
+
 def test_the_setting_can_be_changed_on_the_page_and_in_chat(search):
     with TestClient(create_app()) as c:
         assert c.get("/api/settings").json()["web_search_provider"] == "openai"
