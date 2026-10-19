@@ -104,12 +104,12 @@ function ChatRow({ chat, active }: { chat: Conversation; active: boolean }) {
   return (
     <li className="group relative">
       <div
-        className={`flex items-center rounded-md ${active ? "bg-accent-soft" : "hover:bg-panel-2"}`}
+        className={`flex items-center rounded-lg ${active ? "bg-panel-2" : "hover:bg-panel-2/70"}`}
       >
         <Link
           href={`/?c=${chat.id}`}
           dir="auto"
-          className={`min-w-0 flex-1 truncate px-3 py-1.5 text-sm ${urduClass(chat.title) ? "urdu leading-normal" : ""}`}
+          className={`min-w-0 flex-1 truncate px-3 py-[7px] text-[14px] ${urduClass(chat.title) ? "urdu leading-normal" : ""}`}
           title={chat.title}
         >
           {chat.pinned && <span aria-label="pinned">📌 </span>}
@@ -156,32 +156,17 @@ function ChatRow({ chat, active }: { chat: Conversation; active: boolean }) {
   );
 }
 
-/** The list of all chats: grouped by date, searchable, rename / pin / delete. */
-export function ChatHistory() {
+/** Your chats ("Recents"): grouped by date, filtered by the sidebar's search, rename / pin / delete. */
+export function ChatHistory({ query = "" }: { query?: string }) {
   const params = useSearchParams();
   const activeId = params.get("c") ? Number(params.get("c")) : null;
-  const [query, setQuery] = useState("");
   const deferred = useDeferredValue(query.trim());
   const key = deferred ? `${CHATS_KEY}?q=${encodeURIComponent(deferred)}` : CHATS_KEY;
   const { data, error } = useSWR<Conversation[]>(key, fetcher, { keepPreviousData: true });
 
   return (
-    <div className="flex flex-col gap-2 pb-3">
-      <Link
-        href="/"
-        className="mx-1 rounded-md border border-line px-3 py-1.5 text-sm hover:bg-panel-2"
-      >
-        + New chat
-      </Link>
-      <input
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="🔍 Search chats"
-        aria-label="Search chats"
-        dir="auto"
-        className="mx-1 rounded-md border border-line bg-bg px-3 py-1.5 text-sm outline-none focus:border-accent"
-      />
+    <div className="flex flex-col pb-3">
+      <h2 className="px-3 pt-1 pb-1.5 text-[13px] text-muted">{deferred ? "Search results" : "Recents"}</h2>
       {error && <p className="px-3 text-sm text-danger">{error.message}</p>}
       {data && !data.length && (
         <p className="px-3 py-2 text-sm text-muted">{deferred ? "No chats found." : "No chats yet."}</p>
@@ -189,7 +174,7 @@ export function ChatHistory() {
       {data &&
         groupByDate(data).map((group) => (
           <section key={group.label}>
-            <h3 className="px-3 pt-2 pb-1 text-xs font-medium text-muted">{group.label}</h3>
+            <h3 className="px-3 pt-2 pb-0.5 text-[11px] font-medium text-muted/80">{group.label}</h3>
             <ul className="flex flex-col">
               {group.chats.map((chat) => (
                 <ChatRow key={chat.id} chat={chat} active={chat.id === activeId} />

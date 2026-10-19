@@ -25,8 +25,8 @@ function subscribe(onChange: () => void) {
   };
 }
 
-/** Cycles System → Light → Dark. The choice is saved in this browser. */
-export function ThemeToggle() {
+/** The theme and a function that moves to the next one (System → Light → Dark), saved in this browser. */
+export function useTheme(): [Theme, () => void] {
   const theme = useSyncExternalStore(subscribe, readTheme, () => "system" as Theme);
 
   function next() {
@@ -44,6 +44,14 @@ export function ThemeToggle() {
     window.dispatchEvent(new Event(EVENT));
   }
 
+  return [theme, next];
+}
+
+export const THEME_NAMES: Record<Theme, string> = { system: "System", light: "Light", dark: "Dark" };
+
+/** A small button that cycles the theme. */
+export function ThemeToggle() {
+  const [theme, next] = useTheme();
   return (
     <button
       onClick={next}

@@ -48,6 +48,81 @@ export function SendIcon(p: IconProps) {
   );
 }
 
+/** Line icons for the sidebar, by name. */
+const NAV_PATHS: Record<string, React.ReactNode> = {
+  newchat: (
+    <>
+      <path d="M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L12 14l-4 1 1-4 7.5-7.5z" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="M20 20l-4.2-4.2" />
+    </>
+  ),
+  approvals: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M8.5 12.5l2.5 2.5 4.5-5" />
+    </>
+  ),
+  inbox: (
+    <>
+      <path d="M4 13l2.5-7.5h11L20 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5z" />
+      <path d="M4 13h4.5l1 2h5l1-2H20" />
+    </>
+  ),
+  social: (
+    <>
+      <path d="M4 10v4h3l7 4V6L7 10H4z" />
+      <path d="M17.5 9a4 4 0 0 1 0 6" />
+    </>
+  ),
+  freelance: (
+    <>
+      <rect x="3.5" y="7" width="17" height="12.5" rx="2" />
+      <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3.5 12.5h17" />
+    </>
+  ),
+  news: (
+    <>
+      <path d="M5 4.5h11a2 2 0 0 1 2 2V19a1.5 1.5 0 0 0 3 0V9h-3" />
+      <path d="M5 4.5V18a2 2 0 0 0 2 2h12.5M8 8.5h6M8 12h6M8 15.5h4" />
+    </>
+  ),
+  memory: (
+    <>
+      <path d="M9.5 18h5M10 21h4" />
+      <path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" />
+    </>
+  ),
+  activity: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </>
+  ),
+  profile: (
+    <>
+      <circle cx="12" cy="8.5" r="3.5" />
+      <path d="M5 20a7 7 0 0 1 14 0" />
+    </>
+  ),
+  settings: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" />
+    </>
+  ),
+  theme: <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" />,
+};
+
+export function NavIcon({ name, ...p }: IconProps & { name: string }) {
+  return <Svg {...p}>{NAV_PATHS[name]}</Svg>;
+}
+
 /** Line icons for the Settings menu, by name. */
 const SETTINGS_PATHS: Record<string, React.ReactNode> = {
   profile: (
