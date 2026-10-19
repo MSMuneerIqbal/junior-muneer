@@ -712,6 +712,26 @@ function SettingsForm({ initial }: { initial: Settings }) {
           </div>
         </Row>
         <Row
+          label="Watch my Gmail"
+          hint="Every 5 minutes, new emails are sorted (client, money, security...) with a one-line summary. Promotions and social mail cost nothing. See them on the Inbox page."
+        >
+          <div className="flex flex-col gap-2">
+            <Toggle
+              checked={form.email_watch_enabled}
+              onChange={(v) => set("email_watch_enabled", v)}
+              label="Watch my Gmail inbox"
+            />
+            <label className="flex items-center gap-2 text-sm">
+              <Toggle
+                checked={form.email_notify_whatsapp}
+                onChange={(v) => set("email_notify_whatsapp", v)}
+                label="Send important emails to my WhatsApp"
+              />
+              <span className="text-muted">Send important ones to my WhatsApp</span>
+            </label>
+          </div>
+        </Row>
+        <Row
           label="Morning briefing"
           hint="Each morning: what needs you today, what got done yesterday, and the news, from the app's records only. About $0.001. Skipped while paused."
         >

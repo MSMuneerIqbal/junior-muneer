@@ -288,10 +288,18 @@ Read-only: these agents never post or send anything. News pages are outside cont
 
 **Phase done when:** you answer a real email from the dashboard.
 
-- [ ] **P4-01** Google Cloud project + Gmail access (guide for you; app set to "production" for personal use so Google doesn't log you out every 7 days)
-- [ ] **P4-02** Email Agent: fetch, sort (client / platform alert / spam / other), summarize. Emails are outside content
-- [ ] **P4-03** Inbox page
-- [ ] **P4-04** Reply drafts, new emails, the `gmail.send` action through the permission rules (replies always Ask). Fake-API tests
+- [x] **P4-01** Google Cloud project + Gmail access (the Google sign-in from the Google extras; `gmail.readonly` and
+  `gmail.compose` added 2026-10-19: use Connect again in Settings → Connections and tick Gmail)
+- [x] **P4-02** Email Agent (`agents/email_sorter.md`, `junior/inbox.py`): every 5 minutes new inbox mail is sorted
+  (client / freelance / work / study / money / security / personal / newsletter / promotion / social), one-line
+  summary, scam check; Gmail's Promotions/Social/Forums tabs sorted without AI. Important ones go to WhatsApp; inside
+  WhatsApp's 24-hour rule they wait for your next message. The first check only starts the clock.
+- [x] **P4-03** Inbox page (filters, Check now, Read it / Reply / Open in Gmail); Settings → News: watch on/off,
+  WhatsApp alerts on/off; important emails in the morning briefing
+- [x] **P4-04** `gmail_search`, `gmail_read`, `gmail_draft` (new or reply, in the thread): a Gmail draft plus an
+  approval card; the Gmail sender (`senders/gmail.py`) sends exactly the approved text only after Approve (dashboard
+  or WhatsApp's Approve button, which now sends too). `gmail.send` Ask, `gmail.reply` locked Ask, Safety Guard
+  (placeholders, keys) and the daily limit apply. Fake-API tests.
 - [ ] **P4-05** Upwork and Fiverr alert emails → tasks for the Freelance Manager
 - [ ] **P4-06** Tests + your acceptance test + push
 

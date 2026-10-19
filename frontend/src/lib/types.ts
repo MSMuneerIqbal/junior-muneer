@@ -180,6 +180,8 @@ export type Settings = {
   news_digest_enabled: boolean;
   news_digest_time: string;
   news_email_enabled: boolean;
+  email_watch_enabled: boolean;
+  email_notify_whatsapp: boolean;
   briefing_enabled: boolean;
   briefing_time: string;
   whatsapp_session_hours: number;
