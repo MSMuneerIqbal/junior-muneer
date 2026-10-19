@@ -149,6 +149,12 @@ const SETTINGS_PATHS: Record<string, React.ReactNode> = {
       <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
     </>
   ),
+  search: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M3.5 12h17M12 3.5c2.3 2.4 3.5 5.2 3.5 8.5s-1.2 6.1-3.5 8.5c-2.3-2.4-3.5-5.2-3.5-8.5s1.2-6.1 3.5-8.5z" />
+    </>
+  ),
   calls: <path d="M5 4h3.5l1.5 4-2 1.5a10 10 0 0 0 6.5 6.5l1.5-2 4 1.5V19a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />,
   connections: (
     <>

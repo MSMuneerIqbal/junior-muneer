@@ -40,7 +40,7 @@ type Permissions = {
 
 // The left menu: one section shows at a time. "#news" in the address opens that section.
 type SectionId =
-  | "profile" | "budget" | "models" | "voice" | "calls" | "connections" | "whatsapp" | "posting" | "news" | "permissions" | "advanced";
+  | "profile" | "budget" | "models" | "search" | "voice" | "calls" | "connections" | "whatsapp" | "posting" | "news" | "permissions" | "advanced";
 type MenuItem = { id: SectionId; title: string }; // its icon: SettingsIcon by id
 const GROUPS: { title: string; items: MenuItem[] }[] = [
   { title: "Account", items: [{ id: "profile", title: "Profile" }, { id: "budget", title: "Budget" }] },
@@ -48,6 +48,7 @@ const GROUPS: { title: string; items: MenuItem[] }[] = [
     title: "AI",
     items: [
       { id: "models", title: "Models" },
+      { id: "search", title: "Web search" },
       { id: "voice", title: "Voice" },
       { id: "calls", title: "Live calls" },
     ],
@@ -536,7 +537,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
       <Section
         id="models"
         title="Models"
-        description="Which AI writes his typed answers, and which engine searches the web. Voice messages and live calls always use OpenAI."
+        description="Which AI writes his typed answers. Voice messages and live calls always use OpenAI."
       >
         {models ? (
           <>
@@ -562,33 +563,37 @@ function SettingsForm({ initial }: { initial: Settings }) {
                 onChange={(m) => set("helper_model", m)}
               />
             </Row>
-            <Row
-              label="Web search"
-              hint={
-                <>
-                  Which engine searches the web for him. News from official sources always uses OpenAI&apos;s search.
-                  {form.web_search_provider === "deepseek" && !models.choices.some((c) => c.provider === "DeepSeek" && c.ready) && (
-                    <span className="mt-1 block text-warn">
-                      DeepSeek search needs <code>DEEPSEEK_API_KEY</code> in backend/.env; until then OpenAI searches.
-                    </span>
-                  )}
-                </>
-              }
-            >
-              <Segmented
-                label="Web search"
-                value={form.web_search_provider}
-                onChange={(v) => set("web_search_provider", v)}
-                options={[
-                  { value: "openai", label: "OpenAI", sub: "~$0.01 a search + a helper" },
-                  { value: "deepseek", label: "DeepSeek", sub: "~$0.0008 a search" },
-                ]}
-              />
-            </Row>
           </>
         ) : (
           <p className="px-6 py-5 text-sm text-muted">Loading models…</p>
         )}
+      </Section>
+
+      <Section id="search" title="Web search" description="Which engine searches the web when he needs fresh facts (news, prices, anything that changes).">
+        <Row
+          label="Search engine"
+          hint={
+            <>
+              DeepSeek is much cheaper and answers from the results directly; OpenAI uses a small helper. If DeepSeek
+              fails, OpenAI searches instead. News from official sources always uses OpenAI&apos;s search.
+              {form.web_search_provider === "deepseek" && models && !models.choices.some((c) => c.provider === "DeepSeek" && c.ready) && (
+                <span className="mt-1 block text-warn">
+                  DeepSeek search needs <code>DEEPSEEK_API_KEY</code> in backend/.env; until then OpenAI searches.
+                </span>
+              )}
+            </>
+          }
+        >
+          <Segmented
+            label="Web search"
+            value={form.web_search_provider}
+            onChange={(v) => set("web_search_provider", v)}
+            options={[
+              { value: "openai", label: "OpenAI", sub: "~$0.01 a search + a helper" },
+              { value: "deepseek", label: "DeepSeek", sub: "~$0.0008 a search" },
+            ]}
+          />
+        </Row>
       </Section>
 
       <Section id="voice" title="Voice" description="How he sounds when he speaks to you.">
