@@ -1272,3 +1272,12 @@ def _google_tools() -> list[Tool]:
 
 
 TOOL_FACTORIES["google"] = _google_tools
+
+
+def _computer_read_tools() -> list[Tool]:
+    from junior.computer.tools import READ_TOOLS
+
+    return list(READ_TOOLS)
+
+
+TOOL_FACTORIES["computer_read"] = _computer_read_tools

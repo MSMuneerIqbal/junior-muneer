@@ -508,8 +508,11 @@ outside your allowed folders (or on the blocked list) can be read or changed.
   - the path guard: real full paths only (`..`, links and shortcuts can't escape), inside an allowed folder or a path
     in your own words, never the blocked list (`.env`, keys, `.ssh`, browser data, Windows, Program Files, Junior's `data`)
   - safety tests for every way out; live check with real paths on his PC
-- [ ] **P9-02** Reading tools: `list_folder`, `find_files`, `read_file` (text, PDF, Word, Excel; size limits; fenced as data).
+- [x] **P9-02** Reading tools (`pc_list`, `pc_find`, `pc_read` in `junior/computer/tools.py`; tool group `computer_read`): `list_folder`, `find_files`, `read_file` (text, PDF, Word, Excel; size limits; fenced as data).
   Live check: list and read files in a test folder; a blocked file is refused
+  - **Done 2026-10-20.** Live: in `Desktop\junior-pc-test` it listed 3 files (the `.env` hidden), found by name and by
+    words, read a .txt (line numbers), a .docx and a .csv; `.env`, AppData and C:\Windows refused; a real search found 43 PDFs
+    in Downloads. (The names are `pc_*` because `read_file` already reads files you send.)
 - [ ] **P9-03** Writing: `write_file`, `make_folder` as approval cards (the card shows the new text or the change; editable
   before Approve), carried out by the Computer sender (plain code, at most once); Auto runs at once. Live check
 - [ ] **P9-04** Move and delete: `move_file`, `delete_file` (to the Recycle Bin, `send2trash`). Live check: delete, then
