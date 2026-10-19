@@ -454,5 +454,23 @@ Read-only: these agents never post or send anything. News pages are outside cont
     4. Clients → Create client → **Web application**; Authorized redirect URI
        `http://127.0.0.1:8000/api/google/callback`. Copy the Client ID and Client secret into backend/.env
        (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`), restart, then Settings → Connections → **Connect Google**.
+- [x] **Extra: reading files** (`junior/reading.py`): PDF, Word, Excel, CSV, text by code; photos by a vision model
+  (`read_file` for files you send, `drive_read` / `drive_folder` for Drive). Drag-and-drop and paste to attach.
+- [x] **Extra: Junior mode vs friend mode** (`agent/style.py`): "Junior …" = professional, no emojis (removed in code
+  too); anything else = a relaxed friend, emojis fine. Easy English by default (Settings → language).
+- [x] **Extra: the Polisher** (`writing/polish.py`, `agents/polisher.md`): emails, Google Docs and messages to you are
+  rewritten to read like a careful human wrote them; AI signs found in code; every link, email and number must survive.
+- [x] **Extra: dashboard look**: Settings as a full page with a grouped left menu (one section at a time, `#section`
+  links), ChatGPT-style sidebar (New chat and features on top, Recents drop-down, you at the bottom), Inter font.
+- [x] **Extra: DeepSeek** (2026-10-19): web search through DeepSeek's Search API (`websearch.py`; Settings → Search &
+  photos; falls back to OpenAI), DeepSeek V4.1 Flash (= `deepseek-flash`) reads photos, spend by provider in Today.
+- [x] **Extra: Gemini Live calls** (2026-10-20, `junior/gemini_live.py`): Settings → Live calls → **Voice engine**:
+  OpenAI Realtime (unchanged), **Gemini 3.8 Live** or **Gemini 2.5 Flash Live** (`gemini-2.5-flash-native-audio-preview-12-2025`).
+  The browser streams 16 kHz PCM to `/ws/call/gemini`; the backend runs the Gemini Live session (google-genai) with
+  Junior's call personality + the Pakistani Urdu/English instruction, Google Search + Junior's tools, saves the chat,
+  counts cost (audio and text priced separately) and minutes; his 24 kHz voice plays back, interruptions stop it.
+  If a model refuses Google Search, our own web_search is used. Sessions last up to 15 minutes.
+  - **Your step:** get a key at https://aistudio.google.com/apikey, paste it after `GEMINI_API_KEY=` in backend/.env,
+    restart, then Settings → Live calls → Voice engine → Gemini.
 - [ ] **P8-05** Monitoring and automatic restarts
 - [ ] **P8-06** Your one-week test + push

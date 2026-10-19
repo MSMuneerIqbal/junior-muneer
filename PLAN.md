@@ -1,10 +1,29 @@
-# Junior Muneer: Project Plan (v7: safe workflow, no browser bots)
+# Junior Muneer: Project Plan (v9: safe workflow, no browser bots, more providers)
 
-> Status: plan complete. Development starts with Phase 0 once you give the go-ahead.
+> Status: Phases 0, 1, 2, 2b, 4, 5 and 7 built; Phase 8 (WhatsApp + server) in progress; 3 and 6 paused. See TASK.md.
 >
 > **What changed in v7:** no browser automation anywhere. Data comes from official APIs, email alerts, RSS or text you paste in.
 > Anything without an official API is copy and paste: you post or submit it yourself in your normal browser.
 > Also: the terminal is always Ask, memory is saved only from your own words, and safety tests are written with each task (see section 18).
+
+## What changed since v8 (October 2026)
+
+The safe workflow below still holds. What was added while building (details per feature in TASK.md):
+
+- **More AI providers, your choice in Settings.** Chat: OpenAI or **DeepSeek** (V4.1 Flash, V4 Pro). Web search: OpenAI
+  or **DeepSeek's Search API**. Reading photos: OpenAI or **DeepSeek V4.1 Flash**. Live calls: **OpenAI Realtime** or
+  **Google Gemini Live** (3.8 Live, 2.5 Flash Live) through the backend, with a Pakistani Urdu/English voice instruction.
+  Each choice falls back to OpenAI when the other provider fails; spend is shown by provider.
+- **Google through Google's own APIs** (not the Workspace MCP servers, which need a paid Workspace account): Docs, Sheets,
+  Calendar, Drive and Gmail, with one "Connect Google" sign-in and the narrowest permissions that do the job.
+- **Phase 4 (Gmail) built**: an inbox watcher sorts new mail and sends important emails to WhatsApp; emails to other
+  people are drafts that go out only after Approve (new emails can be set to Auto; replies always wait).
+- **The gate** (`backend/junior/gate.py`): every action a tool takes passes one check (your words, your rule, pause,
+  Plan mode, a per-message limit), is logged, and anything read from outside is fenced. New apps plug into it.
+- **Two modes**: "Junior …" makes him a professional junior (no emojis); anything else, a relaxed friend.
+- **The Polisher**: emails, docs and messages are rewritten to read like a careful human wrote them; facts are checked
+  in code so polishing can't change them.
+- **WhatsApp** (Phase 8, before the server): text, voice notes, photos and documents, draft cards with buttons, alerts.
 
 ## 1. Goal
 
