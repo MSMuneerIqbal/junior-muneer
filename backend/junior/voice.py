@@ -96,6 +96,7 @@ class TranscriptResult:
     languages: list[str]
     seconds: float | None  # from the API when it reports it
     logprobs: list | None = None
+    model: str | None = None  # set when a backup model did the work (Gemini busy -> OpenAI)
 
 
 class VoiceClient(Protocol):
@@ -238,16 +239,54 @@ def voice_engine() -> str:
     return get_setting("voice_engine") or "openai"
 
 
+class GeminiThenOpenAI:
+    """Gemini first; when Gemini is busy or down (it answers "503 high demand" at times), OpenAI does that one
+    recording or answer, so a voice message never goes unanswered."""
+
+    def __init__(self, gemini, openai_voice) -> None:
+        self.gemini, self.openai_voice = gemini, openai_voice
+
+    async def transcribe(
+        self, path: Path, model: str, prompt: str, language: str | None = None
+    ) -> TranscriptResult:
+        try:
+            return await self.gemini.transcribe(path, model, prompt, language)
+        except Exception as e:
+            log.warning("Gemini couldn't hear the recording (%s); OpenAI does it", e)
+            backup = get_router().audio_model("transcribe")
+            result = await self.openai_voice().transcribe(path, backup, prompt, language)
+            result.model = backup
+            return result
+
+    async def speak(
+        self, text: str, model: str, voice: str, speed: float, instructions: str
+    ) -> AsyncIterator[bytes]:
+        started = False
+        try:
+            async for chunk in self.gemini.speak(text, model, voice, speed, instructions):
+                started = True
+                yield chunk
+            return
+        except Exception as e:
+            if started:  # half an answer already went out: don't repeat it in another voice
+                raise
+            log.warning("Gemini couldn't speak the answer (%s); OpenAI does it", e)
+        async for chunk in self.openai_voice().speak(
+            text, get_router().audio_model("speech"), get_setting("tts_voice"), speed, instructions
+        ):
+            yield chunk
+
+
 def engine_voice(openai_voice):
     """The voice client for the engine chosen in Settings → Voice, picked fresh each time it's asked for."""
 
     def pick() -> "VoiceClient":
         if voice_engine() == "gemini":
             if GEMINI_VOICE is not None:
-                return GEMINI_VOICE()
+                return GeminiThenOpenAI(GEMINI_VOICE(), openai_voice)
             if get_settings().fake_ai:
                 return FakeVoice()
-            return GeminiVoice()
+            return GeminiThenOpenAI(GeminiVoice(), openai_voice)
         return openai_voice()
 
     return pick
@@ -353,6 +392,7 @@ async def transcribe_bytes(voice_factory, data: bytes, content_type: str, second
         audit("tool_call", "transcribe", result="error", detail={"error": str(e)})
         raise HTTPException(502, f"Speech-to-text failed: {e}") from None
 
+    model = result.model or model
     duration = result.seconds if result.seconds is not None else (seconds or 0.0)
     cost = duration / 60 * model_router.audio_price(model).get("per_minute", 0.0)
     record_audio_usage("transcriber", model, "voice", duration, cost)

@@ -196,3 +196,34 @@ def test_gemini_client_speaks_mp3_in_the_chosen_voice():
 def test_to_mp3_makes_a_playable_mp3():
     mp3 = to_mp3(b"\x00\x00" * 24000)
     assert mp3[0] == 0xFF and (mp3[1] & 0xE0) == 0xE0 and len(mp3) > 1000
+
+
+class BusyGemini(FakeVoice):
+    """Gemini saying "503 high demand"."""
+
+    async def transcribe(self, path, model, prompt, language=None):
+        raise RuntimeError("503 UNAVAILABLE: This model is currently experiencing high demand.")
+
+    async def speak(self, text, model, voice, speed, instructions):
+        raise RuntimeError("503 UNAVAILABLE: This model is currently experiencing high demand.")
+        yield b""
+
+
+def test_when_gemini_is_busy_openai_hears_the_recording_and_its_cost_is_openais(client, monkeypatch):
+    monkeypatch.setattr(voice_mod, "GEMINI_VOICE", BusyGemini)
+    client.patch("/api/settings", json={"voice_engine": "gemini"})
+    got = upload(client).json()
+    assert got["text"] == "openai heard you"
+    assert OpenAISide.calls == [{"job": "hear", "model": "gpt-4o-transcribe"}]
+    assert got["cost_usd"] == pytest.approx(6 / 60 * 0.006)
+    with session_scope() as s:
+        assert s.scalars(select(Usage).where(Usage.agent == "transcriber")).all()[-1].model == "gpt-4o-transcribe"
+
+
+def test_when_gemini_is_busy_openai_reads_the_answer_in_your_openai_voice(client, model, monkeypatch):
+    monkeypatch.setattr(voice_mod, "GEMINI_VOICE", BusyGemini)
+    client.patch("/api/settings", json={"voice_engine": "gemini", "tts_voice": "ash"})
+    done = answer(client, model, "Walaikum salam!")
+    r = client.get(f"/api/voice/speak/{done['message_id']}.mp3")
+    assert r.status_code == 200 and len(r.content) > 0
+    assert OpenAISide.calls == [{"job": "speak", "model": "gpt-4o-mini-tts", "voice": "ash"}]
