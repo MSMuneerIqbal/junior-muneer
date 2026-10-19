@@ -183,8 +183,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         )}
 
-        {/* The features always show in full; Recents takes the rest and scrolls on its own. */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2">
+        {/* One scroll for the features and your chats, like ChatGPT. */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-2">
           <nav aria-label="Main" className="flex shrink-0 flex-col gap-0.5 pb-3">
             {NAV.map((item) => {
               const active = item.href !== "/" && pathname.startsWith(item.href); // the open chat is marked in Recents

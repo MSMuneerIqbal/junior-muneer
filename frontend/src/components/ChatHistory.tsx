@@ -167,7 +167,7 @@ export function ChatHistory({ query = "" }: { query?: string }) {
   const shown = open || !!deferred; // a search always shows its results
 
   return (
-    <div className="flex min-h-40 flex-1 flex-col border-t border-line pt-2">
+    <div className="flex flex-col border-t border-line pt-2">
       <h2>
         <button
           type="button"
@@ -183,8 +183,8 @@ export function ChatHistory({ query = "" }: { query?: string }) {
         </button>
       </h2>
       {shown && (
-        // Its own scroll: New chat and the features above stay where they are.
-        <div className="min-h-0 flex-1 overflow-y-auto pb-3" aria-label="Your chats">
+        // One scroll for the whole sidebar: going down your chats moves the features up out of view.
+        <div className="pb-3" aria-label="Your chats">
           {error && <p className="px-3 text-sm text-danger">{error.message}</p>}
           {data && !data.length && (
             <p className="px-3 py-2 text-sm text-muted">{deferred ? "No chats found." : "No chats yet."}</p>
