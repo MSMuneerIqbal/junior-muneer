@@ -84,6 +84,7 @@ label = "DeepSeek"
 base_url = "https://api.deepseek.com"
 key_env = "DEEPSEEK_API_KEY"
 
+# "deepseek-flash" is DeepSeek-V4.1-Flash-1017 (vision too) since 2026-10-17; prices unchanged (checked 2026-10-19).
 # DeepSeek prices (checked 2026-10-15). They are cheaper off-peak; the peak price
 # is used here so the daily cap is never under-counted.
 [prices."deepseek:deepseek-flash"]

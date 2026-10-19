@@ -35,6 +35,7 @@ class SettingsUpdate(BaseModel):
     main_model: str | None = Field(default=None, max_length=100)
     helper_model: str | None = Field(default=None, max_length=100)
     web_search_provider: Literal["openai", "deepseek"] | None = None
+    vision_provider: Literal["openai", "deepseek"] | None = None
     api_posts_per_day: int | None = Field(default=None, ge=0, le=50)
     news_digest_enabled: bool | None = None
     news_digest_time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
@@ -108,8 +109,8 @@ MODEL_INFO = {
     "gpt-6-sol": ("GPT-6 Sol", "Strong, slightly older.", "medium"),
     "gpt-6-astra": ("GPT-6 Astra", "OpenAI's best, and the most expensive.", "medium"),
     "deepseek:deepseek-flash": (
-        "DeepSeek Flash",
-        "Very cheap and quick. Can stall when DeepSeek is busy (OpenAI steps in after 20 s).",
+        "DeepSeek V4.1 Flash",
+        "Very cheap and quick, and sees images. Can stall when DeepSeek is busy (OpenAI steps in after 20 s).",
         "fast",
     ),
     "deepseek:deepseek-v4-pro": (

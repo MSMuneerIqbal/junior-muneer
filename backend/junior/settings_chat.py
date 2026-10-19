@@ -18,6 +18,7 @@ CHANGEABLE: dict[str, str] = {
     "main_model": "Main model (chat, WhatsApp)",
     "helper_model": "Helper model (writing team, news, other helpers)",
     "web_search_provider": "Web search engine: openai or deepseek (cheaper)",
+    "vision_provider": "Who reads photos: openai or deepseek (DeepSeek V4.1 Flash, cheaper)",
     "language": "Reply language: match, english or urdu",
     "tts_voice": "Speaking voice",
     "voice_accent": "Accent: pakistani, indian or neutral",
@@ -90,7 +91,7 @@ def _parse(key: str, value: str) -> Any:
         return 0 if word in {"every message", "every", "0"} else int(word)
     if key == "tts_speed":
         return float(text)
-    if key in {"language", "voice_accent", "turn_taking", "mic_type", "tts_voice", "web_search_provider"}:
+    if key in {"language", "voice_accent", "turn_taking", "mic_type", "tts_voice", "web_search_provider", "vision_provider"}:
         return text.casefold()
     if key.endswith("_model") and text.casefold() == "default":
         return ""

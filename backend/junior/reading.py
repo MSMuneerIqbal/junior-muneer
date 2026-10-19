@@ -135,26 +135,55 @@ def _csv(text: str) -> str:
     return "\n".join(shown)
 
 
+DEEPSEEK_VISION = "deepseek:deepseek-flash"  # DeepSeek V4.1 Flash sees images (api-docs.deepseek.com/guides/vision)
+
+
+async def _deepseek_look(image: str, prompt: str, context) -> str:
+    """The photo read by DeepSeek V4.1 Flash (Chat Completions with an image_url part)."""
+    from junior.ai_client import ai_client
+    from junior.models import ModelRouter, get_router
+
+    router = get_router()
+    client = ai_client(get_settings().deepseek_api_key, base_url=router.providers["deepseek"]["base_url"])
+    response = await client.chat.completions.create(
+        model=ModelRouter.bare(DEEPSEEK_VISION),
+        messages=[{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": image}}]}],
+    )
+    usage = response.usage
+    cached = getattr(getattr(usage, "prompt_tokens_details", None), "cached_tokens", 0) or 0
+    cost = router.price(DEEPSEEK_VISION).cost(usage.prompt_tokens, usage.completion_tokens, cached)
+    context.usage.append(ModelUsage("image_reader", DEEPSEEK_VISION, usage.prompt_tokens, cached, usage.completion_tokens, 0, cost))
+    return (response.choices[0].message.content or "").strip()
+
+
 async def look_at_image(data: bytes, mime: str, question: str, context) -> str:
-    """What a photo shows and the text in it, from OpenAI's small vision model. Its cost goes into the turn's usage."""
+    """What a photo shows and the text in it: DeepSeek V4.1 Flash or OpenAI's small vision model (Settings →
+    Search & photos). Its cost goes into the turn's usage. If DeepSeek fails, OpenAI reads it."""
     from junior.ai_client import ai_client
     from junior.costs import budget_left
     from junior.models import get_router
+    from junior.settings_store import get_setting
 
     if len(data) > MAX_IMAGE_BYTES:
         raise ReadError("The photo is too big to read (over 15 MB).")
     settings = get_settings()
     if settings.fake_ai:
         return "(fake vision) A photo of a page. Text: 'Invoice 42, total Rs 5,000'."
-    if not settings.openai_api_key:
-        raise ReadError("Reading photos needs the OpenAI key (OPENAI_API_KEY in backend/.env).")
     budget_left(context.settings)
+    prompt = IMAGE_PROMPT + (f"\n\nThe user asks: {question}" if question.strip() else "")
+    image = f"data:{mime if mime in IMAGE_TYPES else 'image/jpeg'};base64,{base64.b64encode(data).decode()}"
+    if get_setting("vision_provider") == "deepseek" and settings.deepseek_api_key:
+        try:
+            if text := await _deepseek_look(image, prompt, context):
+                return text
+        except Exception as e:  # noqa: BLE001 - DeepSeek down or refused: OpenAI reads it instead
+            log.info("DeepSeek couldn't read the photo, OpenAI will: %s: %s", type(e).__name__, e)
+    if not settings.openai_api_key:
+        raise ReadError("Reading photos needs the OpenAI key (OPENAI_API_KEY in backend/.env), or DeepSeek in Settings.")
     router = get_router()
     model = router.tiers["small"]
     if router.provider_of(model) != "openai":
-        model = "gpt-6-luna"  # photos need a model that can see; DeepSeek can't
-    prompt = IMAGE_PROMPT + (f"\n\nThe user asks: {question}" if question.strip() else "")
-    image = f"data:{mime if mime in IMAGE_TYPES else 'image/jpeg'};base64,{base64.b64encode(data).decode()}"
+        model = "gpt-6-luna"  # OpenAI's small vision model
     response = await ai_client(settings.openai_api_key).responses.create(
         model=model,
         input=[{"role": "user", "content": [{"type": "input_text", "text": prompt}, {"type": "input_image", "image_url": image}]}],

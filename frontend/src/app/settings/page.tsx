@@ -48,7 +48,7 @@ const GROUPS: { title: string; items: MenuItem[] }[] = [
     title: "AI",
     items: [
       { id: "models", title: "Models" },
-      { id: "search", title: "Web search" },
+      { id: "search", title: "Search & photos" },
       { id: "voice", title: "Voice" },
       { id: "calls", title: "Live calls" },
     ],
@@ -569,7 +569,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
         )}
       </Section>
 
-      <Section id="search" title="Web search" description="Which engine searches the web when he needs fresh facts (news, prices, anything that changes).">
+      <Section id="search" title="Search & photos" description="Which engine searches the web for fresh facts, and which AI reads the photos you send.">
         <Row
           label="Search engine"
           hint={
@@ -591,6 +591,20 @@ function SettingsForm({ initial }: { initial: Settings }) {
             options={[
               { value: "openai", label: "OpenAI", sub: "~$0.01 a search + a helper" },
               { value: "deepseek", label: "DeepSeek", sub: "~$0.0008 a search" },
+            ]}
+          />
+        </Row>
+        <Row
+          label="Reading photos"
+          hint="Photos you send on WhatsApp or with 📎, and images in your Drive: the text in them and what they show. If DeepSeek fails, OpenAI reads it."
+        >
+          <Segmented
+            label="Reading photos"
+            value={form.vision_provider}
+            onChange={(v) => set("vision_provider", v)}
+            options={[
+              { value: "openai", label: "OpenAI", sub: "Small vision model" },
+              { value: "deepseek", label: "DeepSeek V4.1 Flash", sub: "~$0.0005 a photo" },
             ]}
           />
         </Row>

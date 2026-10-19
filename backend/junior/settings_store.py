@@ -32,6 +32,8 @@ DEFAULTS: dict[str, Any] = {
     "helper_model": "",
     # Web search engine: openai (hosted search through a small helper) · deepseek (DeepSeek's Search API, cheaper).
     "web_search_provider": "openai",
+    # Reading photos: openai (its small vision model) · deepseek (DeepSeek V4.1 Flash, cheaper).
+    "vision_provider": "openai",
     # Your profile (Profile page). Kept here, edited through /api/profile.
     "profile": {},
     # Phase 3: at most this many posts per platform per day through the APIs (Safety Guard).
