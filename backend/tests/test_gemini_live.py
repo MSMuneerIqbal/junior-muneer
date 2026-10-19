@@ -124,17 +124,25 @@ def test_a_gemini_call_streams_audio_saves_the_chat_and_counts_the_cost(gemini, 
         assert s.scalars(select(Usage).where(Usage.agent == "live_call")).first() is not None  # the call's minutes
 
 
-def test_the_session_has_junior_the_urdish_voice_google_search_and_his_tools(gemini, monkeypatch):
-    set_voice = FakeGemini([turn(heard="hello", said="Hi!")])
-    call(monkeypatch, set_voice, until=1)
-    model, config = set_voice.configs[0]
+def test_the_session_has_junior_the_urdish_voice_and_his_tools(gemini, monkeypatch):
+    fake = FakeGemini([turn(heard="hello", said="Hi!")])
+    call(monkeypatch, fake, until=1)
+    model, config = fake.configs[0]
     assert model == "gemini-3.8-live" and config["response_modalities"] == ["AUDIO"]
     assert URDISH_INSTRUCTION in config["system_instruction"] and "Junior Muneer" in config["system_instruction"]
-    assert config["tools"][0] == {"google_search": {}} and config["tools"][1] == {"url_context": {}}
-    names = [d["name"] for d in config["tools"][2]["function_declarations"]]
-    assert names == ["ai_news", "pakistan_news", "ask_junior", "save_memory", "forget_memory"]
+    # Gemini 3 has no Google Search on a free key: he searches with Junior's own web_search (your Search setting).
+    assert not any("google_search" in t for t in config["tools"])
+    names = [d["name"] for d in config["tools"][0]["function_declarations"]]
+    assert names == ["ai_news", "pakistan_news", "ask_junior", "save_memory", "forget_memory", "web_search"]
     assert config["speech_config"]["voice_config"]["prebuilt_voice_config"]["voice_name"] == "Charon"
     assert config["input_audio_transcription"] == {} and config["output_audio_transcription"] == {}
+
+
+def test_gemini_25_live_gets_googles_own_search(gemini, monkeypatch):
+    fake = FakeGemini([turn(heard="hello", said="Hi!")])
+    call(monkeypatch, fake, until=1, model="gemini-2.5-flash-native-audio-preview-12-2025")
+    tools = fake.configs[0][1]["tools"]
+    assert tools[0] == {"google_search": {}} and not any("url_context" in t for t in tools)  # not taken together
 
 
 def test_without_google_search_it_uses_our_web_search(gemini, monkeypatch):

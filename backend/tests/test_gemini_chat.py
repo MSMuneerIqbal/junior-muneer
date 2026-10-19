@@ -149,13 +149,14 @@ def test_gemini_search_uses_google_search_and_url_reading_with_sources(keys, mon
         set_setting("web_search_provider", "gemini")
         text, ctx = search("petrol price in Pakistan today")
     [call] = fake.calls
-    assert call["model"] == "gemini-3.8-flash" and call["config"] == {"tools": [{"google_search": {}}, {"url_context": {}}]}
+    # Gemini 2.5 Flash: free Google Search on a free key (Gemini 3 has none), plus reading links.
+    assert call["model"] == "gemini-2.5-flash" and call["config"] == {"tools": [{"google_search": {}}, {"url_context": {}}]}
     assert "petrol price in Pakistan today" in call["contents"]
     assert "Petrol is Rs 260 a litre" in text and "Sources:\n- Dawn: https://www.dawn.com/news/1" in text
     assert text.count("https://www.dawn.com/news/1") == 1  # the same source once
     assert "START OF THEIR TEXT (Google search results via Gemini" in text and ctx.outside_content_seen
     [u] = ctx.usage
-    assert u.model == "gemini:gemini-3.8-flash" and u.cost_usd == pytest.approx((1000 * 0.75 + 200 * 3.75) / 1_000_000)
+    assert u.model == "gemini:gemini-2.5-flash" and u.cost_usd == pytest.approx((1000 * 0.30 + 200 * 2.50) / 1_000_000)
     assert ctx.helpers.asked == []
 
 

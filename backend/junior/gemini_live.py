@@ -49,6 +49,9 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 GEMINI_MODELS = ("gemini-3.8-live", "gemini-2.5-flash-native-audio-preview-12-2025")
+# Live models that get Google's built-in search. A free-tier key has no Google Search on Gemini 3 (tested 2026-10-20:
+# "quota exceeded"), so 3.8 Live searches with Junior's own web_search (your Search setting) instead.
+GOOGLE_SEARCH_LIVE = {"gemini-2.5-flash-native-audio-preview-12-2025"}
 SESSION_LIMIT_SECONDS = 15 * 60  # Gemini Live: audio-only sessions last up to 15 minutes
 INPUT_MIME = "audio/pcm;rate=16000"
 
@@ -71,8 +74,8 @@ def declarations(tools: list[dict]) -> list[dict]:
 def session_config(instructions: str, voice: str, google_search: bool = True) -> dict:
     """The Live session: audio out, Junior's personality plus the Urdish instruction, tools, transcripts."""
     tools: list[dict] = [{"function_declarations": declarations(CUSTOM_TOOLS + ([] if google_search else [WEB_SEARCH_TOOL]))}]
-    if google_search:  # Google Search grounding and reading links; if refused, our own web_search instead
-        tools[0:0] = [{"google_search": {}}, {"url_context": {}}]
+    if google_search:  # Google Search grounding (Live doesn't take URL reading with it); if refused, our web_search
+        tools.insert(0, {"google_search": {}})
     return {
         "response_modalities": ["AUDIO"],
         "system_instruction": f"{instructions}\n\n# Voice\n{URDISH_INSTRUCTION}",
@@ -232,9 +235,10 @@ class GeminiCall:
     async def run(self, limit_seconds: float) -> None:
         call = self.call
         voice = self.settings.get("gemini_voice") or "Charon"
+        google = self.model in GOOGLE_SEARCH_LIVE
         try:
             try:
-                connection = self.gw.connect(self.model, session_config(call.instructions, voice, google_search=True))
+                connection = self.gw.connect(self.model, session_config(call.instructions, voice, google_search=google))
                 session = await connection.__aenter__()
             except Exception as e:  # e.g. this model doesn't take Google Search: use our own web_search
                 log.info("Gemini Live with Google Search didn't start (%s); trying with our web search", e)

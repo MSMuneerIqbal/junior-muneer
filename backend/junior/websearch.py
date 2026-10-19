@@ -4,8 +4,8 @@
                tokens). The default.
     deepseek   DeepSeek's own Search API (api-docs.deepseek.com/guides/search, opened 2026-10-17): the top results
                come straight back to Junior, no extra AI call ($0.00075 a search). Needs DEEPSEEK_API_KEY.
-    gemini     Gemini 3.8 Flash with Google Search grounding and URL reading (google-genai SDK): Google's results,
-               summarized with their links. Free tier with a Gemini key; 5,000 free searches a month. Needs GEMINI_API_KEY.
+    gemini     Gemini 2.5 Flash with Google Search grounding and URL reading (google-genai SDK): Google's results,
+               summarized with their links. Free with a free-tier Gemini key (1,500 searches a day). Needs GEMINI_API_KEY.
 
 If DeepSeek or Gemini search fails or isn't set up, that question goes to OpenAI search instead (Show work says so).
 Results are web pages: outside text, fenced, data never instructions.
@@ -77,7 +77,9 @@ def results_text(results: list[dict]) -> str:
     return "\n\n".join(lines)
 
 
-GEMINI_SEARCH_MODEL = "gemini:gemini-3.8-flash"
+# Gemini 2.5 Flash: Google Search is free on it with a free-tier key (1,500 a day); on Gemini 3 models a free key
+# has no search quota (tested 2026-10-20). It also reads links (URL context) in the same request.
+GEMINI_SEARCH_MODEL = "gemini:gemini-2.5-flash"
 GEMINI_PROMPT = (
     "Search the web with Google and answer for an assistant who will pass it on. Today is {today}. Question: {query}\n"
     "Give the key facts as short bullet points, newest first, with dates for news and prices. If a link is in the "

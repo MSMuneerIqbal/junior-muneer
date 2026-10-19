@@ -474,8 +474,11 @@ Read-only: these agents never post or send anything. News pages are outside cont
     restart, then Settings → Live calls → Voice engine → Gemini.
 - [x] **Extra: Gemini as the third chat provider** (2026-10-20): Gemini 3.8 Flash and 3.1 Flash-Lite (free tier) and
   Gemini 4 Argon (heavy) in Settings → Models, through Google's OpenAI-compatible endpoint (`[providers.gemini]` in
-  models.toml), so every tool works. Gemini web search (Settings → Search & photos): Gemini 3.8 Flash with Google Search
-  and URL reading (`websearch.gemini_search`); Gemini Live calls get URL reading too. If DeepSeek or Gemini is rate-limited,
+  models.toml), so every tool works. Gemini web search (Settings → Search & photos): Gemini 2.5 Flash with Google Search
+  and URL reading (`websearch.gemini_search`). If DeepSeek or Gemini is rate-limited,
   down or silent before answering, OpenAI answers instead (Show work says so). Spend shows Gemini separately.
+  - Live test on his free key (2026-10-20): 3.1 Flash-Lite chat + tools + Gemini search ✅ (~2 s); 2.5 Flash ✅;
+    3.8 Flash takes 60-70 s per reply, so OpenAI steps in; 4 Argon is paid only. A free key has no Google Search on
+    Gemini 3, so search uses 2.5 Flash, 2.5 Flash Live uses Google Search, and 3.8 Live uses Junior's web_search tool.
 - [ ] **P8-05** Monitoring and automatic restarts
 - [ ] **P8-06** Your one-week test + push

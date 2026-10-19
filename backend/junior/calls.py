@@ -589,14 +589,16 @@ class CallManager:
         return rewritten if rewritten and not is_roman(rewritten) else text
 
     async def _quick_search(self, call: LiveCall, query: str) -> str:
-        """Straight to the web researcher (small model, one quick search): ~4 seconds."""
+        """A quick web search with your Search setting (OpenAI, DeepSeek or Gemini; junior/websearch.py)."""
+        from junior.websearch import search_for
+
         if not query.strip():
             return "No search query given."
         context = call.context
         context.mark_outside()  # web results: no memory saving this turn
         spent_before = len(context.usage)
         try:
-            text = await context.helpers.run("web_researcher", query, context)
+            text = await search_for(context, query)
         except BudgetExceeded as e:
             return f"Can't search: {e}"
         new_usage = context.usage[spent_before:]

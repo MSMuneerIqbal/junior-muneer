@@ -130,7 +130,12 @@ input = 0.25
 cached_input = 0.025
 output = 1.50
 
-[prices."gemini:gemini-4-argon"]   # $4 / $20 from 2026-12-01
+[prices."gemini:gemini-2.5-flash"]   # also Gemini web search (free Google Search on the free tier)
+input = 0.30
+cached_input = 0.03
+output = 2.50
+
+[prices."gemini:gemini-4-argon"]   # $4 / $20 from 2026-12-01; no free tier
 input = 2.00
 cached_input = 0.10
 output = 10.00
@@ -140,6 +145,6 @@ output = 10.00
 web_search = 0.010
 # DeepSeek's own Search API (api-docs.deepseek.com/guides/search): $0.75 per 1,000 searches (checked 2026-10-19).
 deepseek_search = 0.00075
-# Grounding with Google Search on Gemini 3+: 5,000 free a month (shared), then $14 per 1,000 (checked 2026-10-20).
-# Counted as free here; Activity shows how many searches ran.
+# Gemini web search runs on Gemini 2.5 Flash: Google Search is free on the free tier (1,500 a day; paid: $35 per
+# 1,000 above that). Counted as free here; Activity shows how many searches ran.
 gemini_search = 0.0

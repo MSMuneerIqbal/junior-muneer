@@ -117,17 +117,22 @@ MODEL_INFO = {
     ),
     "gemini:gemini-3.8-flash": (
         "Gemini 3.8 Flash",
-        "Google's smartest Flash: strong and quick, free tier with a Gemini key.",
-        "fast",
+        "Google's smartest Flash. On a free key it waits about a minute per reply (OpenAI steps in after 20 s); quick on a paid key.",
+        "slow",
     ),
     "gemini:gemini-3.1-flash-lite": (
         "Gemini 3.1 Flash-Lite",
-        "Google's fastest and cheapest; free tier. Good backup.",
+        "Google's fastest and cheapest: answers in about 2 s, free tier. The best Gemini choice on a free key.",
+        "fast",
+    ),
+    "gemini:gemini-2.5-flash": (
+        "Gemini 2.5 Flash",
+        "Older Flash, steady and cheap; free tier.",
         "fast",
     ),
     "gemini:gemini-4-argon": (
         "Gemini 4 Argon",
-        "Google's heavy flagship for hard reasoning. No free tier.",
+        "Google's heavy flagship for hard reasoning. Paid only: a free key can't use it.",
         "medium",
     ),
     "deepseek:deepseek-v4-pro": (
