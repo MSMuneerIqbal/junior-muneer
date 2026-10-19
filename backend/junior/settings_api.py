@@ -34,6 +34,7 @@ class SettingsUpdate(BaseModel):
     mic_type: Literal["headset", "laptop", "off"] | None = None
     main_model: str | None = Field(default=None, max_length=100)
     helper_model: str | None = Field(default=None, max_length=100)
+    web_search_provider: Literal["openai", "deepseek"] | None = None
     api_posts_per_day: int | None = Field(default=None, ge=0, le=50)
     news_digest_enabled: bool | None = None
     news_digest_time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")

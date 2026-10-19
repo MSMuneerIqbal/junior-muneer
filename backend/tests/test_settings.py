@@ -43,6 +43,7 @@ def test_defaults(client):
         "mic_type": "headset",
         "main_model": "",
         "helper_model": "",
+        "web_search_provider": "openai",
         "api_posts_per_day": 5,
         "news_digest_enabled": True,
         "news_digest_time": "07:30",

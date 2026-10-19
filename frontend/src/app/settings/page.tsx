@@ -536,7 +536,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
       <Section
         id="models"
         title="Models"
-        description="Which AI writes his typed answers. Voice messages and live calls always use OpenAI."
+        description="Which AI writes his typed answers, and which engine searches the web. Voice messages and live calls always use OpenAI."
       >
         {models ? (
           <>
@@ -560,6 +560,29 @@ function SettingsForm({ initial }: { initial: Settings }) {
                 defaultModel={models.defaults.helper_model}
                 choices={models.choices.filter((c) => c.speed !== "slow")}
                 onChange={(m) => set("helper_model", m)}
+              />
+            </Row>
+            <Row
+              label="Web search"
+              hint={
+                <>
+                  Which engine searches the web for him. News from official sources always uses OpenAI&apos;s search.
+                  {form.web_search_provider === "deepseek" && !models.choices.some((c) => c.provider === "DeepSeek" && c.ready) && (
+                    <span className="mt-1 block text-warn">
+                      DeepSeek search needs <code>DEEPSEEK_API_KEY</code> in backend/.env; until then OpenAI searches.
+                    </span>
+                  )}
+                </>
+              }
+            >
+              <Segmented
+                label="Web search"
+                value={form.web_search_provider}
+                onChange={(v) => set("web_search_provider", v)}
+                options={[
+                  { value: "openai", label: "OpenAI", sub: "~$0.01 a search + a helper" },
+                  { value: "deepseek", label: "DeepSeek", sub: "~$0.0008 a search" },
+                ]}
               />
             </Row>
           </>

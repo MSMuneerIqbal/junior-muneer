@@ -30,6 +30,8 @@ DEFAULTS: dict[str, Any] = {
     # Text models (Settings -> Models). "" = the default from agents/models.toml.
     "main_model": "",
     "helper_model": "",
+    # Web search engine: openai (hosted search through a small helper) · deepseek (DeepSeek's Search API, cheaper).
+    "web_search_provider": "openai",
     # Your profile (Profile page). Kept here, edited through /api/profile.
     "profile": {},
     # Phase 3: at most this many posts per platform per day through the APIs (Safety Guard).

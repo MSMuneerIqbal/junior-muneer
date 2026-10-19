@@ -99,3 +99,5 @@ output = 3.96
 # Tools, in US dollars per call.
 [tool_prices]
 web_search = 0.010
+# DeepSeek's own Search API (api-docs.deepseek.com/guides/search): $0.75 per 1,000 searches (checked 2026-10-19).
+deepseek_search = 0.00075

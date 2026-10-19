@@ -124,11 +124,10 @@ async def web_search(ctx: Ctx, query: str) -> str:
     Args:
         query: What to search for, as a clear search query.
     """
-    # Web results are outside text: no memory saving for the rest of this turn.
-    ctx.context.mark_outside()
-    if ctx.context.helpers is None:
-        return "Web search is not available right now."
-    return await ctx.context.helpers.run("web_researcher", query, ctx.context)
+    # OpenAI's or DeepSeek's search, as chosen in Settings (junior/websearch.py). Results are outside text.
+    from junior.websearch import search_for
+
+    return await search_for(ctx.context, query)
 
 
 def _hosted_web_search() -> list[Tool]:

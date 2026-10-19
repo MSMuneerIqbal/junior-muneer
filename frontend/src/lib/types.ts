@@ -176,6 +176,7 @@ export type Settings = {
   mic_type: "headset" | "laptop" | "off";
   main_model: string;
   helper_model: string;
+  web_search_provider: "openai" | "deepseek";
   api_posts_per_day: number;
   news_digest_enabled: boolean;
   news_digest_time: string;
