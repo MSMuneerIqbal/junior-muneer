@@ -116,7 +116,7 @@ def test_spend_today_shows_each_provider_and_each_search_engine(search):
     with TestClient(create_app()) as c:
         today = c.get("/api/usage/today").json()
     assert today["by_provider"] == {"deepseek": 0.00125, "openai": 0.0125}
-    assert today["web_search"] == {"openai": 0.0105, "deepseek": 0.00075}
+    assert today["web_search"] == {"openai": 0.0105, "deepseek": 0.00075, "gemini": 0.0}
     assert today["web_search_engine"] == "deepseek"
 
 

@@ -17,7 +17,7 @@ from junior.settings_store import all_settings, set_setting
 CHANGEABLE: dict[str, str] = {
     "main_model": "Main model (chat, WhatsApp)",
     "helper_model": "Helper model (writing team, news, other helpers)",
-    "web_search_provider": "Web search engine: openai or deepseek (cheaper)",
+    "web_search_provider": "Web search engine: openai, deepseek (cheaper) or gemini (Google Search, free tier)",
     "vision_provider": "Who reads photos: openai or deepseek (DeepSeek V4.1 Flash, cheaper)",
     "language": "Reply language: match, english or urdu",
     "tts_voice": "Speaking voice",

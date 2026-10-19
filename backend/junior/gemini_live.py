@@ -71,8 +71,8 @@ def declarations(tools: list[dict]) -> list[dict]:
 def session_config(instructions: str, voice: str, google_search: bool = True) -> dict:
     """The Live session: audio out, Junior's personality plus the Urdish instruction, tools, transcripts."""
     tools: list[dict] = [{"function_declarations": declarations(CUSTOM_TOOLS + ([] if google_search else [WEB_SEARCH_TOOL]))}]
-    if google_search:
-        tools.insert(0, {"google_search": {}})
+    if google_search:  # Google Search grounding and reading links; if refused, our own web_search instead
+        tools[0:0] = [{"google_search": {}}, {"url_context": {}}]
     return {
         "response_modalities": ["AUDIO"],
         "system_instruction": f"{instructions}\n\n# Voice\n{URDISH_INSTRUCTION}",

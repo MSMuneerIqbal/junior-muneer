@@ -472,5 +472,10 @@ Read-only: these agents never post or send anything. News pages are outside cont
   If a model refuses Google Search, our own web_search is used. Sessions last up to 15 minutes.
   - **Your step:** get a key at https://aistudio.google.com/apikey, paste it after `GEMINI_API_KEY=` in backend/.env,
     restart, then Settings → Live calls → Voice engine → Gemini.
+- [x] **Extra: Gemini as the third chat provider** (2026-10-20): Gemini 3.8 Flash and 3.1 Flash-Lite (free tier) and
+  Gemini 4 Argon (heavy) in Settings → Models, through Google's OpenAI-compatible endpoint (`[providers.gemini]` in
+  models.toml), so every tool works. Gemini web search (Settings → Search & photos): Gemini 3.8 Flash with Google Search
+  and URL reading (`websearch.gemini_search`); Gemini Live calls get URL reading too. If DeepSeek or Gemini is rate-limited,
+  down or silent before answering, OpenAI answers instead (Show work says so). Spend shows Gemini separately.
 - [ ] **P8-05** Monitoring and automatic restarts
 - [ ] **P8-06** Your one-week test + push

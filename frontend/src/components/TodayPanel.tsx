@@ -62,7 +62,7 @@ function Spend() {
           <ul aria-label="Spend by provider" className="mt-0.5 flex flex-col gap-0.5 text-xs text-muted">
             {Object.entries(data.by_provider).map(([provider, cost]) => (
               <li key={provider} className="flex justify-between">
-                <span>{provider === "deepseek" ? "DeepSeek" : "OpenAI"}</span>
+                <span>{provider === "deepseek" ? "DeepSeek" : provider === "gemini" ? "Gemini" : "OpenAI"}</span>
                 <span className="tabular-nums">{money(cost)}</span>
               </li>
             ))}
@@ -73,17 +73,23 @@ function Spend() {
         <div className="mt-3">
           <p className="text-xs font-medium text-ink/80">
             Web search{" "}
-            <span className="font-normal text-muted">(now: {data.web_search_engine === "deepseek" ? "DeepSeek" : "OpenAI"})</span>
+            <span className="font-normal text-muted">
+              (now: {data.web_search_engine === "deepseek" ? "DeepSeek" : data.web_search_engine === "gemini" ? "Gemini" : "OpenAI"})
+            </span>
           </p>
           <ul aria-label="Web search spend" className="mt-0.5 flex flex-col gap-0.5 text-xs text-muted">
-            <li className="flex justify-between">
-              <span>OpenAI</span>
-              <span className="tabular-nums">{money(data.web_search.openai)}</span>
-            </li>
-            <li className="flex justify-between">
-              <span>DeepSeek</span>
-              <span className="tabular-nums">{money(data.web_search.deepseek)}</span>
-            </li>
+            {(
+              [
+                ["openai", "OpenAI"],
+                ["deepseek", "DeepSeek"],
+                ["gemini", "Gemini"],
+              ] as const
+            ).map(([key, label]) => (
+              <li key={key} className="flex justify-between">
+                <span>{label}</span>
+                <span className="tabular-nums">{money(data.web_search?.[key] ?? 0)}</span>
+              </li>
+            ))}
           </ul>
         </div>
       )}

@@ -32,8 +32,8 @@ The design is in [PLAN.md](PLAN.md); progress and set-up steps per feature are i
 
 | What | Choices |
 |---|---|
-| Chat model | OpenAI GPT-6 family, **DeepSeek V4.1 Flash** (fast, cheap, sees images) or DeepSeek V4 Pro |
-| Web search | OpenAI (hosted search) or **DeepSeek Search API** (~$0.0008 a search) |
+| Chat model | OpenAI GPT-6 family, **DeepSeek** (V4.1 Flash, V4 Pro) or **Google Gemini** (3.8 Flash, 3.1 Flash-Lite: free tier; 4 Argon: heavy). If DeepSeek or Gemini is busy or rate-limited, OpenAI answers |
+| Web search | OpenAI (hosted search), **DeepSeek Search API** (~$0.0008 a search) or **Gemini** (Google Search + reading links, free tier) |
 | Reading photos | OpenAI's small vision model or **DeepSeek V4.1 Flash** |
 | Live calls | **OpenAI Realtime** (Natural ~$0.05/min, Economy ~$0.02/min), **Gemini 3.8 Live** or **Gemini 2.5 Flash Live** (~$0.02/min, free tier) |
 | Voice messages | OpenAI transcribe and text-to-speech |
@@ -52,7 +52,7 @@ Keys go in `backend\.env` (created on the first run; see `backend\.env.example`)
 |---|---|
 | `OPENAI_API_KEY` | Chat, voice, OpenAI calls and search (needed) |
 | `DEEPSEEK_API_KEY` | DeepSeek models, search and photos (optional) |
-| `GEMINI_API_KEY` | Gemini Live calls (optional; aistudio.google.com/apikey) |
+| `GEMINI_API_KEY` | Gemini chat models, Gemini web search and Gemini Live calls (optional; aistudio.google.com/apikey) |
 | `GMAIL_ADDRESS`, `GMAIL_APP_PASSWORD` | Emails to yourself (daily news, "email me") |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google Docs, Sheets, Calendar, Drive and Gmail (then Connect Google in Settings) |
 | `WHATSAPP_*`, `META_APP_SECRET`, `NGROK_*` | WhatsApp (steps in TASK.md, P8-04) |

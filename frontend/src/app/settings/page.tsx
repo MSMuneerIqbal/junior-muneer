@@ -538,7 +538,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
       <Section
         id="models"
         title="Models"
-        description="Which AI writes his typed answers. Voice messages and live calls always use OpenAI."
+        description="Which AI writes his typed answers: OpenAI, DeepSeek or Google Gemini. If DeepSeek or Gemini is busy or hits its limit, OpenAI answers instead."
       >
         {models ? (
           <>
@@ -575,8 +575,14 @@ function SettingsForm({ initial }: { initial: Settings }) {
           label="Search engine"
           hint={
             <>
-              DeepSeek is much cheaper and answers from the results directly; OpenAI uses a small helper. If DeepSeek
-              fails, OpenAI searches instead. News from official sources always uses OpenAI&apos;s search.
+              DeepSeek is much cheaper and answers from the results directly; Gemini searches Google and can read
+              links (free tier, 5,000 searches a month); OpenAI uses a small helper. If DeepSeek or Gemini fails,
+              OpenAI searches instead. News from official sources always uses OpenAI&apos;s search.
+              {form.web_search_provider === "gemini" && limits && !limits.gemini_ready && (
+                <span className="mt-1 block text-warn">
+                  Gemini search needs <code>GEMINI_API_KEY</code> in backend/.env; until then OpenAI searches.
+                </span>
+              )}
               {form.web_search_provider === "deepseek" && models && !models.choices.some((c) => c.provider === "DeepSeek" && c.ready) && (
                 <span className="mt-1 block text-warn">
                   DeepSeek search needs <code>DEEPSEEK_API_KEY</code> in backend/.env; until then OpenAI searches.
@@ -592,6 +598,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
             options={[
               { value: "openai", label: "OpenAI", sub: "~$0.01 a search + a helper" },
               { value: "deepseek", label: "DeepSeek", sub: "~$0.0008 a search" },
+              { value: "gemini", label: "Gemini", sub: "Google Search · free tier" },
             ]}
           />
         </Row>

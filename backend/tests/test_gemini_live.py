@@ -130,8 +130,8 @@ def test_the_session_has_junior_the_urdish_voice_google_search_and_his_tools(gem
     model, config = set_voice.configs[0]
     assert model == "gemini-3.8-live" and config["response_modalities"] == ["AUDIO"]
     assert URDISH_INSTRUCTION in config["system_instruction"] and "Junior Muneer" in config["system_instruction"]
-    assert config["tools"][0] == {"google_search": {}}
-    names = [d["name"] for d in config["tools"][1]["function_declarations"]]
+    assert config["tools"][0] == {"google_search": {}} and config["tools"][1] == {"url_context": {}}
+    names = [d["name"] for d in config["tools"][2]["function_declarations"]]
     assert names == ["ai_news", "pakistan_news", "ask_junior", "save_memory", "forget_memory"]
     assert config["speech_config"]["voice_config"]["prebuilt_voice_config"]["voice_name"] == "Charon"
     assert config["input_audio_transcription"] == {} and config["output_audio_transcription"] == {}

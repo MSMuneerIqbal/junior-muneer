@@ -5,7 +5,7 @@ import logging
 from collections.abc import AsyncIterator, Callable
 from typing import Any
 
-from openai import APIConnectionError
+from openai import APIConnectionError, InternalServerError, RateLimitError
 
 from junior.agent.builder import ModelProvider, NoApiKeyError, build_agent, chosen_model
 from junior.agent.context import TurnContext
@@ -252,12 +252,20 @@ class ChatService:
                         event = await anext(stream)
                 except StopAsyncIteration:
                     break
-                except TimeoutError:
+                except Exception as e:
+                    # Another provider (DeepSeek, Gemini) silent, rate-limited (free tiers) or down before any
+                    # words: OpenAI answers instead. Anything else, or OpenAI itself failing, goes up as before.
+                    limited = isinstance(e, (RateLimitError, InternalServerError, APIConnectionError))
+                    if not (isinstance(e, TimeoutError) or (other_provider and limited)):
+                        raise
                     await stream.aclose()
                     if not first:
+                        if limited:
+                            raise
                         raise RuntimeError(
                             f"{model_name} stopped responding mid-answer. Please try again."
                         ) from None
+                    why = "hit its rate limit" if isinstance(e, RateLimitError) else "is busy right now"
                     # Busy: answer with the default OpenAI model instead.
                     spec = self.registry.get(MAIN_AGENT)
                     backup = router.model_for(MAIN_AGENT, spec.model)
@@ -266,12 +274,12 @@ class ChatService:
                     label = router.providers.get(router.provider_of(model_name), {}).get(
                         "label", model_name
                     )
-                    log.warning("%s gave no answer in %ss; using %s", model_name, limit, backup)
+                    log.warning("%s didn't answer (%s); using %s", model_name, type(e).__name__, backup)
                     fallback_step = {
                         "id": "fallback",
                         "kind": "tool",
                         "name": "fallback",
-                        "label": f"{label} is busy right now, so {backup} answered",
+                        "label": f"{label} {why}, so {backup} answered",
                         "status": "done",
                     }
                     yield {"type": "step", **fallback_step}

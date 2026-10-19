@@ -64,16 +64,19 @@ def usage_today() -> dict:
         by_model = s.execute(
             select(Usage.agent, Usage.model, func.sum(Usage.cost_usd)).where(Usage.created_at >= since).group_by(Usage.agent, Usage.model)
         ).all()
-    # Who you paid: DeepSeek models are written "deepseek:..."; everything else (text, voice, calls) is OpenAI.
+    # Who you paid: "deepseek:..." and "gemini..." (chat and Gemini Live calls); everything else is OpenAI.
     by_provider: dict[str, float] = defaultdict(float)
-    # Web search by engine: OpenAI's goes through the web_researcher helper; DeepSeek's is its Search API.
-    web_search = {"openai": 0.0, "deepseek": 0.0}
+    # Web search by engine: OpenAI's goes through the web_researcher helper; DeepSeek's and Gemini's are counted
+    # under the web_search agent.
+    web_search = {"openai": 0.0, "deepseek": 0.0, "gemini": 0.0}
     for agent, model, cost in by_model:
-        by_provider["deepseek" if (model or "").startswith("deepseek") else "openai"] += cost or 0.0
+        name = model or ""
+        provider = "deepseek" if name.startswith("deepseek") else "gemini" if name.startswith("gemini") else "openai"
+        by_provider[provider] += cost or 0.0
         if agent == "web_researcher":
             web_search["openai"] += cost or 0.0
-        elif model == "deepseek:search":
-            web_search["deepseek"] += cost or 0.0
+        elif agent == "web_search" and provider != "openai":
+            web_search[provider] += cost or 0.0
     spent = sum(by_mode.values())
     cap = float(settings["daily_cap_usd"])
     return {

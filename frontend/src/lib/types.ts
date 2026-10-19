@@ -148,8 +148,8 @@ export type UsageToday = {
   by_mode: Record<string, number>;
   by_agent: Record<string, number>;
   by_provider?: Record<string, number>;
-  web_search?: { openai: number; deepseek: number };
-  web_search_engine?: "openai" | "deepseek";
+  web_search?: { openai: number; deepseek: number; gemini?: number };
+  web_search_engine?: "openai" | "deepseek" | "gemini";
 };
 
 export type Activity = {
@@ -181,7 +181,7 @@ export type Settings = {
   mic_type: "headset" | "laptop" | "off";
   main_model: string;
   helper_model: string;
-  web_search_provider: "openai" | "deepseek";
+  web_search_provider: "openai" | "deepseek" | "gemini";
   vision_provider: "openai" | "deepseek";
   api_posts_per_day: number;
   news_digest_enabled: boolean;

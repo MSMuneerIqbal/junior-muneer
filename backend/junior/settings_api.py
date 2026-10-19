@@ -36,7 +36,7 @@ class SettingsUpdate(BaseModel):
     mic_type: Literal["headset", "laptop", "off"] | None = None
     main_model: str | None = Field(default=None, max_length=100)
     helper_model: str | None = Field(default=None, max_length=100)
-    web_search_provider: Literal["openai", "deepseek"] | None = None
+    web_search_provider: Literal["openai", "deepseek", "gemini"] | None = None
     vision_provider: Literal["openai", "deepseek"] | None = None
     api_posts_per_day: int | None = Field(default=None, ge=0, le=50)
     news_digest_enabled: bool | None = None
@@ -114,6 +114,21 @@ MODEL_INFO = {
         "DeepSeek V4.1 Flash",
         "Very cheap and quick, and sees images. Can stall when DeepSeek is busy (OpenAI steps in after 20 s).",
         "fast",
+    ),
+    "gemini:gemini-3.8-flash": (
+        "Gemini 3.8 Flash",
+        "Google's smartest Flash: strong and quick, free tier with a Gemini key.",
+        "fast",
+    ),
+    "gemini:gemini-3.1-flash-lite": (
+        "Gemini 3.1 Flash-Lite",
+        "Google's fastest and cheapest; free tier. Good backup.",
+        "fast",
+    ),
+    "gemini:gemini-4-argon": (
+        "Gemini 4 Argon",
+        "Google's heavy flagship for hard reasoning. No free tier.",
+        "medium",
     ),
     "deepseek:deepseek-v4-pro": (
         "DeepSeek V4 Pro",

@@ -91,7 +91,7 @@ audio_output = 12.00
 text_input = 0.50
 text_output = 2.00   # not listed separately; the audio models' text output is small
 
-# Other providers (text only; voice and web search stay on OpenAI).
+# Other providers for chat (Settings → Models). Voice messages stay on OpenAI.
 # A model from a provider is written "provider:model", e.g. "deepseek:deepseek-flash".
 # Choose them in Settings -> Models, or here in [tiers] / [agents].
 [providers.deepseek]
@@ -112,8 +112,34 @@ input = 1.32
 cached_input = 0.044
 output = 3.96
 
+# Google Gemini through Google's OpenAI-compatible endpoint (ai.google.dev/gemini-api/docs/openai), with GEMINI_API_KEY.
+# Paid-tier prices (checked 2026-10-20); with a free-tier key the Flash models cost nothing within Google's limits,
+# but the paid price is counted here so the daily cap is never under-counted.
+[providers.gemini]
+label = "Gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+key_env = "GEMINI_API_KEY"
+
+[prices."gemini:gemini-3.8-flash"]
+input = 0.75
+cached_input = 0.075
+output = 3.75
+
+[prices."gemini:gemini-3.1-flash-lite"]
+input = 0.25
+cached_input = 0.025
+output = 1.50
+
+[prices."gemini:gemini-4-argon"]   # $4 / $20 from 2026-12-01
+input = 2.00
+cached_input = 0.10
+output = 10.00
+
 # Tools, in US dollars per call.
 [tool_prices]
 web_search = 0.010
 # DeepSeek's own Search API (api-docs.deepseek.com/guides/search): $0.75 per 1,000 searches (checked 2026-10-19).
 deepseek_search = 0.00075
+# Grounding with Google Search on Gemini 3+: 5,000 free a month (shared), then $14 per 1,000 (checked 2026-10-20).
+# Counted as free here; Activity shows how many searches ran.
+gemini_search = 0.0
