@@ -15,6 +15,7 @@ pypdf==6.21.1  # reads PDFs you send or have in Drive
 python-docx==1.2.0  # reads Word files
 openpyxl==3.1.5  # reads Excel files
 google-genai==2.31.0  # live calls with Gemini Live
+lameenc==1.9.0  # Gemini's spoken answers -> MP3 (WhatsApp takes MP3, not raw audio)
 
 # Tests
 pytest==9.1.1

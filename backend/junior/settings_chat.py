@@ -20,7 +20,9 @@ CHANGEABLE: dict[str, str] = {
     "web_search_provider": "Web search engine: openai, deepseek (cheaper) or gemini (Google Search, free tier)",
     "vision_provider": "Who reads photos: openai or deepseek (DeepSeek V4.1 Flash, cheaper)",
     "language": "Reply language: match, english or urdu",
-    "tts_voice": "Speaking voice",
+    "voice_engine": "Who hears voice messages and reads answers aloud (dashboard and WhatsApp): openai or gemini",
+    "tts_voice": "Speaking voice (OpenAI engine)",
+    "gemini_voice": "Gemini voice: Charon, Puck, Orus, Fenrir, Kore, Aoede, Leda or Zephyr",
     "voice_accent": "Accent: pakistani, indian or neutral",
     "tts_speed": "Speaking speed: 0.5 to 2.0",
     "voice_autoplay": "Read answers to voice messages aloud: on or off",
@@ -91,8 +93,11 @@ def _parse(key: str, value: str) -> Any:
         return 0 if word in {"every message", "every", "0"} else int(word)
     if key == "tts_speed":
         return float(text)
-    if key in {"language", "voice_accent", "turn_taking", "mic_type", "tts_voice", "web_search_provider", "vision_provider"}:
+    if key in {"language", "voice_accent", "turn_taking", "mic_type", "tts_voice", "web_search_provider", "vision_provider",
+               "voice_engine"}:
         return text.casefold()
+    if key == "gemini_voice":
+        return text.strip().capitalize()
     if key.endswith("_model") and text.casefold() == "default":
         return ""
     return text

@@ -150,6 +150,121 @@ class OpenAIVoice:
                 yield chunk
 
 
+GEMINI_SPEAK_CHARS = 1500  # Gemini's speech model makes one piece at a time: short pieces start playing sooner
+GEMINI_TIMEOUT_SECONDS = 120
+GEMINI_AUDIO_TOKENS_PER_SECOND = 25
+GEMINI_READ_ALOUD = "Read the text below aloud, word for word. Don't add or say anything else."
+
+
+def to_mp3(pcm: bytes, rate: int = 24000) -> bytes:
+    """Gemini's raw 16-bit mono audio -> MP3 (the dashboard plays it; WhatsApp only takes real audio files)."""
+    import lameenc
+
+    encoder = lameenc.Encoder()
+    encoder.set_bit_rate(64)
+    encoder.set_in_sample_rate(rate)
+    encoder.set_channels(1)
+    encoder.set_quality(2)
+    return bytes(encoder.encode(pcm) + encoder.flush())
+
+
+class GeminiVoice:
+    """Voice messages with Google Gemini (Settings → Voice → Engine): Gemini 2.5 Flash writes down what you said,
+    Gemini's speech model reads his answers in the Gemini voice you picked. Needs GEMINI_API_KEY."""
+
+    def __init__(self) -> None:
+        key = get_settings().gemini_api_key
+        if not key:
+            raise NoApiKeyError(
+                "Voice messages with Gemini need GEMINI_API_KEY in backend/.env (then a restart), "
+                "or switch Settings → Voice → Engine back to OpenAI."
+            )
+        from google import genai
+
+        self.client = genai.Client(api_key=key)
+
+    async def transcribe(
+        self, path: Path, model: str, prompt: str, language: str | None = None
+    ) -> TranscriptResult:
+        from google.genai import types
+
+        ask = prompt + (" They are speaking Urdu: write it in Urdu script." if language == "ur" else "")
+        ask += " Reply with only their words: no notes, no labels, no quotes."
+        audio = types.Part.from_bytes(data=path.read_bytes(), mime_type=MEDIA_TYPES[path.suffix[1:]])
+        result = await asyncio.wait_for(
+            self.client.aio.models.generate_content(model=model, contents=[audio, ask]), GEMINI_TIMEOUT_SECONDS
+        )
+        usage = result.usage_metadata
+        audio_tokens = sum(
+            d.token_count or 0 for d in (getattr(usage, "prompt_tokens_details", None) or [])
+            if "AUDIO" in str(d.modality).upper()
+        )
+        return TranscriptResult(
+            text=(result.text or "").strip(),
+            languages=[],
+            seconds=audio_tokens / GEMINI_AUDIO_TOKENS_PER_SECOND if audio_tokens else None,
+        )
+
+    async def speak(
+        self, text: str, model: str, voice: str, speed: float, instructions: str
+    ) -> AsyncIterator[bytes]:
+        """One MP3 piece per short part of the answer (Gemini can't change speed; `speed` is for OpenAI)."""
+        from google.genai import types
+
+        config = types.GenerateContentConfig(
+            response_modalities=["AUDIO"],
+            speech_config=types.SpeechConfig(
+                voice_config=types.VoiceConfig(prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice))
+            ),
+        )
+        for piece in chunks(text, GEMINI_SPEAK_CHARS):
+            result = await asyncio.wait_for(
+                self.client.aio.models.generate_content(
+                    model=model, contents=f"{instructions} {GEMINI_READ_ALOUD}\n\n{piece}", config=config
+                ),
+                GEMINI_TIMEOUT_SECONDS,
+            )
+            parts = result.candidates[0].content.parts if result.candidates and result.candidates[0].content else []
+            pcm = b"".join(p.inline_data.data for p in parts or [] if getattr(p, "inline_data", None))
+            if pcm:
+                yield to_mp3(pcm)
+
+
+# Tests put a pretend Gemini voice here.
+GEMINI_VOICE = None
+
+
+def voice_engine() -> str:
+    return get_setting("voice_engine") or "openai"
+
+
+def engine_voice(openai_voice):
+    """The voice client for the engine chosen in Settings → Voice, picked fresh each time it's asked for."""
+
+    def pick() -> "VoiceClient":
+        if voice_engine() == "gemini":
+            if GEMINI_VOICE is not None:
+                return GEMINI_VOICE()
+            if get_settings().fake_ai:
+                return FakeVoice()
+            return GeminiVoice()
+        return openai_voice()
+
+    return pick
+
+
+def voice_models() -> tuple[str, str]:
+    """(speech-to-text model, text-to-speech model) for the chosen engine."""
+    r = get_router()
+    if voice_engine() == "gemini":
+        return r.audio_model("gemini_transcribe"), r.audio_model("gemini_speech")
+    return r.audio_model("transcribe"), r.audio_model("speech")
+
+
+def voice_name(settings: dict) -> str:
+    return (settings.get("gemini_voice") or "Charon") if voice_engine() == "gemini" else settings["tts_voice"]
+
+
 class FakeVoice:
     """For tests and FAKE_AI mode: no network, no cost."""
 
@@ -217,7 +332,7 @@ async def transcribe_bytes(voice_factory, data: bytes, content_type: str, second
     path.write_bytes(data)
 
     model_router = get_router()
-    model = model_router.audio_model("transcribe")
+    model = voice_models()[0]
     try:
         voice: VoiceClient = voice_factory()
         prompt = TRANSCRIBE_PROMPT.format(name=get_setting("user_name"))
@@ -373,8 +488,7 @@ async def speak(request: Request, message_id: int):
         raise
 
     settings = all_settings()
-    model_router = get_router()
-    model = model_router.audio_model("speech")
+    model = voice_models()[1]
     speed = float(settings["tts_speed"])
 
     async def generate() -> AsyncIterator[bytes]:
@@ -383,7 +497,7 @@ async def speak(request: Request, message_id: int):
             async with asyncio.timeout(SPEAK_TIMEOUT_SECONDS):
                 for piece in chunks(text):  # MP3 pieces join cleanly
                     async for chunk in voice.speak(
-                        piece, model, settings["tts_voice"], speed, speak_instructions(settings)
+                        piece, model, voice_name(settings), speed, speak_instructions(settings)
                     ):
                         audio.extend(chunk)
                         yield chunk
@@ -414,7 +528,7 @@ def _store_speech(message_id: int, conversation_id: int | None, audio: bytes, te
     audit(
         "tool_call",
         "speak",
-        detail={"model": model, "voice": settings["tts_voice"], "characters": len(text)},
+        detail={"model": model, "voice": voice_name(settings), "characters": len(text)},
         cost_usd=cost,
         conversation_id=conversation_id,
     )
@@ -439,12 +553,12 @@ async def speak_message(voice_factory, message_id: int) -> bytes:
     budget_left()
     voice: VoiceClient = voice_factory()
     settings = all_settings()
-    model = get_router().audio_model("speech")
+    model = voice_models()[1]
     speed = float(settings["tts_speed"])
     audio = bytearray()
     async with asyncio.timeout(SPEAK_TIMEOUT_SECONDS):
         for piece in chunks(text):
-            async for chunk in voice.speak(piece, model, settings["tts_voice"], speed, speak_instructions(settings)):
+            async for chunk in voice.speak(piece, model, voice_name(settings), speed, speak_instructions(settings)):
                 audio.extend(chunk)
     _store_speech(message_id, conversation_id, bytes(audio), text, model, settings, speed)
     return bytes(audio)
@@ -464,7 +578,7 @@ async def preview(request: Request, voice: str, accent: str):
         raise HTTPException(429, str(e)) from None
     model = get_router().audio_model("speech")
     try:
-        client: VoiceClient = request.app.state.voice()
+        client: VoiceClient = request.app.state.openai_voice()  # these are OpenAI's voices, whatever the engine
         audio = bytearray()
         async for chunk in client.speak(
             PREVIEW_TEXT, model, voice, 1.0, speak_instructions({"voice_accent": accent})

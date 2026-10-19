@@ -35,3 +35,15 @@ test("Settings: the voice engine and Gemini's voice", async ({ page }, testInfo)
   expect((await sample).headers()["content-type"]).toContain("audio/wav");
   await page.getByRole("button", { name: "Discard" }).click();
 });
+
+test("Settings: voice messages can use Gemini, with Gemini's voices", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "one shared database: once is enough");
+  await page.goto("/settings#voice");
+  const engine = page.getByRole("radiogroup", { name: "Voice messages engine" });
+  await expect(engine.getByRole("radio", { name: /OpenAI/ })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("radiogroup", { name: "His voice" })).toBeVisible();
+  await engine.getByRole("radio", { name: /Gemini/ }).click();
+  await expect(page.getByRole("radiogroup", { name: "Gemini voice" })).toBeVisible();
+  await expect(page.getByRole("radiogroup", { name: "His voice" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Discard" }).click();
+});

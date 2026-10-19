@@ -57,7 +57,7 @@ from junior.hosts import LocalOnly
 from junior.reports import router as reports_router
 from junior.senders.registry import SenderRegistry, set_current
 from junior.settings_api import router as settings_router
-from junior.voice import FakeVoice, OpenAIVoice, VoiceClient
+from junior.voice import FakeVoice, OpenAIVoice, VoiceClient, engine_voice
 from junior.voice import router as voice_router
 
 log = logging.getLogger(__name__)
@@ -113,7 +113,8 @@ def create_app(
         recover_background()
         set_current(app.state.senders)
         app.state.chat = ChatService(app.state.registry, model_provider)
-        app.state.voice = voice
+        app.state.openai_voice = voice
+        app.state.voice = engine_voice(voice)  # OpenAI or Gemini, as Settings -> Voice says
         app.state.calls = CallManager(realtime, app.state.registry, model_provider)
         async def news_job() -> None:
             from junior.news.mail import daily_news_email

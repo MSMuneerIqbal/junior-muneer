@@ -679,15 +679,50 @@ function SettingsForm({ initial }: { initial: Settings }) {
         </Row>
       </Section>
 
-      <Section id="voice" title="Voice" description="How he sounds when he speaks to you.">
-        <Row wide label="His voice" hint="Used for spoken answers and live calls. Press ▶ to hear each one.">
-          <VoicePicker
-            voices={voices ?? [form.tts_voice]}
-            value={form.tts_voice}
-            accent={form.voice_accent}
-            onChange={(v) => set("tts_voice", v)}
+      <Section id="voice" title="Voice" description="How he hears your voice messages and how he sounds when he answers.">
+        <Row
+          wide
+          label="Voice messages engine"
+          hint={
+            <>
+              Who hears your recorded voice messages (dashboard mic and WhatsApp voice notes) and reads his answers
+              aloud. Live calls have their own engine under Live calls.
+              {form.voice_engine === "gemini" && limits && !limits.gemini_ready && (
+                <span className="mt-1 block text-warn">
+                  Gemini needs <code>GEMINI_API_KEY</code> in backend/.env (from aistudio.google.com/apikey), then a restart.
+                </span>
+              )}
+            </>
+          }
+        >
+          <Segmented
+            label="Voice messages engine"
+            value={form.voice_engine}
+            onChange={(v) => set("voice_engine", v)}
+            options={[
+              { value: "openai", label: "OpenAI", sub: "Best Urdu hearing · ~$0.02/min" },
+              { value: "gemini", label: "Gemini", sub: "Cheaper, free tier · Gemini voices" },
+            ]}
           />
         </Row>
+        {form.voice_engine === "gemini" ? (
+          <Row
+            wide
+            label="His voice"
+            hint="Gemini's voices, the same choice as Gemini live calls. Press ▶ to hear each one."
+          >
+            <GeminiVoicePicker value={form.gemini_voice} onChange={(v) => set("gemini_voice", v)} />
+          </Row>
+        ) : (
+          <Row wide label="His voice" hint="Used for spoken answers and OpenAI live calls. Press ▶ to hear each one.">
+            <VoicePicker
+              voices={voices ?? [form.tts_voice]}
+              value={form.tts_voice}
+              accent={form.voice_accent}
+              onChange={(v) => set("tts_voice", v)}
+            />
+          </Row>
+        )}
         <Row label="Accent" hint="How he pronounces Urdu and English. The ▶ samples use this accent.">
           <Segmented
             label="Accent"
@@ -696,7 +731,10 @@ function SettingsForm({ initial }: { initial: Settings }) {
             options={ACCENTS}
           />
         </Row>
-        <Row label="Speaking speed" hint="For spoken answers and calls.">
+        <Row
+          label="Speaking speed"
+          hint={form.voice_engine === "gemini" ? "For OpenAI only: Gemini speaks at its own pace." : "For spoken answers and calls."}
+        >
           <div className="flex max-w-sm items-center gap-4">
             <input
               type="range"

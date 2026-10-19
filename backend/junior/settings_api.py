@@ -30,6 +30,7 @@ class SettingsUpdate(BaseModel):
     voice_autoplay: bool | None = None
     call_minutes_per_day: int | None = Field(default=None, ge=0, le=600)
     call_quality: Literal["natural", "economy"] | None = None
+    voice_engine: Literal["openai", "gemini"] | None = None
     voice_provider_model: Literal["openai-realtime", "gemini-3.8-live", "gemini-2.5-flash-native-audio-preview-12-2025"] | None = None
     gemini_voice: Literal["Charon", "Puck", "Kore", "Fenrir", "Aoede", "Orus", "Leda", "Zephyr"] | None = None
     turn_taking: Literal["patient", "balanced", "quick"] | None = None

@@ -480,5 +480,10 @@ Read-only: these agents never post or send anything. News pages are outside cont
   - Live test on his free key (2026-10-20): 3.1 Flash-Lite chat + tools + Gemini search ✅ (~2 s); 2.5 Flash ✅;
     3.8 Flash takes 60-70 s per reply, so OpenAI steps in; 4 Argon is paid only. A free key has no Google Search on
     Gemini 3, so search uses 2.5 Flash, 2.5 Flash Live uses Google Search, and 3.8 Live uses Junior's web_search tool.
+- [x] **Extra: Gemini voice messages** (2026-10-20): Settings → Voice → **Voice messages engine** (OpenAI or Gemini;
+  `voice_engine`, also changeable from chat). With Gemini, Gemini 2.5 Flash hears your recordings (dashboard mic and
+  WhatsApp voice notes; keeps English as English) and `gemini-2.5-flash-preview-tts` reads answers in the Gemini voice,
+  turned into MP3 with `lameenc` (`voice.GeminiVoice`). Gemini voice cards in Settings have ▶ samples
+  (`/api/voice/gemini-preview/{voice}.wav`). Live test: heard a WebM recording in ~6 s ($0.0002), spoke the answer in ~12 s.
 - [ ] **P8-05** Monitoring and automatic restarts
 - [ ] **P8-06** Your one-week test + push
