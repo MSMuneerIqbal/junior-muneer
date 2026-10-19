@@ -47,6 +47,42 @@ def test_gemini_goes_through_googles_openai_compatible_endpoint(keys):
     assert model._client.api_key == "gemini-test-key"
 
 
+def test_gemini_streaming_asks_for_token_counts_so_its_cost_is_counted(keys):
+    """Gemini streams without token counts unless asked; then every reply cost $0."""
+    import json
+
+    from agents import ModelSettings, ModelTracing
+    from openai import AsyncOpenAI
+
+    sent = {}
+    sse = (
+        'data: {"id":"1","object":"chat.completion.chunk","created":1,"model":"gemini-3.1-flash-lite",'
+        '"choices":[{"index":0,"delta":{"role":"assistant","content":"hi"},"finish_reason":"stop"}]}\n\n'
+        'data: {"id":"1","object":"chat.completion.chunk","created":1,"model":"gemini-3.1-flash-lite","choices":[],'
+        '"usage":{"prompt_tokens":120,"completion_tokens":7,"total_tokens":127}}\n\n'
+        "data: [DONE]\n\n"
+    )
+
+    def handler(request):
+        sent.update(json.loads(request.content))
+        return httpx.Response(200, text=sse, headers={"content-type": "text/event-stream"})
+
+    model = openai_model_provider()("gemini:gemini-3.1-flash-lite")
+    model._client = AsyncOpenAI(api_key="k", base_url="https://example.test/v1/",
+                                http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+
+    async def run():
+        events = []
+        async for event in model.stream_response(None, "hi", ModelSettings(), [], None, [], ModelTracing.DISABLED):
+            events.append(event)
+        return events
+
+    events = asyncio.run(run())
+    assert sent["stream_options"] == {"include_usage": True}
+    done = [e for e in events if getattr(e, "type", "") == "response.completed"][-1]
+    assert done.response.usage.input_tokens == 120 and done.response.usage.output_tokens == 7
+
+
 def test_without_a_gemini_key_it_says_which_key(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-openai")
     monkeypatch.setenv("GEMINI_API_KEY", "")

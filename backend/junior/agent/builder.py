@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 
-from agents import Agent, Model, OpenAIChatCompletionsModel, OpenAIResponsesModel, RunContextWrapper
+from agents import Agent, Model, ModelSettings, OpenAIChatCompletionsModel, OpenAIResponsesModel, RunContextWrapper
 from openai import AsyncOpenAI
 
 from junior.agent.context import TurnContext
@@ -44,6 +44,23 @@ class NoApiKeyError(RuntimeError):
     pass
 
 
+class CountedChatModel(OpenAIChatCompletionsModel):
+    """A non-OpenAI chat model that always asks for token counts while streaming.
+    DeepSeek sends them anyway; Gemini only when asked, or its cost shows as $0."""
+
+    @staticmethod
+    def _counted(model_settings: ModelSettings) -> ModelSettings:
+        if model_settings.include_usage is None:
+            return model_settings.resolve(ModelSettings(include_usage=True))
+        return model_settings
+
+    async def get_response(self, system_instructions, input, model_settings, *args, **kwargs):
+        return await super().get_response(system_instructions, input, self._counted(model_settings), *args, **kwargs)
+
+    def stream_response(self, system_instructions, input, model_settings, *args, **kwargs):
+        return super().stream_response(system_instructions, input, self._counted(model_settings), *args, **kwargs)
+
+
 def openai_model_provider() -> ModelProvider:
     """Gives the SDK model for any model name: OpenAI ones, or 'provider:model'
     (e.g. 'deepseek:deepseek-flash') through that provider's OpenAI-style API."""
@@ -73,7 +90,7 @@ def openai_model_provider() -> ModelProvider:
                     "to OpenAI in Settings -> Models."
                 )
             clients[provider] = ai_client(provider_key, base_url=info["base_url"])
-        return OpenAIChatCompletionsModel(model=ModelRouter.bare(name), openai_client=clients[provider])
+        return CountedChatModel(model=ModelRouter.bare(name), openai_client=clients[provider])
 
     return provide
 
