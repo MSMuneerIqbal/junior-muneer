@@ -17,6 +17,32 @@ const STATUS: Record<ApprovalStatus, { label: string; style: string }> = {
 // Proposals and messages are "sent"; posts are "posted".
 const SENT_KINDS = new Set(["proposal", "message", "reply", "delivery", "email"]);
 const isSent = (item: ApprovalItem) => SENT_KINDS.has(item.item_type) || item.platform === "upwork" || item.platform === "fiverr";
+// Files, folders and commands on your PC are "done".
+const onPc = (item: ApprovalItem) => item.platform === "computer";
+
+/** A change to a file on your PC: removed lines red, added lines green. */
+function Diff({ diff }: { diff: string }) {
+  return (
+    <pre aria-label="The change" className="max-h-80 overflow-auto rounded-lg border border-line bg-bg p-2 font-mono text-[12px] leading-relaxed">
+      {diff.split("\n").map((line, n) => (
+        <div
+          key={n}
+          className={
+            line.startsWith("+") && !line.startsWith("+++")
+              ? "bg-ok/10 text-ok"
+              : line.startsWith("-") && !line.startsWith("---")
+                ? "bg-danger/10 text-danger"
+                : line.startsWith("@@")
+                  ? "text-muted"
+                  : ""
+          }
+        >
+          {line || " "}
+        </div>
+      ))}
+    </pre>
+  );
+}
 
 const button =
   "rounded-lg border border-line px-3 py-1.5 text-sm font-medium transition hover:bg-panel-2 disabled:opacity-50";
@@ -85,7 +111,7 @@ function SendState({
   if (blocked.length || error) {
     return (
       <p role="note" className="mx-4 mb-3 rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">
-        Not posted: {blocked[0] ?? error}
+        {onPc(item) ? "Not done" : "Not posted"}: {blocked[0] ?? error}
       </p>
     );
   }
@@ -157,7 +183,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
           </span>
         ) : null}
         <span className={`${item.planned_at && (item.status === "waiting" || item.status === "approved") ? "" : "ml-auto"} rounded-full px-2 py-0.5 text-[11px] font-medium ${status.style}`} data-testid="approval-status">
-          {item.status === "posted" && isSent(item) ? "Sent" : status.label}
+          {item.status === "posted" && onPc(item) ? "Done" : item.status === "posted" && isSent(item) ? "Sent" : status.label}
         </span>
       </header>
 
@@ -172,8 +198,27 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
             rows={Math.min(14, Math.max(4, editing.split("\n").length + 1))}
             value={editing}
             onChange={(e) => setEditing(e.target.value)}
-            className={`w-full resize-y rounded-xl border border-line bg-bg px-3 py-2 text-sm leading-relaxed outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 ${urduClass(editing)}`}
+            className={`w-full resize-y rounded-xl border border-line bg-bg px-3 py-2 text-sm leading-relaxed outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 ${onPc(item) ? "font-mono text-[13px]" : urduClass(editing)}`}
           />
+        ) : onPc(item) ? (
+          <>
+            {typeof item.meta.diff === "string" && item.meta.diff && <Diff diff={item.meta.diff} />}
+            {item.item_type === "file" ? (
+              <details open={!item.meta.diff} className="mt-1.5">
+                <summary className="cursor-pointer text-xs text-muted">{item.meta.diff ? "The whole new text" : "The text"}</summary>
+                <pre className="mt-1 max-h-80 overflow-auto rounded-lg border border-line bg-bg p-2 font-mono text-[12px] leading-relaxed whitespace-pre-wrap">
+                  {item.text}
+                </pre>
+              </details>
+            ) : (
+              <p className="font-mono text-[13px] whitespace-pre-wrap">{item.text}</p>
+            )}
+            {item.status === "posted" && typeof item.meta.result === "string" && (
+              <p role="status" className="mt-1.5 text-xs text-ok">
+                ✓ {item.meta.result}
+              </p>
+            )}
+          </>
         ) : (
           <p dir="auto" className={`whitespace-pre-wrap text-sm leading-relaxed ${urduClass(item.text)}`}>
             {item.text}

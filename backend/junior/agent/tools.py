@@ -1281,3 +1281,12 @@ def _computer_read_tools() -> list[Tool]:
 
 
 TOOL_FACTORIES["computer_read"] = _computer_read_tools
+
+
+def _computer_tools() -> list[Tool]:
+    from junior.computer.tools import READ_TOOLS, WRITE_TOOLS
+
+    return [*READ_TOOLS, *WRITE_TOOLS]
+
+
+TOOL_FACTORIES["computer"] = _computer_tools

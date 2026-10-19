@@ -87,7 +87,7 @@ async def send_item(item_id: int, senders: SenderRegistry) -> ApprovalOut:
         if result.outcome == "sent":
             item.status = "posted"
             item.posted_at = utcnow()
-            meta.update(remote_id=result.remote_id, post_url=result.url, sent_text=out.text, last_error="")
+            meta.update(remote_id=result.remote_id, post_url=result.url, sent_text=out.text, last_error="", result=result.detail)
         elif result.outcome == "failed":
             meta["last_error"] = result.detail  # still approved: you may try again on purpose
         else:

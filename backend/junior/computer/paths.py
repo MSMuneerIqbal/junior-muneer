@@ -180,3 +180,16 @@ def addable(text: str) -> Path:
     if reason := blocked_reason(path):
         raise PathRefused(reason)
     return path  # a folder with a blocked one inside is fine: the guard still blocks that part
+
+
+def recheck(saved: str) -> Path:
+    """Just before an approved action runs: the tools are still on, the path is still the real one that was approved
+    (no link swapped in since) and it's not on the blocked list."""
+    if not get_setting("computer_enabled"):
+        raise PathRefused("The computer tools were turned off (Settings → Computer), so it didn't run.")
+    path = Path(saved)
+    if _real(path) != path:
+        raise PathRefused(f"{path} now leads somewhere else (a link), so it didn't run.")
+    if reason := blocked_reason(path):
+        raise PathRefused(reason)
+    return path

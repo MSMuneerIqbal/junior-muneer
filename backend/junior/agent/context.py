@@ -36,6 +36,7 @@ class TurnContext:
     paste: dict[str, Any] | None = None
     # Approval items made in this turn; shown as cards under the answer.
     approval_ids: list[int] = field(default_factory=list)
+    computer_actions: int = 0  # computer cards made this turn (Phase 9)
     # Jobs that got a proposal card in this turn (one card per job).
     proposal_jobs: set[int] = field(default_factory=set)
     # Every model call so far, kept here so the cost is saved even if the turn fails.

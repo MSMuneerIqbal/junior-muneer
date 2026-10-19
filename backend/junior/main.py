@@ -76,6 +76,9 @@ def default_senders(settings) -> SenderRegistry:
     from junior.senders.gmail import GmailSender
 
     registry.add(GmailSender())  # sends only when Google is connected with Gmail drafts allowed
+    from junior.computer.sender import ComputerSender
+
+    registry.add(ComputerSender())  # approved file changes and commands on this PC (Phase 9)
     if settings.fake_ai and not registry.for_action("facebook.page.post"):
         from junior.senders.fake import FakeSender
 

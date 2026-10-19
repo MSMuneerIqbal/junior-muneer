@@ -83,9 +83,14 @@ def check(item: ApprovalItem, text: str) -> list[str]:
         if not images_for([item.id]).get(item.id):
             problems.append(f"{label} posts need an image.")
 
+    computer = item.platform == "computer"  # a file or a command on your PC: TODOs and "pwd = ..." are normal there
     for pattern, what in NEVER_SEND:
+        if computer and what == "a password":
+            continue
         if pattern.search(text):
-            problems.append(f"It contains {what}. That must never be posted.")
+            problems.append(f"It contains {what}. " + ("Junior never writes or runs that." if computer else "That must never be posted."))
+    if computer:
+        return problems
     if PLACEHOLDERS.search(text):
         problems.append("It still has a placeholder (like [link] or TODO) to fill in.")
 

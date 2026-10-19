@@ -61,6 +61,7 @@ PLATFORM_LABELS = {
     "fiverr": "Fiverr",
     "email": "Email",
     "github": "GitHub",
+    "computer": "Your PC",
     "other": "Other",
 }
 
@@ -189,8 +190,9 @@ def create_item(
     conversation_id: int | None = None,
 ) -> ApprovalOut:
     """Put a draft in the queue. API items follow the permission rules; Deny refuses them."""
-    text = text.strip()
-    if not text:
+    if platform != "computer":  # a file on your PC keeps its text exactly (its last newline too)
+        text = text.strip()
+    if not text.strip():
         raise ApprovalError("The draft is empty.")
     if platform not in PLATFORM_LABELS:
         raise ApprovalError(f"Unknown platform {platform!r}; use one of {sorted(PLATFORM_LABELS)}.")
@@ -291,12 +293,14 @@ def _need(item: ApprovalItem, status: str, kind: str | None = None) -> None:
 
 
 def edit_item(item_id: int, text: str) -> ApprovalOut:
-    text = text.strip()
-    if not text:
+    if not text.strip():
         raise ApprovalError("The text can't be empty.")
 
     def fn(item: ApprovalItem) -> None:
+        nonlocal text
         _need(item, "waiting")
+        if item.platform != "computer":
+            text = text.strip()
         if text != item.text:
             item.edits = [*item.edits, {"at": utcnow().isoformat(), "before": item.text, "after": text}]
             item.text = text

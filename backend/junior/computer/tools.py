@@ -234,3 +234,132 @@ async def pc_read(ctx: Ctx, file: str, from_line: int = 1, question: str = "") -
 
 
 READ_TOOLS: list[FunctionTool] = [pc_list, pc_find, pc_read]
+
+
+# ---- changes: approval cards, carried out by the Computer sender ------------------------------
+
+MAX_WRITE_CHARS = 200_000
+MAX_ACTIONS_PER_TURN = 20  # computer cards per message, so a loop can't make hundreds
+DIFF_CHARS = 8_000
+
+
+async def queue_action(context: TurnContext, action_type: str, item_type: str, text: str, title: str, meta: dict) -> str:
+    """Put one computer action on a card. Ask: it waits for Approve. Auto: it runs now, through the same Safety Guard
+    and sender. Outside text in this turn makes it Ask whatever the rule is."""
+    from junior.approvals import ApprovalError, create_item
+    from junior.permissions import plan_mode_refusal
+
+    if refusal := plan_mode_refusal():
+        return refusal
+    if context.computer_actions >= MAX_ACTIONS_PER_TURN:
+        return f"NOT done: at most {MAX_ACTIONS_PER_TURN} computer actions per message. Ask them to continue in a new message."
+    context.computer_actions += 1
+    try:
+        item = create_item(
+            kind="api", platform="computer", item_type=item_type, action_type=action_type, text=text, title=title[:200],
+            from_outside=context.outside_content_seen, conversation_id=context.conversation_id, meta=meta,
+        )
+    except ApprovalError as e:
+        return f"NOT done: {e}"
+    context.approval_ids.append(item.id)
+    if item.status == "approved":  # their rule is Auto
+        from junior.senders.dispatch import SendError, send_item
+        from junior.senders.registry import CURRENT
+
+        try:
+            item = await send_item(item.id, CURRENT)
+        except SendError as e:
+            context.pending_events.append({"type": "approval", "item": item.model_dump(mode="json")})
+            return f"NOT done: {e} The card shows it. Tell them why in one line."
+        context.pending_events.append({"type": "approval", "item": item.model_dump(mode="json")})
+        if item.status == "posted":
+            return f"Done (their rule is Auto): {item.meta.get('result', '')} Tell them in one line."
+        return f"It didn't work: {item.meta.get('last_error', '')} Tell them in one line."
+    context.pending_events.append({"type": "approval", "item": item.model_dump(mode="json")})
+    return (
+        f"Waiting for their OK (card {item.id}, {item.reason}). Nothing changes on their PC until they press Approve. "
+        "Tell them in one line what the card does; don't repeat its content."
+    )
+
+
+def fingerprint(path: Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _diff(old: str, new: str, name: str) -> str:
+    import difflib
+
+    lines = difflib.unified_diff(old.splitlines(), new.splitlines(), f"{name} (now)", f"{name} (after)", lineterm="", n=2)
+    text = "\n".join(lines)
+    return text if len(text) <= DIFF_CHARS else text[:DIFF_CHARS] + "\n(... the change is longer)"
+
+
+async def write_file_for(context: TurnContext, file: str, content: str, replace: bool = False) -> str:
+    try:
+        path = check(file, context)
+    except PathRefused as e:
+        return f"NOT done: {e}"
+    if not content.strip():
+        return "NOT done: the file would be empty. Write what should be in it."
+    if len(content) > MAX_WRITE_CHARS:
+        return f"NOT done: that's over {MAX_WRITE_CHARS:,} characters; split it into smaller files."
+    if path.is_dir():
+        return f"NOT done: {path} is a folder."
+    if not path.parent.is_dir():
+        return f"NOT done: the folder {path.parent} doesn't exist. Make it first with pc_make_folder."
+    meta = {"op": "write", "path": str(path), "replace": False}
+    if path.exists():
+        if not replace:
+            return (f"NOT done: {path.name} already exists there. To change it, read it with pc_read first, then call "
+                    "pc_write again with the whole new text and replace=true (the old version goes to the Recycle Bin).")
+        try:
+            old = path.read_text(encoding="utf-8-sig")
+        except (UnicodeDecodeError, OSError):
+            return f"NOT done: {path.name} isn't a plain text file, so it can't be changed here."
+        if old == content:
+            return f"Nothing to change: {path.name} already says exactly that."
+        meta.update(replace=True, diff=_diff(old, content, path.name), old_sha=fingerprint(path))
+        title = f"Change {path}"
+    else:
+        title = f"Create {path}"
+    return await queue_action(context, "computer.write", "file", content, title, meta)
+
+
+async def make_folder_for(context: TurnContext, folder: str) -> str:
+    try:
+        path = check(folder, context)
+    except PathRefused as e:
+        return f"NOT done: {e}"
+    if path.exists():
+        return f"{path} already exists." if path.is_dir() else f"NOT done: {path} is a file."
+    return await queue_action(context, "computer.write", "folder", f"Make the folder {path}", f"Make folder {path}",
+                              {"op": "mkdir", "path": str(path)})
+
+
+@function_tool
+async def pc_write(ctx: Ctx, file: str, content: str, replace: bool = False) -> str:
+    """Create a text file on the user's PC (notes, code, a list...), or change one. It shows as a card: it happens
+    when they approve it, or at once if their rule is Auto. To change a file: pc_read it, then send the WHOLE new text
+    with replace=true (the old version goes to the Recycle Bin).
+
+    Args:
+        file: The file's full path, e.g. C:\\Users\\Name\\Desktop\\notes.txt, or Desktop\\notes.txt.
+        content: Everything the file should contain.
+        replace: True to replace a file that already exists.
+    """
+    return await write_file_for(ctx.context, file, content, replace)
+
+
+@function_tool
+async def pc_make_folder(ctx: Ctx, folder: str) -> str:
+    """Make a new folder on the user's PC (and any missing folders above it). Shows as a card like pc_write.
+
+    Args:
+        folder: The new folder's full path, e.g. C:\\Users\\Name\\Documents\\Clients\\Acme.
+    """
+    return await make_folder_for(ctx.context, folder)
+
+
+WRITE_TOOLS: list[FunctionTool] = [pc_write, pc_make_folder]

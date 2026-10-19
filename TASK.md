@@ -513,8 +513,13 @@ outside your allowed folders (or on the blocked list) can be read or changed.
   - **Done 2026-10-20.** Live: in `Desktop\junior-pc-test` it listed 3 files (the `.env` hidden), found by name and by
     words, read a .txt (line numbers), a .docx and a .csv; `.env`, AppData and C:\Windows refused; a real search found 43 PDFs
     in Downloads. (The names are `pc_*` because `read_file` already reads files you send.)
-- [ ] **P9-03** Writing: `write_file`, `make_folder` as approval cards (the card shows the new text or the change; editable
+- [x] **P9-03** Writing (`pc_write`, `pc_make_folder`, `junior/computer/sender.py`): `write_file`, `make_folder` as approval cards (the card shows the new text or the change; editable
   before Approve), carried out by the Computer sender (plain code, at most once); Auto runs at once. Live check
+  - **Done 2026-10-20.** Live, through his running backend: a card created `shopping.txt` only after Approve; a change
+    showed `+Sugar` on the card and the old file went to his real Recycle Bin; a folder was made; a file with an API key
+    was stopped by the Safety Guard; Pictures was refused. Also: the path is checked again just before it runs (a link
+    swapped in is caught), a file changed since the card isn't overwritten, at most 20 computer actions per message, and
+    files keep their exact text (cards used to trim it).
 - [ ] **P9-04** Move and delete: `move_file`, `delete_file` (to the Recycle Bin, `send2trash`). Live check: delete, then
   find it in the Recycle Bin and restore it
 - [ ] **P9-05** Terminal: `run_command` (PowerShell, in an allowed folder, 2-minute limit, output capped), always Ask
