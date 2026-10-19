@@ -39,9 +39,12 @@ def _not_ready(scope: str) -> str | None:
 async def doc_create_for(context: TurnContext, title: str, content: str, your_words: str) -> str:
     from junior.google.docs import create_doc
 
+    from junior.writing.polish import polish
+
     action = "google.docs.create"
     if refusal := _not_ready("drive.file") or gate.check(context, action, your_words=your_words):
         return refusal
+    content = await polish(content, "a Google Doc (keep its # headings and - lists)", context)
     try:
         _id, link = await create_doc(title, content)
     except GoogleError as e:
@@ -455,6 +458,9 @@ async def gmail_draft_for(
         return "NOT done: who should it go to? Ask them for the email address."
     if len(recipients) + len(valid_addresses(cc)) > 10:
         return "NOT done: at most 10 people per email."
+    from junior.writing.polish import polish
+
+    body = await polish(body, "an email" + (" reply" if reply_to.strip() else ""), context)
     try:
         draft_id = await make_draft(to, subject, body, cc, thread_id, in_reply_to, references)
     except GoogleError as e:

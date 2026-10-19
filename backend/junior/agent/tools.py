@@ -1162,6 +1162,9 @@ async def send_to_me_for(
         return "NOT sent: WhatsApp isn't connected (Settings → Connections)."
     if refusal := gate.check(context, action, your_words=your_words):
         return refusal
+    from junior.writing.polish import polish
+
+    message = await polish(message, f"a message for them to read on {'Gmail' if where == 'gmail' else 'WhatsApp'}", context)
 
     attachment, note = (None, "")
     if file_link.strip():

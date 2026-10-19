@@ -36,7 +36,7 @@ def test_the_mode_goes_into_his_instructions():
         assert JUNIOR_MODE in render_instructions(spec, settings, "Junior, make a doc")
         friendly = render_instructions(spec, settings, "kya haal hai")
         assert FRIEND_MODE in friendly and JUNIOR_MODE not in friendly
-        assert "Never use emojis" in friendly
+        assert "**none in Junior mode**" in friendly and "emojis are fine here" in friendly
 
 
 def test_emojis_are_removed_but_urdu_arrows_and_punctuation_stay():
@@ -45,12 +45,24 @@ def test_emojis_are_removed_but_urdu_arrows_and_punctuation_stay():
     assert no_emojis("سلام دوست → next step: 5 - 3 = 2 (ok)") == "سلام دوست → next step: 5 - 3 = 2 (ok)"
 
 
-def test_his_answer_never_has_emojis():
-    model = ScriptedModel([[assistant_message("Hey Muneer! 😄 All good here 🙌  How was your day?")]])
+def chat(text: str, answer: str) -> tuple[str, list[str]]:
+    model = ScriptedModel([[assistant_message(answer)]])
+    deltas = []
     with TestClient(create_app(model_provider=lambda: (lambda _n: model))) as c:
         with c.websocket_connect("/ws/chat") as ws:
-            ws.send_json({"type": "message", "conversation_id": None, "text": "hey"})
+            ws.send_json({"type": "message", "conversation_id": None, "text": text})
             while (event := ws.receive_json())["type"] != "done":
                 if event["type"] == "delta":
-                    assert not any(ch in event["text"] for ch in "😄🙌")
-        assert event["text"] == "Hey Muneer! All good here How was your day?"
+                    deltas.append(event["text"])
+    return event["text"], deltas
+
+
+def test_junior_mode_answers_never_have_emojis():
+    text, deltas = chat("Junior, is the email sent?", "Done 👍 The email is sent ✅  to Sara.")
+    assert text == "Done The email is sent to Sara."
+    assert not any(ch in "".join(deltas) for ch in "👍✅")
+
+
+def test_a_friend_may_use_emojis():
+    text, _ = chat("hey, how's it going", "All good yaar 😄 what about you?")
+    assert text == "All good yaar 😄 what about you?"

@@ -299,6 +299,9 @@ def _team_answer(schema: str, prompt: str) -> dict:
         return _fake_tidy(prompt)
     if "EmailSort" in schema:
         return _fake_email_sort(prompt)
+    if "Polished" in schema:  # the fake Polisher: the same content, long dashes gone
+        content = prompt.split("<content>\n", 1)[-1].rsplit("\n</content>", 1)[0]
+        return {"text": content.replace(" — ", ", "), "changes": ["(fake Polisher) simpler words"]}
     if "Draft" in schema:
         who = "(fake Writer, revised)" if "## The Checker sent it back" in prompt else "(fake Writer)"
         listed = prompt.split("## Screening questions (", 1)[1].split("\n## ", 1)[0] if "## Screening questions (" in prompt else ""

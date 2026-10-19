@@ -25,7 +25,7 @@ from agents import (
 from agents.items import ModelResponse, TResponseInputItem
 
 from junior.agent.context import ModelUsage, TurnContext
-from junior.agent.style import no_emojis
+from junior.agent.style import no_emojis, talk_mode
 from junior.audit import audit
 from junior.costs import BudgetExceeded
 from junior.models import ModelRouter
@@ -190,6 +190,8 @@ async def stream_turn(
     )
     steps: dict[str, dict[str, Any]] = {}
     text_parts: list[str] = []
+    # Junior mode is professional: no emojis. As a friend he may use a few.
+    clean = no_emojis if talk_mode(context.user_text) == "junior" else (lambda text: text)
 
     def pending() -> list[dict[str, Any]]:
         out = []
@@ -208,7 +210,7 @@ async def stream_turn(
         if isinstance(event, RawResponsesStreamEvent):
             data = event.data
             if data.type == "response.output_text.delta" and data.delta:
-                piece = no_emojis(data.delta)  # he never uses emojis (agent/style.py)
+                piece = clean(data.delta)  # Junior mode: no emojis (agent/style.py)
                 text_parts.append(piece)
                 if piece:
                     yield {"type": "delta", "text": piece}
@@ -234,7 +236,7 @@ async def stream_turn(
             yield e
 
     final = result.final_output
-    text = no_emojis(final) if isinstance(final, str) and final else "".join(text_parts)
+    text = clean(final) if isinstance(final, str) and final else "".join(text_parts)
     text = re.sub(r"[ \t]{2,}", " ", text).replace(" \n", "\n")
     yield {
         "type": "final",
