@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useDeferredValue, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { fetcher, send } from "@/lib/api";
 import { urduClass } from "@/lib/urdu";
@@ -163,25 +163,63 @@ export function ChatHistory({ query = "" }: { query?: string }) {
   const deferred = useDeferredValue(query.trim());
   const key = deferred ? `${CHATS_KEY}?q=${encodeURIComponent(deferred)}` : CHATS_KEY;
   const { data, error } = useSWR<Conversation[]>(key, fetcher, { keepPreviousData: true });
+  const [open, toggle] = useRecentsOpen();
+  const shown = open || !!deferred; // a search always shows its results
 
   return (
-    <div className="flex flex-col pb-3">
-      <h2 className="px-3 pt-1 pb-1.5 text-[13px] text-muted">{deferred ? "Search results" : "Recents"}</h2>
-      {error && <p className="px-3 text-sm text-danger">{error.message}</p>}
-      {data && !data.length && (
-        <p className="px-3 py-2 text-sm text-muted">{deferred ? "No chats found." : "No chats yet."}</p>
+    <div className="flex min-h-40 flex-1 flex-col border-t border-line pt-2">
+      <h2>
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={shown}
+          className="flex w-full items-center gap-1 rounded-lg px-3 py-1 text-left text-[13px] text-muted hover:text-ink"
+        >
+          {deferred ? "Search results" : "Recents"}
+          {data && !deferred && <span className="text-muted/70">· {data.length}</span>}
+          <span aria-hidden className={`ml-auto text-[10px] transition-transform ${shown ? "" : "-rotate-90"}`}>
+            ▼
+          </span>
+        </button>
+      </h2>
+      {shown && (
+        // Its own scroll: New chat and the features above stay where they are.
+        <div className="min-h-0 flex-1 overflow-y-auto pb-3" aria-label="Your chats">
+          {error && <p className="px-3 text-sm text-danger">{error.message}</p>}
+          {data && !data.length && (
+            <p className="px-3 py-2 text-sm text-muted">{deferred ? "No chats found." : "No chats yet."}</p>
+          )}
+          {data &&
+            groupByDate(data).map((group) => (
+              <section key={group.label}>
+                <h3 className="px-3 pt-2 pb-0.5 text-[11px] font-medium text-muted/80">{group.label}</h3>
+                <ul className="flex flex-col">
+                  {group.chats.map((chat) => (
+                    <ChatRow key={chat.id} chat={chat} active={chat.id === activeId} />
+                  ))}
+                </ul>
+              </section>
+            ))}
+        </div>
       )}
-      {data &&
-        groupByDate(data).map((group) => (
-          <section key={group.label}>
-            <h3 className="px-3 pt-2 pb-0.5 text-[11px] font-medium text-muted/80">{group.label}</h3>
-            <ul className="flex flex-col">
-              {group.chats.map((chat) => (
-                <ChatRow key={chat.id} chat={chat} active={chat.id === activeId} />
-              ))}
-            </ul>
-          </section>
-        ))}
     </div>
   );
+}
+
+/** Recents open or closed, remembered in this browser (open by default). */
+function useRecentsOpen(): [boolean, () => void] {
+  const [open, setOpen] = useState(true);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("recents") === "closed") setOpen(false);
+    } catch {}
+  }, []);
+  const toggle = () =>
+    setOpen((o) => {
+      try {
+        localStorage.setItem("recents", o ? "closed" : "open");
+      } catch {}
+      return !o;
+    });
+  return [open, toggle];
 }

@@ -20,6 +20,13 @@ test("the sidebar: New chat and features on top, your chats under Recents, you a
   await expect(page.getByRole("heading", { name: "Recents" })).toBeVisible();
   await expect(page.getByRole("link", { name: `Sidebar test ${tag}` })).toBeVisible();
 
+  // Recents is a drop-down with its own scroll.
+  const recents = page.getByRole("button", { name: /^Recents/ });
+  await recents.click();
+  await expect(page.getByRole("link", { name: `Sidebar test ${tag}` })).toHaveCount(0);
+  await recents.click();
+  await expect(page.getByRole("link", { name: `Sidebar test ${tag}` })).toBeVisible();
+
   // Search filters the chats.
   await page.getByRole("button", { name: "Search chats" }).click();
   await page.getByRole("searchbox", { name: "Search text" }).fill(tag);
