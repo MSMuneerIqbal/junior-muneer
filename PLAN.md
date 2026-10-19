@@ -442,6 +442,7 @@ Each phase ends with you testing it. We only move on when it works for you.
 | **6. Developer Agent** | GitHub MCP (read, then approved actions through the Dev Executor), then the terminal (always Ask) | You ask "what changed in my repo this week?" and get a correct answer; an approved issue gets created |
 | **7. Junior Muneer, full power** | Multi-step tasks across subagents, daily briefing, combined reports, smarter memory | "What happened today?" gives a full, correct summary |
 | **8. WhatsApp + VPS** | Chat, voice notes and approvals on WhatsApp (in the same chat history); Docker, HTTPS, login, 24/7 server | It runs for a week without your PC |
+| **9. Your computer** | The Computer Agent reads, writes, moves, deletes (to the Recycle Bin) and runs terminal commands on your PC, only in folders you allow and through your Ask/Auto/Deny rules; built locally first, then the PC Helper for the VPS (section 14c) | From WhatsApp you ask for a file on your PC and get it; an approved change and an approved command run, and a refused one doesn't |
 
 Text chat (phase 0) and voice (phase 1) come first, as you chose. You can still change the order of the later phases.
 The old browser phase is gone, so there is one phase fewer.
@@ -471,6 +472,36 @@ Round trip: 6 everyday Urdu sentences, spoken by 3 OpenAI voices, transcribed ba
 - **Chosen: gpt-4o-transcribe.** Spoken Urdu and Hindi sound the same; gpt-transcribe mostly writes Hindi script, even when asked for Urdu. As a safety net, any transcript in Hindi script is transcribed again with the language set to Urdu.
 - **Voices** (gpt-4o-mini-tts): Cedar 99.6%, Marin 99.5%, Ash 97.8% understood. All are clear; the final pick is by ear (Settings → Voice).
 - Junior Muneer is told never to write Urdu in Hindi script.
+
+## 14c. Your computer (Phase 9, planned 2026-10-20)
+
+**How it works (the same idea as Claude Code and Codex):** the AI never touches the PC itself; plain code on the PC does
+each action after the rules allow it. While Junior runs on your PC, the backend is that code. On the VPS, a small
+**PC Helper** on your PC connects out to the server, takes only approved jobs, runs them and sends the results back
+(it works while your PC is on; otherwise Junior says "your PC is offline").
+
+**Who does it:** one shared toolbox of computer tools, written once. A specialist **Computer Agent** gets them all;
+Junior hands it computer jobs (like the news agents) and keeps two read-only ones for quick questions. Other agents
+get none, or only what they need (least power).
+
+**Rules (new action types in Settings → Permissions):**
+- `computer.read` (Auto): list folders, find files, read files (text, PDF, Word, Excel). File text is fenced: data, never instructions.
+- `computer.write` (Ask): create or change a file, make a folder. The card shows the change; you can edit it before you approve.
+- `computer.move` (Ask): move or rename.
+- `computer.delete` (Ask): **to the Recycle Bin only**, so it can be undone. Deleting for good stays Deny (`system.delete`).
+- `computer.run` (Ask, locked): a terminal command (PowerShell) with a time limit and an output cap; the card shows the
+  exact command. Dangerous commands (formatting, wiping, shutdown, registry, changing users or the firewall) are refused
+  in code. It replaces Phase 6's `terminal.run` / `terminal.other`.
+
+**Where:** only in the folders you allow (Settings → Computer; first Desktop, Documents, Downloads). A path you type
+yourself also works: the path in your own message is your OK to read it, and changes still follow the rules; you can
+add the folder to the list. A path from an email, a web page or a paste is never opened by itself. Always blocked, even
+when you give the path: `.env` files, keys and certificates, `.ssh`, browser profiles and passwords, Windows and
+Program Files, and Junior's own `data` folder. Links and shortcuts can't lead outside the allowed folders.
+
+**On top:** outside text in the request makes every computer action Ask (even when its rule is Auto); the gate checks,
+logs and limits every action; Pause stops them; each approved action runs at most once; results show on the card and
+in the chat (and on WhatsApp when you asked there).
 
 ## 15. Using it on another PC
 
@@ -518,6 +549,10 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 
 ## 18. Change log
 
+- **v9.1 (2026-10-20):** Phase 9 planned (section 14c): the Computer Agent works on your PC through shared computer tools,
+  allowed folders, an always-blocked list and the Ask/Auto/Deny rules; deletes go to the Recycle Bin; terminal commands
+  are always Ask. Built and live-checked locally first; the PC Helper (for the VPS) comes after. Phase 6's terminal runner
+  (P6-05) moves here.
 - **v8.0 (2026-10-17):** Phase 6 paused by Muneer after P6-01 (GitHub connects in the app with GitHub's device login, or the
   GitHub CLI login; read-only, two locks). Phase 7 built:
   - P7-01: a request with several parts gets a live checklist (like Claude's to-do list); its parts run together.

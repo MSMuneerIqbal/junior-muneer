@@ -358,7 +358,7 @@ Read-only: these agents never post or send anything. News pages are outside cont
 - [ ] **P6-02** Developer Agent: repo summaries, issue and PR reading, code review, drafts
 - [ ] **P6-03** Dev Executor: GitHub write actions through the permission rules (merge and `main` locked to Ask; deletes denied). Tests included
 - [ ] **P6-04** GitHub playbook (commit messages, PR descriptions, branch names)
-- [ ] **P6-05** Terminal runner: projects folder only, allowed-commands list, **every command is Ask (locked)**, every command logged. Tests included
+- [-] **P6-05** Terminal runner: moved to Phase 9 (P9-05), where it works in your allowed folders
 - [ ] **P6-06** Tests + your acceptance test + push
 
 ## Phase 7: Junior Muneer, full power
@@ -487,3 +487,37 @@ Read-only: these agents never post or send anything. News pages are outside cont
   (`/api/voice/gemini-preview/{voice}.wav`). Live test: heard a WebM recording in ~6 s ($0.0002), spoke the answer in ~12 s.
 - [ ] **P8-05** Monitoring and automatic restarts
 - [ ] **P8-06** Your one-week test + push
+
+## Phase 9: Your computer (local first, then the PC Helper)
+
+> Planned 2026-10-20 (PLAN.md section 14c). Muneer: build and test it locally first, then the PC Helper, then use it
+> with the VPS. **Every task is live-checked on his PC** (real files in a throwaway test folder, real commands) as well
+> as tested.
+
+**Phase done when:** from the dashboard and from WhatsApp you ask for a file on your PC and get it; an approved file
+change, an approved delete (it's in the Recycle Bin) and an approved command all run; a refused one doesn't; and nothing
+outside your allowed folders (or on the blocked list) can be read or changed.
+
+- [ ] **P9-01** Rules + Settings + the path guard (`junior/computer/paths.py`):
+  - new action types `computer.read` (Auto), `computer.write` (Ask), `computer.move` (Ask), `computer.delete` (Ask, to
+    the Recycle Bin), `computer.run` (Ask, locked); `terminal.run` / `terminal.other` retired
+  - Settings → Computer: on/off, allowed folders (first Desktop, Documents, Downloads), add/remove a folder
+  - the path guard: real full paths only (`..`, links and shortcuts can't escape), inside an allowed folder or a path
+    in your own words, never the blocked list (`.env`, keys, `.ssh`, browser data, Windows, Program Files, Junior's `data`)
+  - safety tests for every way out; live check with real paths on his PC
+- [ ] **P9-02** Reading tools: `list_folder`, `find_files`, `read_file` (text, PDF, Word, Excel; size limits; fenced as data).
+  Live check: list and read files in a test folder; a blocked file is refused
+- [ ] **P9-03** Writing: `write_file`, `make_folder` as approval cards (the card shows the new text or the change; editable
+  before Approve), carried out by the Computer sender (plain code, at most once); Auto runs at once. Live check
+- [ ] **P9-04** Move and delete: `move_file`, `delete_file` (to the Recycle Bin, `send2trash`). Live check: delete, then
+  find it in the Recycle Bin and restore it
+- [ ] **P9-05** Terminal: `run_command` (PowerShell, in an allowed folder, 2-minute limit, output capped), always Ask
+  (locked), dangerous commands refused in code, the result on the card and in the chat. Live check
+- [ ] **P9-06** The Computer Agent (`agents/computer.md`, all the tools) and Junior's handoff to it, plus Junior's quick
+  read-only tools. Live check: "what's in my Downloads?", "make notes.txt on my Desktop with ..."
+- [ ] **P9-07** WhatsApp: computer approvals with Approve/Reject buttons, results sent back, "send me that file" from
+  your PC. Live check on WhatsApp
+- [ ] **P9-08** Your acceptance test (local), then push
+- [ ] **P9-09** PC Helper (after the VPS is ready): a small program on your PC that connects out to the server, gets
+  only approved jobs, runs them with the same guard, sends results; "your PC is offline" when it isn't running
+- [ ] **P9-10** Acceptance test with the VPS + push
