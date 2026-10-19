@@ -136,11 +136,67 @@ class GeminiGateway:
         await session.send_tool_response(function_responses=[types.FunctionResponse(**r) for r in responses])
 
 
+class FakeGemini:
+    """A pretend Gemini (FAKE_AI with GEMINI_API_KEY=fake): when it hears you, it says one line. Nothing leaves the PC."""
+
+    def connect(self, model: str, config: dict):
+        from contextlib import asynccontextmanager
+
+        @asynccontextmanager
+        async def session():
+            yield {"queue": asyncio.Queue(), "heard": False}
+        return session()
+
+    @staticmethod
+    async def send_audio(session, data: bytes) -> None:
+        from types import SimpleNamespace as NS
+
+        if session["heard"]:
+            return
+        session["heard"] = True
+
+        def content(**kw):
+            base = {"input_transcription": None, "output_transcription": None, "model_turn": None,
+                    "interrupted": False, "turn_complete": False}
+            return NS(server_content=NS(**{**base, **kw}), usage_metadata=None, tool_call=None)
+
+        for message in (
+            content(input_transcription=NS(text="Assalam o alaikum")),
+            content(output_transcription=NS(text="(fake Gemini) Walaikum salam! Kya haal hai?"),
+                    model_turn=NS(parts=[NS(inline_data=NS(data=b"\x00\x00" * 4800))])),  # 0.2 s of silence
+            content(turn_complete=True),
+        ):
+            await session["queue"].put(message)
+
+    @staticmethod
+    async def send_tool_responses(session, responses: list[dict]) -> None:
+        return None
+
+    # The pretend session's receive(), bound through the dict.
+    @staticmethod
+    async def receive_from(session):
+        while True:
+            message = await session["queue"].get()
+            yield message
+            if message.server_content.turn_complete:
+                return
+
+
 GATEWAY: Any = None  # tests put a fake Gemini here
 
 
 def gateway() -> Any:
-    return GATEWAY or GeminiGateway()
+    if GATEWAY is not None:
+        return GATEWAY
+    s = get_settings()
+    if s.fake_ai and s.gemini_api_key == "fake":
+        return FakeGemini()
+    return GeminiGateway()
+
+
+def receive(gw: Any, session: Any):
+    """The session's messages for one turn (the pretend Gemini keeps its session in a dict)."""
+    return gw.receive_from(session) if isinstance(gw, FakeGemini) else session.receive()
 
 
 # ---- one call ------------------------------------------------------------------------------
@@ -234,7 +290,7 @@ class GeminiCall:
     async def _from_gemini(self, session) -> None:
         while not self.call.ended:  # receive() ends after each turn; keep listening
             got = False
-            async for message in session.receive():
+            async for message in receive(self.gw, session):
                 got = True
                 await self._handle(session, message)
             if not got:
@@ -335,7 +391,7 @@ async def gemini_call(ws: WebSocket) -> None:
         await ws.send_json({"type": "error", "message": "Gemini isn't the voice engine in Settings → Live calls."})
         await ws.close()
         return
-    if not get_settings().gemini_api_key and GATEWAY is None:
+    if not get_settings().gemini_api_key and GATEWAY is None:  # (the pretend Gemini needs GEMINI_API_KEY=fake)
         await ws.send_json({"type": "error", "message": "Gemini calls need GEMINI_API_KEY in backend/.env (then restart)."})
         await ws.close()
         return

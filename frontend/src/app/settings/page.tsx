@@ -430,6 +430,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
   const { mutate } = useSWRConfig();
   const { data: voices } = useSWR<string[]>("/api/voices", fetcher);
   const { data: models } = useSWR<Choices>("/api/models/choices", fetcher);
+  const { data: limits } = useSWR<{ gemini_ready: boolean }>("/api/call/limits", fetcher);
   const [form, setForm] = useState(initial);
   const [saved, setSaved] = useState(initial);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
@@ -658,7 +659,53 @@ function SettingsForm({ initial }: { initial: Settings }) {
         title="Live calls"
         description="Real-time voice conversations. These cost the most, so they have their own limits."
       >
-        <Row label="Call quality">
+        <Row
+          wide
+          label="Voice engine"
+          hint={
+            <>
+              Who runs the call. Gemini is much cheaper (about $0.02 a minute, with a free tier) and searches Google
+              by itself; OpenAI is what you used so far.
+              {form.voice_provider_model !== "openai-realtime" && limits && !limits.gemini_ready && (
+                <span className="mt-1 block text-warn">
+                  Gemini needs <code>GEMINI_API_KEY</code> in backend/.env (from aistudio.google.com/apikey), then a restart.
+                </span>
+              )}
+            </>
+          }
+        >
+          <Segmented
+            label="Voice engine"
+            value={form.voice_provider_model}
+            onChange={(v) => set("voice_provider_model", v)}
+            options={[
+              { value: "openai-realtime", label: "OpenAI Realtime", sub: "Natural or Economy below · ~$0.02–0.05/min" },
+              { value: "gemini-3.8-live", label: "Gemini 3.8 Live", sub: "Newest, fastest · ~$0.023/min" },
+              {
+                value: "gemini-2.5-flash-native-audio-preview-12-2025",
+                label: "Gemini 2.5 Flash Live",
+                sub: "Budget · ~$0.02/min",
+              },
+            ]}
+          />
+        </Row>
+        {form.voice_provider_model !== "openai-realtime" && (
+          <Row label="Gemini voice" hint="Gemini has its own voices. It speaks Urdu and English in Pakistani style either way.">
+            <select
+              value={form.gemini_voice}
+              onChange={(e) => set("gemini_voice", e.target.value as Settings["gemini_voice"])}
+              className={`${input} max-w-xs`}
+              aria-label="Gemini voice"
+            >
+              {["Charon", "Puck", "Orus", "Fenrir", "Kore", "Aoede", "Leda", "Zephyr"].map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </Row>
+        )}
+        <Row label="Call quality" hint="For OpenAI Realtime only.">
           <Segmented
             label="Call quality"
             value={form.call_quality}

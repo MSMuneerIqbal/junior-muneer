@@ -31,6 +31,9 @@ const child = spawn(python, ["-m", "uvicorn", "junior.main:app", "--port", "8100
     // A pretend Gmail for the news email test (FAKE_AI + GMAIL_APP_PASSWORD=fake): nothing leaves this PC.
     GMAIL_ADDRESS: "me@example.com",
     GMAIL_APP_PASSWORD: "fake",
+    // A pretend Gemini Live (FAKE_AI + GEMINI_API_KEY=fake): says one line when it hears you.
+    GEMINI_API_KEY: "fake",
+    DEEPSEEK_API_KEY: "",
     // A pretend Google (FAKE_AI + GOOGLE_CLIENT_ID=fake): approves at once; Docs, Sheets, Calendar in memory.
     GOOGLE_CLIENT_ID: "fake",
     GOOGLE_CLIENT_SECRET: "fake",

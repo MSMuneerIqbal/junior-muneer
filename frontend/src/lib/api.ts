@@ -4,11 +4,11 @@
 const configured = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://127.0.0.1:8000";
 export const BACKEND_URL = (configured === "same-origin" ? "" : configured).replace(/\/$/, "");
 
-/** The chat's WebSocket address (on the server: this page's own address, wss:// over HTTPS). */
-export function wsUrl(): string {
-  if (BACKEND_URL) return BACKEND_URL.replace(/^http/, "ws") + "/ws/chat";
+/** A WebSocket address on the backend (the chat by default; on the server: this page's own address, wss:// over HTTPS). */
+export function wsUrl(path = "/ws/chat"): string {
+  if (BACKEND_URL) return BACKEND_URL.replace(/^http/, "ws") + path;
   const { protocol, host } = window.location;
-  return `${protocol === "https:" ? "wss" : "ws"}://${host}/ws/chat`;
+  return `${protocol === "https:" ? "wss" : "ws"}://${host}${path}`;
 }
 
 export class ApiError extends Error {

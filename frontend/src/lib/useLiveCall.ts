@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BACKEND_URL, send } from "@/lib/api";
+import { BACKEND_URL, send, wsUrl } from "@/lib/api";
 
 export type CallLine = {
   id: string;
@@ -15,10 +15,21 @@ export type Activity = "listening" | "you" | "thinking" | "speaking" | "checking
 
 type ServerEvent = { type: string; [key: string]: unknown };
 
+/** Gemini Live calls: 16-bit PCM both ways over our backend's WebSocket (16 kHz up, 24 kHz down). */
+function pcmToFloat(data: ArrayBuffer): Float32Array<ArrayBuffer> {
+  const pcm = new Int16Array(data);
+  const out = new Float32Array(new ArrayBuffer(pcm.length * 4));
+  for (let i = 0; i < pcm.length; i++) out[i] = pcm[i] / 0x8000;
+  return out;
+}
+
 /**
- * A live voice call over WebRTC. The browser sends its offer to our backend, which
- * creates the call at OpenAI (so the browser never holds a key) and stays attached
- * to save the transcript and run tools. Here we only play audio and show the transcript.
+ * A live voice call, with the engine chosen in Settings → Live calls:
+ * - OpenAI Realtime over WebRTC: the browser sends its offer to our backend, which creates the call at OpenAI
+ *   (so the browser never holds a key) and stays attached to save the transcript and run tools.
+ * - Gemini Live: the browser streams the microphone to our backend's WebSocket, which talks to Gemini (again,
+ *   no key in the browser) and streams his voice back.
+ * Here we only play audio and show the transcript.
  */
 export function useLiveCall() {
   const [status, setStatus] = useState<CallStatus>("idle");
@@ -36,6 +47,13 @@ export function useLiveCall() {
   const callId = useRef<string | null>(null);
   // True from a tool call until his real answer starts (fillers don't count).
   const searching = useRef(false);
+  // Gemini Live: the socket, the microphone (16 kHz) and speaker (24 kHz) audio, and his queued voice.
+  const socket = useRef<WebSocket | null>(null);
+  const captureCtx = useRef<AudioContext | null>(null);
+  const playCtx = useRef<AudioContext | null>(null);
+  const playing = useRef<Set<AudioBufferSourceNode>>(new Set());
+  const playAt = useRef(0);
+  const turn = useRef(0);
 
 
   const upsert = useCallback((id: string, who: CallLine["who"], text: string, final: boolean, append: boolean) => {
@@ -99,13 +117,134 @@ export function useLiveCall() {
     [upsert],
   );
 
+  const stopVoice = useCallback(() => {
+    // You spoke over him (or the call ended): stop what's playing and what's queued.
+    playing.current.forEach((s) => {
+      try {
+        s.stop();
+      } catch {}
+    });
+    playing.current.clear();
+    playAt.current = 0;
+  }, []);
+
   const cleanup = useCallback(() => {
     pc.current?.close();
     pc.current = null;
+    if (socket.current && socket.current.readyState <= WebSocket.OPEN) {
+      try {
+        socket.current.send(JSON.stringify({ type: "end" }));
+      } catch {}
+      socket.current.close();
+    }
+    socket.current = null;
+    stopVoice();
+    void captureCtx.current?.close();
+    captureCtx.current = null;
+    void playCtx.current?.close();
+    playCtx.current = null;
     mic.current?.getTracks().forEach((t) => t.stop());
     mic.current = null;
     if (speaker.current) speaker.current.srcObject = null;
+  }, [stopVoice]);
+
+  /** His voice: 24 kHz PCM chunks, played one after another without gaps. */
+  const playChunk = useCallback((data: ArrayBuffer) => {
+    const ctx = playCtx.current;
+    if (!ctx) return;
+    const samples = pcmToFloat(data);
+    const buffer = ctx.createBuffer(1, samples.length, 24000);
+    buffer.copyToChannel(samples, 0);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    const out = (ctx as AudioContext & { junior?: MediaStreamAudioDestinationNode }).junior;
+    if (out) source.connect(out);
+    const at = Math.max(ctx.currentTime, playAt.current);
+    source.start(at);
+    playAt.current = at + buffer.duration;
+    playing.current.add(source);
+    source.onended = () => playing.current.delete(source);
   }, []);
+
+  const startGemini = useCallback(
+    async (stream: MediaStream) => {
+      // The microphone at 16 kHz (the browser resamples), sent as Int16 PCM every 100 ms.
+      const capture = new AudioContext({ sampleRate: 16000 });
+      captureCtx.current = capture;
+      await capture.audioWorklet.addModule("/pcm-capture.worklet.js");
+      const node = new AudioWorkletNode(capture, "pcm-capture");
+      capture.createMediaStreamSource(stream).connect(node);
+      // His voice at 24 kHz, also as a stream for the call screen's sound bars.
+      const play = new AudioContext({ sampleRate: 24000 });
+      playCtx.current = play;
+      const out = play.createMediaStreamDestination();
+      (play as AudioContext & { junior?: MediaStreamAudioDestinationNode }).junior = out;
+      setRemoteStream(out.stream);
+      turn.current = 0;
+
+      const ws = new WebSocket(wsUrl("/ws/call/gemini"));
+      ws.binaryType = "arraybuffer";
+      socket.current = ws;
+      node.port.onmessage = (m: MessageEvent<ArrayBuffer>) => {
+        if (ws.readyState === WebSocket.OPEN) ws.send(m.data);
+      };
+      ws.onmessage = (m) => {
+        if (m.data instanceof ArrayBuffer) {
+          setActivity(searching.current ? "checking" : "speaking");
+          playChunk(m.data);
+          return;
+        }
+        let e: ServerEvent;
+        try {
+          e = JSON.parse(String(m.data));
+        } catch {
+          return;
+        }
+        const n = turn.current;
+        switch (e.type) {
+          case "live":
+            setConversationId(Number(e.conversation_id));
+            setStatus("live");
+            setStartedAt(Date.now());
+            break;
+          case "you":
+            setActivity(e.final ? "thinking" : "you");
+            upsert(`u-${n}`, "you", String(e.text ?? ""), Boolean(e.final), false);
+            break;
+          case "junior":
+            searching.current = false;
+            upsert(`j-${n}`, "junior", String(e.text ?? ""), Boolean(e.final), false);
+            break;
+          case "checking":
+            searching.current = true;
+            setActivity("checking");
+            break;
+          case "interrupted":
+            stopVoice();
+            setActivity("you");
+            break;
+          case "turn_complete":
+            turn.current = n + 1;
+            setActivity("listening");
+            break;
+          case "error":
+            setError(String(e.message ?? "The call stopped"));
+            setStatus("error");
+            break;
+          case "ended":
+            setError(e.reason ? `Call ended: ${String(e.reason)}` : null);
+            setStatus("ended");
+            break;
+        }
+      };
+      ws.onclose = () => {
+        setStatus((s) => (s === "live" || s === "connecting" ? "ended" : s));
+        socket.current = null;
+      };
+    },
+    [playChunk, stopVoice, upsert],
+  );
 
   const start = useCallback(async () => {
     setError(null);
@@ -124,6 +263,13 @@ export function useLiveCall() {
         });
       mic.current = stream;
       setMicStream(stream);
+
+      // Which engine (Settings → Live calls → Voice engine).
+      const limits = await send<{ engine?: string }>("GET", "/api/call/limits");
+      if (limits.engine === "gemini") {
+        await startGemini(stream);
+        return;
+      }
 
       const peer = new RTCPeerConnection();
       pc.current = peer;
@@ -170,7 +316,7 @@ export function useLiveCall() {
       setError(e instanceof Error ? e.message : "Couldn't start the call");
       setStatus("error");
     }
-  }, [cleanup, onEvent]);
+  }, [cleanup, onEvent, startGemini]);
 
   const end = useCallback(async () => {
     const id = callId.current;

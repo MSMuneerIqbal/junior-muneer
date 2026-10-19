@@ -1,0 +1,30 @@
+import { expect, test } from "@playwright/test";
+
+const BACKEND = "http://127.0.0.1:8100";
+
+test("a live call with Gemini Live: the microphone streams, he answers, the call is saved", async ({ page, request }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "one shared database: once is enough");
+  await request.patch(`${BACKEND}/api/settings`, { data: { voice_provider_model: "gemini-3.8-live" } });
+  try {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Live call" }).click();
+    const call = page.getByRole("dialog", { name: "Live call" });
+    // The fake microphone streams to the backend; the pretend Gemini hears it and answers.
+    await expect(call.getByText("(fake Gemini) Walaikum salam! Kya haal hai?").first()).toBeVisible({ timeout: 20_000 });
+    await expect(call.getByText("Assalam o alaikum").first()).toBeVisible();
+    await call.getByRole("button", { name: "End call" }).click();
+    await expect(call.getByRole("status")).toHaveText(/Call ended/);
+  } finally {
+    await request.patch(`${BACKEND}/api/settings`, { data: { voice_provider_model: "openai-realtime" } });
+  }
+});
+
+test("Settings: the voice engine and Gemini's voice", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "one shared database: once is enough");
+  await page.goto("/settings#calls");
+  const engine = page.getByRole("radiogroup", { name: "Voice engine" });
+  await expect(engine.getByRole("radio", { name: /OpenAI Realtime/ })).toHaveAttribute("aria-checked", "true");
+  await engine.getByRole("radio", { name: /Gemini 3\.8 Live/ }).click();
+  await expect(page.getByRole("combobox", { name: "Gemini voice" })).toHaveValue("Charon");
+  await page.getByRole("button", { name: "Discard" }).click();
+});
