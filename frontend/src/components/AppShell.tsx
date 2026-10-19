@@ -50,7 +50,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const docked = (query: string) => window.matchMedia(query).matches;
 
-  // Settings is its own full page (its own left menu), opened in a new tab.
+  // Settings is its own full page (its own left menu, and a link back to the chat).
   if (pathname.startsWith("/settings")) return <div className="h-dvh overflow-hidden">{children}</div>;
   const hideLeft = () => (docked(LEFT_DOCKED) ? setHidden("left", true) : setLeftOpen(false));
   const hideRight = () => (docked(RIGHT_DOCKED) ? setHidden("right", true) : setRightOpen(false));
@@ -99,7 +99,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                {...(item.href === "/settings" ? { target: "_blank", rel: "noopener" } : {})}
                 className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm ${
                   active ? "bg-accent-soft font-medium text-ink" : "text-muted hover:bg-panel-2"
                 }`}

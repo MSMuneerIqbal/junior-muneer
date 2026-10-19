@@ -3,9 +3,8 @@ import { expect, test } from "@playwright/test";
 test("Settings is its own page: a left menu, one section at a time", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "the side menu is for big screens; phones get a picker");
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Settings" })).toHaveAttribute("target", "_blank"); // a new tab
-
-  await page.goto("/settings");
+  await page.getByRole("link", { name: "Settings" }).click(); // the same tab
+  await expect(page).toHaveURL(/\/settings$/);
   await expect(page.getByRole("link", { name: "← Back to Junior" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Profile" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Permissions" })).toBeHidden();
