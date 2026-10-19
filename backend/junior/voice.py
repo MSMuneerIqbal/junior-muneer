@@ -292,12 +292,53 @@ def engine_voice(openai_voice):
     return pick
 
 
-def voice_models() -> tuple[str, str]:
-    """(speech-to-text model, text-to-speech model) for the chosen engine."""
+# The models you can pick in Settings → Voice, per engine: (model, name, short note). Tested on 2026-10-20.
+VOICE_CHOICES: dict[str, dict[str, list[tuple[str, str, str]]]] = {
+    "openai": {
+        "hear": [
+            ("gpt-4o-transcribe", "GPT-4o Transcribe", "Best for Urdu: writes Urdu in Urdu script."),
+            ("gpt-4o-mini-transcribe", "GPT-4o mini Transcribe", "Half the price, a bit quicker; good Urdu."),
+            ("gpt-transcribe", "GPT Transcribe", "Newest, but often writes Urdu in Hindi script (then it's heard again as Urdu)."),
+        ],
+        "speak": [
+            ("gpt-4o-mini-tts", "GPT-4o mini TTS", "Natural, follows your accent setting."),
+            ("tts-1", "TTS-1", "Older and flatter; ignores the accent setting."),
+        ],
+    },
+    "gemini": {
+        "hear": [
+            ("gemini-2.5-flash", "Gemini 2.5 Flash", "Keeps English as English inside Urdu. Free tier."),
+            ("gemini-3.8-flash", "Gemini 3.8 Flash", "Newest; a little slower and dearer. Free tier."),
+            ("gemini-3.1-flash-lite", "Gemini 3.1 Flash-Lite", "Cheapest; may write English words in Urdu script. Free tier."),
+        ],
+        "speak": [
+            ("gemini-2.5-flash-preview-tts", "Gemini 2.5 Flash TTS", "Quick and natural. Free tier."),
+            ("gemini-2.5-pro-preview-tts", "Gemini 2.5 Pro TTS", "Richer voice. Paid key only: a free key can't use it."),
+        ],
+    },
+}
+
+
+def voice_defaults(engine: str) -> tuple[str, str]:
+    """The engine's own (hearing, speaking) models from agents/models.toml."""
     r = get_router()
-    if voice_engine() == "gemini":
+    if engine == "gemini":
         return r.audio_model("gemini_transcribe"), r.audio_model("gemini_speech")
     return r.audio_model("transcribe"), r.audio_model("speech")
+
+
+def voice_models() -> tuple[str, str]:
+    """(speech-to-text model, text-to-speech model): your picks in Settings → Voice if they belong to the
+    chosen engine, otherwise that engine's defaults."""
+    engine = voice_engine()
+    hear, speak = voice_defaults(engine)
+    picked_hear, picked_speak = get_setting("voice_hear_model") or "", get_setting("voice_speak_model") or ""
+    choices = VOICE_CHOICES.get(engine, {})
+    if picked_hear in {m for m, _, _ in choices.get("hear", [])}:
+        hear = picked_hear
+    if picked_speak in {m for m, _, _ in choices.get("speak", [])}:
+        speak = picked_speak
+    return hear, speak
 
 
 def voice_name(settings: dict) -> str:
@@ -633,3 +674,20 @@ async def preview(request: Request, voice: str, accent: str):
     cost = len(PREVIEW_TEXT) / CHARS_PER_MINUTE * get_router().audio_price(model).get("per_minute", 0)
     record_audio_usage("speaker", model, "voice", len(PREVIEW_TEXT) / CHARS_PER_MINUTE * 60, cost)
     return FileResponse(path, media_type="audio/mpeg")
+
+
+@router.get("/api/voice/models")
+def voice_model_choices() -> dict:
+    """The hearing and speaking models each engine offers, with their notes, prices and defaults (Settings → Voice)."""
+    r = get_router()
+    out = {}
+    for engine, jobs in VOICE_CHOICES.items():
+        hear, speak = voice_defaults(engine)
+        out[engine] = {
+            job: [
+                {"model": m, "label": label, "note": note, "per_minute": r.audio_price(m).get("per_minute", 0.0)}
+                for m, label, note in choices
+            ]
+            for job, choices in jobs.items()
+        } | {"defaults": {"hear": hear, "speak": speak}}
+    return out

@@ -485,6 +485,47 @@ function GeminiVoicePicker({
   );
 }
 
+type VoiceModel = { model: string; label: string; note: string; per_minute: number };
+type VoiceModels = Record<
+  "openai" | "gemini",
+  { hear: VoiceModel[]; speak: VoiceModel[]; defaults: { hear: string; speak: string } }
+>;
+
+function VoiceModelSelect({
+  label,
+  options,
+  defaultModel,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: VoiceModel[];
+  defaultModel: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const known = options.some((o) => o.model === value);
+  const shown = options.find((o) => o.model === (known ? value : defaultModel));
+  return (
+    <div className="max-w-md">
+      <select
+        value={known ? value : ""}
+        onChange={(e) => onChange(e.target.value)}
+        className={input}
+        aria-label={label}
+      >
+        {options.map((o) => (
+          <option key={o.model} value={o.model === defaultModel ? "" : o.model}>
+            {o.label}
+            {o.model === defaultModel ? " (default)" : ""} · ${o.per_minute.toFixed(4)}/min
+          </option>
+        ))}
+      </select>
+      {shown && <p className="mt-1.5 text-[13px] text-muted">{shown.note}</p>}
+    </div>
+  );
+}
+
 // ---- the form ------------------------------------------------------------------------
 
 function SettingsForm({ initial }: { initial: Settings }) {
@@ -492,6 +533,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
   const { data: voices } = useSWR<string[]>("/api/voices", fetcher);
   const { data: models } = useSWR<Choices>("/api/models/choices", fetcher);
   const { data: limits } = useSWR<{ gemini_ready: boolean }>("/api/call/limits", fetcher);
+  const { data: voiceModels } = useSWR<VoiceModels>("/api/voice/models", fetcher);
   const [form, setForm] = useState(initial);
   const [saved, setSaved] = useState(initial);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
@@ -698,13 +740,39 @@ function SettingsForm({ initial }: { initial: Settings }) {
           <Segmented
             label="Voice messages engine"
             value={form.voice_engine}
-            onChange={(v) => set("voice_engine", v)}
+            onChange={(v) => {
+              set("voice_engine", v);
+              set("voice_hear_model", ""); // each engine has its own models: start from its defaults
+              set("voice_speak_model", "");
+            }}
             options={[
               { value: "openai", label: "OpenAI", sub: "Best Urdu hearing · ~$0.02/min" },
               { value: "gemini", label: "Gemini", sub: "Cheaper, free tier · Gemini voices" },
             ]}
           />
         </Row>
+        {voiceModels && (
+          <>
+            <Row label="Hearing model" hint="Turns your voice messages into text.">
+              <VoiceModelSelect
+                label="Hearing model"
+                options={voiceModels[form.voice_engine].hear}
+                defaultModel={voiceModels[form.voice_engine].defaults.hear}
+                value={form.voice_hear_model}
+                onChange={(v) => set("voice_hear_model", v)}
+              />
+            </Row>
+            <Row label="Speaking model" hint="Reads his answers aloud.">
+              <VoiceModelSelect
+                label="Speaking model"
+                options={voiceModels[form.voice_engine].speak}
+                defaultModel={voiceModels[form.voice_engine].defaults.speak}
+                value={form.voice_speak_model}
+                onChange={(v) => set("voice_speak_model", v)}
+              />
+            </Row>
+          </>
+        )}
         {form.voice_engine === "gemini" ? (
           <Row
             wide

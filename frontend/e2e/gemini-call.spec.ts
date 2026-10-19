@@ -42,8 +42,15 @@ test("Settings: voice messages can use Gemini, with Gemini's voices", async ({ p
   const engine = page.getByRole("radiogroup", { name: "Voice messages engine" });
   await expect(engine.getByRole("radio", { name: /OpenAI/ })).toHaveAttribute("aria-checked", "true");
   await expect(page.getByRole("radiogroup", { name: "His voice" })).toBeVisible();
+  const hearing = page.getByRole("combobox", { name: "Hearing model" });
+  await expect(hearing.locator("option:checked")).toHaveText(/GPT-4o Transcribe \(default\)/);
   await engine.getByRole("radio", { name: /Gemini/ }).click();
   await expect(page.getByRole("radiogroup", { name: "Gemini voice" })).toBeVisible();
   await expect(page.getByRole("radiogroup", { name: "His voice" })).toHaveCount(0);
+  // Gemini's own models, with notes.
+  await expect(hearing.locator("option:checked")).toHaveText(/Gemini 2\.5 Flash \(default\)/);
+  await hearing.selectOption("gemini-3.1-flash-lite");
+  await expect(page.getByText("Cheapest; may write English words in Urdu script. Free tier.")).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Speaking model" }).locator("option")).toHaveCount(2);
   await page.getByRole("button", { name: "Discard" }).click();
 });

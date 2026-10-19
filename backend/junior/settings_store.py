@@ -25,6 +25,8 @@ DEFAULTS: dict[str, Any] = {
     "call_quality": "natural",
     # Which engine runs live calls: OpenAI Realtime (above), or Google Gemini Live (needs GEMINI_API_KEY).
     "voice_engine": "openai",  # voice messages: "openai" or "gemini" (Settings -> Voice)
+    "voice_hear_model": "",  # "" = the engine's default (agents/models.toml)
+    "voice_speak_model": "",
     "voice_provider_model": "openai-realtime",
     # Gemini Live's voice (Gemini has its own voices).
     "gemini_voice": "Charon",

@@ -177,6 +177,8 @@ export type Settings = {
   call_quality: "natural" | "economy";
   voice_provider_model: "openai-realtime" | "gemini-3.8-live" | "gemini-2.5-flash-native-audio-preview-12-2025";
   voice_engine: "openai" | "gemini";
+  voice_hear_model: string;
+  voice_speak_model: string;
   gemini_voice: "Charon" | "Puck" | "Kore" | "Fenrir" | "Aoede" | "Orus" | "Leda" | "Zephyr";
   turn_taking: "patient" | "balanced" | "quick";
   mic_type: "headset" | "laptop" | "off";

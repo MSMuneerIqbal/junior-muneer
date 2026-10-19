@@ -227,3 +227,43 @@ def test_when_gemini_is_busy_openai_reads_the_answer_in_your_openai_voice(client
     r = client.get(f"/api/voice/speak/{done['message_id']}.mp3")
     assert r.status_code == 200 and len(r.content) > 0
     assert OpenAISide.calls == [{"job": "speak", "model": "gpt-4o-mini-tts", "voice": "ash"}]
+
+
+# ---- picking the models (Settings -> Voice) ---------------------------------------------------
+
+
+def test_each_engine_lists_its_models_with_notes_prices_and_defaults(client):
+    got = client.get("/api/voice/models").json()
+    assert got["openai"]["defaults"] == {"hear": "gpt-4o-transcribe", "speak": "gpt-4o-mini-tts"}
+    assert got["gemini"]["defaults"] == {"hear": "gemini-2.5-flash", "speak": "gemini-2.5-flash-preview-tts"}
+    hear = {m["model"]: m for m in got["gemini"]["hear"]}
+    assert set(hear) == {"gemini-2.5-flash", "gemini-3.8-flash", "gemini-3.1-flash-lite"}
+    assert hear["gemini-3.1-flash-lite"]["per_minute"] == 0.00075 and hear["gemini-2.5-flash"]["note"]
+    assert "Paid key only" in next(m["note"] for m in got["gemini"]["speak"] if m["model"] == "gemini-2.5-pro-preview-tts")
+    assert {m["model"] for m in got["openai"]["hear"]} >= {"gpt-4o-transcribe", "gpt-4o-mini-transcribe"}
+
+
+def test_picked_models_are_used_and_costed(client, model):
+    client.patch("/api/settings", json={"voice_engine": "gemini", "voice_hear_model": "gemini-3.1-flash-lite",
+                                        "voice_speak_model": "gemini-2.5-pro-preview-tts"})
+    got = upload(client).json()
+    assert GeminiSide.calls[-1]["model"] == "gemini-3.1-flash-lite"
+    assert got["cost_usd"] == pytest.approx(6 / 60 * 0.00075)
+    done = answer(client, model, "Theek hai!")
+    client.get(f"/api/voice/speak/{done['message_id']}.mp3")
+    assert GeminiSide.calls[-1]["model"] == "gemini-2.5-pro-preview-tts"
+
+
+def test_a_pick_from_the_other_engine_falls_back_to_this_engines_default(client):
+    client.patch("/api/settings", json={"voice_engine": "openai", "voice_hear_model": "gemini-3.8-flash"})
+    upload(client)
+    assert OpenAISide.calls[-1]["model"] == "gpt-4o-transcribe"
+
+
+def test_empty_means_default_and_unknown_models_are_refused(client):
+    assert client.patch("/api/settings", json={"voice_hear_model": "whisper-9"}).status_code == 422
+    assert client.patch("/api/settings", json={"voice_speak_model": "gpt-4o-transcribe"}).status_code == 422  # hears, can't speak
+    assert client.patch("/api/settings", json={"voice_hear_model": "gpt-4o-mini-transcribe"}).status_code == 200
+    assert client.patch("/api/settings", json={"voice_hear_model": ""}).status_code == 200
+    upload(client)
+    assert OpenAISide.calls[-1]["model"] == "gpt-4o-transcribe"

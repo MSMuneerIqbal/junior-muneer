@@ -31,6 +31,8 @@ class SettingsUpdate(BaseModel):
     call_minutes_per_day: int | None = Field(default=None, ge=0, le=600)
     call_quality: Literal["natural", "economy"] | None = None
     voice_engine: Literal["openai", "gemini"] | None = None
+    voice_hear_model: str | None = Field(default=None, max_length=100)  # "" = the engine's default
+    voice_speak_model: str | None = Field(default=None, max_length=100)
     voice_provider_model: Literal["openai-realtime", "gemini-3.8-live", "gemini-2.5-flash-native-audio-preview-12-2025"] | None = None
     gemini_voice: Literal["Charon", "Puck", "Kore", "Fenrir", "Aoede", "Orus", "Leda", "Zephyr"] | None = None
     turn_taking: Literal["patient", "balanced", "quick"] | None = None
@@ -56,6 +58,18 @@ class SettingsUpdate(BaseModel):
     def _known_model(cls, v: str | None) -> str | None:
         if v and v not in get_router().prices:
             raise ValueError(f"Unknown model {v!r}; it needs a price in agents/models.toml")
+        return v
+
+    @field_validator("voice_hear_model", "voice_speak_model")
+    @classmethod
+    def _known_voice_model(cls, v: str | None, info) -> str | None:
+        from junior.voice import VOICE_CHOICES
+
+        if v:
+            job = "hear" if info.field_name == "voice_hear_model" else "speak"
+            known = {m for jobs in VOICE_CHOICES.values() for m, _, _ in jobs[job]}
+            if v not in known:
+                raise ValueError(f"Unknown voice model {v!r}; pick one from Settings -> Voice")
         return v
 
     @field_validator("user_name")
