@@ -176,6 +176,7 @@ export type Settings = {
   call_minutes_per_day: number;
   call_quality: "natural" | "economy";
   voice_provider_model: "openai-realtime" | "gemini-3.8-live" | "gemini-2.5-flash-native-audio-preview-12-2025";
+  computer_enabled: boolean;
   voice_engine: "openai" | "gemini";
   voice_hear_model: string;
   voice_speak_model: string;

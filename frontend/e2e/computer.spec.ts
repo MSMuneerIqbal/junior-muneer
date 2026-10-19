@@ -1,0 +1,25 @@
+import path from "node:path";
+
+import { expect, test } from "@playwright/test";
+
+test("Settings → Computer: on/off, allowed folders, add and remove, the blocked list", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "one shared database: once is enough");
+  await page.goto("/settings#computer");
+  await expect(page.getByRole("heading", { name: "Computer" })).toBeVisible();
+  await expect(page.getByRole("switch", { name: "Computer tools" })).toHaveAttribute("aria-checked", "true");
+  const folders = page.getByRole("list", { name: "Allowed folders" });
+  await expect(folders.getByRole("listitem")).toHaveCount(3); // Desktop, Documents, Downloads
+  await expect(page.getByText(/\.env, keys and certificates/)).toBeVisible();
+
+  const extra = path.resolve("e2e");
+  await page.getByRole("textbox", { name: "Folder to allow" }).fill(extra);
+  await page.getByRole("button", { name: "Add folder" }).click();
+  await expect(folders.getByText(extra)).toBeVisible();
+  await page.getByRole("button", { name: `Remove ${extra}` }).click();
+  await expect(folders.getByText(extra)).toHaveCount(0);
+
+  // A blocked folder is refused with the reason.
+  await page.getByRole("textbox", { name: "Folder to allow" }).fill("C:\\Windows");
+  await page.getByRole("button", { name: "Add folder" }).click();
+  await expect(page.locator("#computer").getByRole("alert")).toContainText("system folder");
+});

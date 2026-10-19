@@ -498,7 +498,10 @@ Read-only: these agents never post or send anything. News pages are outside cont
 change, an approved delete (it's in the Recycle Bin) and an approved command all run; a refused one doesn't; and nothing
 outside your allowed folders (or on the blocked list) can be read or changed.
 
-- [ ] **P9-01** Rules + Settings + the path guard (`junior/computer/paths.py`):
+- [x] **P9-01** Rules + Settings + the path guard (`junior/computer/paths.py`):
+  - **Done 2026-10-20.** Live check on his PC: 14 real paths (project files allowed; `.env`, `data`, `secret.key`, AppData,
+    `.claude`, Windows, Program Files, a `..` escape, Pictures and a network path refused; a typed Pictures path allowed,
+    its parent not). Found while building: a typed path also unlocked the folders above it; fixed and tested.
   - new action types `computer.read` (Auto), `computer.write` (Ask), `computer.move` (Ask), `computer.delete` (Ask, to
     the Recycle Bin), `computer.run` (Ask, locked); `terminal.run` / `terminal.other` retired
   - Settings → Computer: on/off, allowed folders (first Desktop, Documents, Downloads), add/remove a folder

@@ -24,6 +24,8 @@ DEFAULTS: dict[str, Any] = {
     # natural (full realtime model) · economy (mini)
     "call_quality": "natural",
     # Which engine runs live calls: OpenAI Realtime (above), or Google Gemini Live (needs GEMINI_API_KEY).
+    "computer_enabled": True,  # Phase 9: the computer tools (Settings -> Computer)
+    "computer_folders": None,  # None = Desktop, Documents and Downloads; else your list of full paths
     "voice_engine": "openai",  # voice messages: "openai" or "gemini" (Settings -> Voice)
     "voice_hear_model": "",  # "" = the engine's default (agents/models.toml)
     "voice_speak_model": "",

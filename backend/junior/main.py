@@ -53,6 +53,7 @@ from junior.memory_tidy import weekly_tidy
 from junior.feeds import feeds_if_due
 from junior.feeds import router as feeds_router
 from junior.whatsapp import router as whatsapp_router
+from junior.computer.api import router as computer_router
 from junior.hosts import LocalOnly
 from junior.reports import router as reports_router
 from junior.senders.registry import SenderRegistry, set_current
@@ -191,6 +192,7 @@ def create_app(
     app.include_router(reports_router)
     app.include_router(feeds_router)
     app.include_router(whatsapp_router)
+    app.include_router(computer_router)
     app.include_router(images_router)
     return app
 

@@ -44,6 +44,7 @@ def test_defaults(client):
         "main_model": "",
         "helper_model": "",
         "web_search_provider": "openai",
+        "computer_enabled": True,
         "voice_engine": "openai",
         "voice_hear_model": "",
         "voice_speak_model": "",

@@ -40,7 +40,8 @@ type Permissions = {
 
 // The left menu: one section shows at a time. "#news" in the address opens that section.
 type SectionId =
-  | "profile" | "budget" | "models" | "search" | "voice" | "calls" | "connections" | "whatsapp" | "posting" | "news" | "permissions" | "advanced";
+  | "profile" | "budget" | "models" | "search" | "voice" | "calls" | "connections" | "whatsapp" | "posting" | "news"
+  | "computer" | "permissions" | "advanced";
 type MenuItem = { id: SectionId; title: string }; // its icon: SettingsIcon by id
 const GROUPS: { title: string; items: MenuItem[] }[] = [
   { title: "Account", items: [{ id: "profile", title: "Profile" }, { id: "budget", title: "Budget" }] },
@@ -61,7 +62,7 @@ const GROUPS: { title: string; items: MenuItem[] }[] = [
       { id: "posting", title: "Posting" },
     ],
   },
-  { title: "Automation", items: [{ id: "news", title: "News & email" }] },
+  { title: "Automation", items: [{ id: "news", title: "News & email" }, { id: "computer", title: "Computer" }] },
   {
     title: "Safety",
     items: [
@@ -926,6 +927,8 @@ function SettingsForm({ initial }: { initial: Settings }) {
 
       <ConnectionsSection />
 
+      <ComputerSection enabled={form.computer_enabled} onEnabled={(v) => set("computer_enabled", v)} />
+
       <Section id="posting" title="Posting" description="Posts that go out through the official APIs (Facebook Page, Instagram, LinkedIn).">
         <Row
           label="Posts per platform per day"
@@ -1260,6 +1263,102 @@ function GoogleConnection() {
         )}
       </div>
     </Row>
+  );
+}
+
+type ComputerStatus = {
+  enabled: boolean;
+  folders: { path: string; exists: boolean }[];
+  using_defaults: boolean;
+  defaults: string[];
+  blocked: string[];
+};
+
+/** Settings → Computer: which folders on this PC the computer tools may use. */
+function ComputerSection({ enabled, onEnabled }: { enabled: boolean; onEnabled: (v: boolean) => void }) {
+  const { data, mutate } = useSWR<ComputerStatus>("/api/computer", fetcher);
+  const [path, setPath] = useState("");
+  const [error, setError] = useState("");
+
+  async function change(url: string, folder: string) {
+    setError("");
+    try {
+      await mutate(await send<ComputerStatus>("POST", url, { path: folder }), { revalidate: false });
+      if (url.endsWith("/folders")) setPath("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't change it");
+    }
+  }
+
+  return (
+    <Section
+      id="computer"
+      title="Computer"
+      description="What Junior may use on this PC: reading, changing and running things, always through your Permissions rules."
+    >
+      <Row label="Computer tools" hint="Off: he can't look at or change anything on this PC.">
+        <Toggle label="Computer tools" checked={enabled} onChange={onEnabled} />
+      </Row>
+      <Row
+        wide
+        label="Allowed folders"
+        hint="He can look and work only inside these. A full path you type yourself in a message also works, that time."
+      >
+        <div className="flex max-w-2xl flex-col gap-2">
+          <ul aria-label="Allowed folders" className="flex flex-col gap-1.5">
+            {data?.folders.map((f) => (
+              <li key={f.path} className="flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm">
+                <span className="min-w-0 flex-1 truncate font-mono text-[13px]" title={f.path}>
+                  {f.path}
+                </span>
+                {!f.exists && <Badge tone="muted">missing</Badge>}
+                <button
+                  type="button"
+                  onClick={() => change("/api/computer/folders/remove", f.path)}
+                  aria-label={`Remove ${f.path}`}
+                  className="rounded-md px-2 py-0.5 text-xs text-muted hover:bg-panel-2 hover:text-ink"
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+            {data && data.folders.length === 0 && <li className="text-sm text-muted">No folders: only paths you type.</li>}
+          </ul>
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (path.trim()) void change("/api/computer/folders", path.trim());
+            }}
+          >
+            <input
+              value={path}
+              onChange={(e) => setPath(e.target.value)}
+              placeholder="D:\Projects"
+              aria-label="Folder to allow"
+              className={`${input} font-mono text-[13px]`}
+            />
+            <button
+              type="submit"
+              disabled={!path.trim()}
+              className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-accent-fg hover:opacity-90 disabled:opacity-40"
+            >
+              Add folder
+            </button>
+          </form>
+          {error && (
+            <p role="alert" className="text-xs text-danger">
+              {error}
+            </p>
+          )}
+        </div>
+      </Row>
+      <Row wide label="Always blocked" hint="Never opened, even when you type the path.">
+        <ul className="list-disc space-y-1 pl-5 text-[13px] text-muted">
+          {data?.blocked.map((b) => <li key={b}>{b}</li>)}
+        </ul>
+      </Row>
+    </Section>
   );
 }
 

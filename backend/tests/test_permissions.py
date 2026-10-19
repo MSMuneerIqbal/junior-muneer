@@ -36,8 +36,10 @@ def client():
         ("github.merge", "ask"),
         ("github.repo.delete", "deny"),
         ("github.force_push", "deny"),
-        ("terminal.run", "ask"),
-        ("terminal.other", "deny"),
+        ("computer.read", "auto"),
+        ("computer.write", "ask"),
+        ("computer.delete", "ask"),
+        ("computer.run", "ask"),
         ("system.payment", "deny"),
         ("system.password", "deny"),
         ("something.not_listed", "ask"),  # anything not listed: Ask
@@ -120,7 +122,7 @@ def test_always_allow_offered_only_for_changeable_own_actions(client):
     assert decide("linkedin.post", from_outside=False).can_always_allow
     assert not decide("linkedin.post", from_outside=True).can_always_allow
     assert not decide("github.merge", from_outside=False).can_always_allow  # locked
-    assert not decide("terminal.run", from_outside=False).can_always_allow  # locked
+    assert not decide("computer.run", from_outside=False).can_always_allow  # locked
     assert not decide("gmail.reply", from_outside=False).can_always_allow  # locked
 
 
