@@ -15,7 +15,6 @@ import hmac
 import json
 import logging
 import re
-from collections import OrderedDict
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -26,7 +25,7 @@ from sqlalchemy import select
 
 from junior.audit import audit
 from junior.config import get_settings
-from junior.db import Conversation, session_scope
+from junior.db import Conversation, WhatsAppInbound, session_scope
 from junior.db.models import utcnow
 from junior.timeutil import zone
 
@@ -41,7 +40,8 @@ CARRY_MESSAGES = 8  # a short previous chat is carried over as its last few mess
 TRANSPORT: httpx.AsyncBaseTransport | None = None
 FAKE_SENT: list[dict] = []
 
-_seen: OrderedDict[str, None] = OrderedDict()  # Meta may deliver a message twice
+RESUME_MINUTES = 30  # after a restart, messages left unanswered this recently are answered; older ones aren't
+MAX_ATTEMPTS = 2  # a message that stopped the app twice isn't tried again
 _lock = asyncio.Lock()  # one message at a time, so answers keep their order
 _jobs: set[asyncio.Task] = set()
 
@@ -417,13 +417,64 @@ async def post_to_whatsapp(conversation_id: int | None, text: str) -> None:
         log.exception("Couldn't send a background result to WhatsApp")
 
 
-def _new(message_id: str) -> bool:
-    if not message_id or message_id in _seen:
+def _new(msg: dict) -> bool:
+    """Keep a message until it's answered. False if Meta already delivered it (it does that at times)."""
+    from sqlalchemy.exc import IntegrityError
+
+    message_id = msg.get("id", "")
+    if not message_id:
         return False
-    _seen[message_id] = None
-    while len(_seen) > 1000:
-        _seen.popitem(last=False)
+    try:
+        with session_scope() as s:
+            s.add(WhatsAppInbound(wa_message_id=message_id, payload=msg))
+    except IntegrityError:
+        return False
     return True
+
+
+async def _work(app: Any, msg: dict) -> None:
+    """Answer one kept message, then mark it done (whatever happened, the reply or an error message went out)."""
+    message_id = msg.get("id", "")
+    with session_scope() as s:
+        row = s.scalar(select(WhatsAppInbound).where(WhatsAppInbound.wa_message_id == message_id))
+        if row is not None:
+            row.attempts += 1
+    try:
+        await handle(app, msg)
+    finally:
+        with session_scope() as s:
+            row = s.scalar(select(WhatsAppInbound).where(WhatsAppInbound.wa_message_id == message_id))
+            if row is not None:
+                row.status, row.finished_at = "done", utcnow()
+
+
+def _start(app: Any, msg: dict) -> None:
+    job = asyncio.create_task(_work(app, msg))
+    _jobs.add(job)
+    job.add_done_callback(_jobs.discard)
+
+
+def resume_unanswered(app: Any) -> int:
+    """At startup: answer the messages a restart cut off (recent ones, in order). Returns how many."""
+    if not configured():
+        return 0
+    since = utcnow() - timedelta(minutes=RESUME_MINUTES)
+    with session_scope() as s:
+        rows = s.scalars(
+            select(WhatsAppInbound).where(WhatsAppInbound.status == "pending").order_by(WhatsAppInbound.id)
+        ).all()
+        resume = []
+        for row in rows:
+            if row.created_at >= since and row.attempts < MAX_ATTEMPTS:
+                resume.append(dict(row.payload))
+            else:
+                row.status, row.finished_at = "expired", utcnow()
+                audit("action", "whatsapp_not_resumed", result="skipped",
+                      detail={"attempts": row.attempts, "type": row.payload.get("type")})
+    for msg in resume:
+        log.info("Answering a WhatsApp message a restart cut off")
+        _start(app, msg)
+    return len(resume)
 
 
 # ---- API --------------------------------------------------------------------
@@ -450,8 +501,6 @@ async def receive(request: Request) -> dict:
     for entry in payload.get("entry", []):
         for change in entry.get("changes", []):
             for msg in change.get("value", {}).get("messages", []) or []:
-                if _new(msg.get("id", "")):
-                    job = asyncio.create_task(handle(request.app, msg))  # answer Meta at once; work after
-                    _jobs.add(job)
-                    job.add_done_callback(_jobs.discard)
+                if _new(msg):
+                    _start(request.app, msg)  # answer Meta at once; work after
     return {"ok": True}

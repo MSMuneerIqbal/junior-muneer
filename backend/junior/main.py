@@ -116,6 +116,9 @@ def create_app(
         app.state.openai_voice = voice
         app.state.voice = engine_voice(voice)  # OpenAI or Gemini, as Settings -> Voice says
         app.state.calls = CallManager(realtime, app.state.registry, model_provider)
+        from junior.whatsapp import resume_unanswered
+
+        resume_unanswered(app)  # WhatsApp messages a restart cut off get their answer now
         async def news_job() -> None:
             from junior.news.mail import daily_news_email
 

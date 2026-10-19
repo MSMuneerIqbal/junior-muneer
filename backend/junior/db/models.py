@@ -439,6 +439,22 @@ class ActionRun(Base):
     finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
 
 
+class WhatsAppInbound(Base):
+    """A message you sent on WhatsApp, kept until its answer went out. Meta's id is unique, so a message Meta
+    delivers twice is answered once (even across restarts), and one cut off by a restart is answered after it."""
+
+    __tablename__ = "whatsapp_inbound"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    wa_message_id: Mapped[str] = mapped_column(String(200), unique=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+    # pending · done · expired (too old to answer after a restart)
+    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+
+
 class Setting(Base):
     __tablename__ = "settings"
 

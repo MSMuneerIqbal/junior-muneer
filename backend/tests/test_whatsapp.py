@@ -45,7 +45,6 @@ def wa(monkeypatch):
         return httpx.Response(404)
 
     monkeypatch.setattr(whatsapp, "TRANSPORT", httpx.MockTransport(meta))
-    whatsapp._seen.clear()
     return sent
 
 
@@ -305,3 +304,52 @@ def test_session_settings_are_checked():
     with app(ScriptedModel([])) as c:
         assert c.patch("/api/settings", json={"whatsapp_session_hours": 24}).json()["whatsapp_session_hours"] == 24
         assert c.patch("/api/settings", json={"whatsapp_session_hours": 5}).status_code == 422
+
+
+def test_a_message_meta_delivers_again_after_a_restart_is_still_answered_once(wa):
+    with app(ScriptedModel([chunked_answer("Once.")])) as c:
+        signed(c, text("hello", mid="wamid.again"))
+        wait_for(wa, 1)
+    with app(ScriptedModel([chunked_answer("Twice?")])) as c:  # the backend restarted
+        signed(c, text("hello", mid="wamid.again"))
+        time.sleep(0.5)
+    assert [m["text"]["body"] for m in wa] == ["Once."]
+
+
+def keep(mid: str, body: str, minutes_ago: float = 1, attempts: int = 1) -> None:
+    """A message the backend took in, then stopped (restart) before answering."""
+    from datetime import timedelta
+
+    from junior.db import WhatsAppInbound
+    from junior.db.models import utcnow
+
+    with session_scope() as s:
+        s.add(WhatsAppInbound(wa_message_id=mid, payload=text(body, mid=mid)["entry"][0]["changes"][0]["value"]["messages"][0],
+                              attempts=attempts, created_at=utcnow() - timedelta(minutes=minutes_ago)))
+
+
+def test_a_reply_cut_off_by_a_restart_is_sent_after_it(wa):
+    with app(ScriptedModel([])):
+        keep("wamid.cut", "Junior, kal ka plan batao")
+    model = ScriptedModel([chunked_answer("Kal ka plan: proposal and gym.")])
+    with app(model) as c:  # starting up answers it
+        reply = wait_for(wa, 1)[0]
+        assert reply["text"]["body"] == "Kal ka plan: proposal and gym."
+        time.sleep(0.2)
+    from junior.db import WhatsAppInbound
+
+    with session_scope() as s:
+        row = s.query(WhatsAppInbound).filter_by(wa_message_id="wamid.cut").one()
+        assert row.status == "done" and row.attempts == 2
+
+
+def test_old_or_twice_failed_messages_are_not_answered_after_a_restart(wa):
+    with app(ScriptedModel([])):
+        keep("wamid.old", "from this morning", minutes_ago=180)
+        keep("wamid.crashy", "this one stopped the app twice", attempts=2)
+    model = ScriptedModel([])
+    with app(model) as c:
+        time.sleep(0.5)
+        assert wa == [] and not model.calls
+        skipped = [a for a in c.get("/api/activity?kind=action").json() if a["name"] == "whatsapp_not_resumed"]
+        assert len(skipped) == 2

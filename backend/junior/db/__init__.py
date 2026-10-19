@@ -23,6 +23,7 @@ from junior.db.models import (
     Paste,
     ReceivedFile,
     Setting,
+    WhatsAppInbound,
     Usage,
 )
 
@@ -48,6 +49,7 @@ __all__ = [
     "Paste",
     "ReceivedFile",
     "Setting",
+    "WhatsAppInbound",
     "Usage",
     "get_engine",
     "init_db",
