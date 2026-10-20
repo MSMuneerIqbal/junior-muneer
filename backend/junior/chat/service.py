@@ -29,7 +29,10 @@ log = logging.getLogger(__name__)
 MAIN_AGENT = "junior_muneer"
 # Other providers (e.g. DeepSeek) can queue requests for minutes when busy.
 FIRST_WORDS_SECONDS = 20  # no first words by then: answer with OpenAI instead
-STALL_SECONDS = 60  # silence mid-answer for this long: give up
+# Silence mid-answer (no text, no steps, no tool-call writing) for this long: give up. Generous, because a model
+# can think quietly for a while over big search results (found live: DeepSeek, 42 s); each AI request also has its
+# own 2-minute limit (ai_client) and the whole answer 10 minutes. A running tool never counts as silence.
+STALL_SECONDS = 180
 TURN_SECONDS = 600  # one answer may take at most 10 minutes (tools included); then it stops instead of hanging
 SUMMARY_SECONDS = 90
 TITLE_LENGTH = 60
@@ -244,6 +247,7 @@ class ChatService:
             stream = stream_turn(agent, model_name, router, items, context, budget)
             other_provider = router.provider_of(model_name) != "openai"
             first = True
+            tools_running: set[str] = set()  # a tool at work (a web search, a helper agent) isn't the model being silent
             deadline = time.monotonic() + TURN_SECONDS
             while True:
                 try:
@@ -251,6 +255,8 @@ class ChatService:
                     if other_provider:
                         # Other providers (DeepSeek) can stall for minutes when busy.
                         limit = FIRST_WORDS_SECONDS if first else STALL_SECONDS
+                        if tools_running:
+                            limit = left
                         event = await asyncio.wait_for(anext(stream), min(limit, left))
                     else:
                         event = await asyncio.wait_for(anext(stream), left)
@@ -298,6 +304,11 @@ class ChatService:
                     other_provider = False
                     continue
                 first = False
+                if event["type"] == "step" and event.get("kind") in ("tool", "web_search") and event.get("id"):
+                    if event.get("status") == "running":
+                        tools_running.add(event["id"])
+                    else:
+                        tools_running.discard(event["id"])
                 if event["type"] == "final":
                     result = event["result"]
                 elif event["type"] != "alive":  # "still writing": only for the silence check above

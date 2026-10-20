@@ -250,3 +250,28 @@ def test_a_long_tool_call_isnt_mistaken_for_silence(monkeypatch):
         events = chat(client, "make me a long doc")
     assert events[-1]["type"] == "done" and events[-1]["text"] == "Your doc is ready."
     assert not any(e["type"] == "alive" for e in events)  # only for the silence check, never sent to the chat
+
+
+def test_a_slow_tool_isnt_mistaken_for_silence(monkeypatch):
+    """Found live: an 18-second web search plus DeepSeek's quiet thinking counted as 60 s of silence."""
+    import time as _time
+
+    import junior.agent.tools as tools
+    import junior.chat.service as service
+
+    monkeypatch.setattr(service, "STALL_SECONDS", 0.3)
+
+    real = tools.spending.on_invoke_tool
+
+    async def slow(ctx, args):
+        await __import__("asyncio").sleep(1.0)  # the tool works for longer than the silence limit
+        return await real(ctx, args)
+
+    monkeypatch.setattr(tools.spending, "on_invoke_tool", slow)
+    model = ScriptedModel([[function_call("spending", {"period": "today"}, call_id="s1")], chunked_answer("You spent a little.")])
+    started = _time.monotonic()
+    with TestClient(create_app(model_provider=lambda: (lambda name: model))) as client:
+        client.patch("/api/settings", json={"main_model": "deepseek:deepseek-flash"})
+        events = chat(client, "how much did I spend?")
+    assert events[-1]["type"] == "done" and events[-1]["text"] == "You spent a little."
+    assert _time.monotonic() - started >= 1.0
