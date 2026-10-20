@@ -168,6 +168,10 @@ def check(text: str, context=None) -> Path:
     if context is not None and in_your_words(path, written, context):
         return path
     folders = ", ".join(str(f) for f in allowed_folders()) or "none yet"
+    if near := closest_allowed(path):  # spoken "D:\Documents" for a folder really named "D:\Docoments" (found live)
+        rest = path.relative_to(Path(*path.parts[: len(near.parts)]))
+        raise PathRefused(f"{path} isn't an allowed folder, but {near} is, and it's almost the same name: they almost "
+                          f"certainly mean {near / rest}. Use that path now (no need to ask them).")
     raise PathRefused(
         f"{path} is outside the allowed folders ({folders}). They can type the full path in their own message to "
         "use it this time, or add the folder in Settings → Computer."
@@ -199,3 +203,20 @@ def recheck(saved: str) -> Path:
     if reason := blocked_reason(path):
         raise PathRefused(reason)
     return path
+
+
+def closest_allowed(path: Path) -> Path | None:
+    """An allowed folder with the same parent as this path and nearly the same name (one or two letters off): spoken
+    "D:\Documents" for a folder really named "D:\Docoments". None if there's no such folder."""
+    import difflib
+
+    best, score = None, 0.0
+    for folder in allowed_folders():
+        depth = len(folder.parts)
+        if len(path.parts) < depth or Path(*path.parts[: depth - 1]) != folder.parent:
+            continue
+        name, real = path.parts[depth - 1].casefold(), folder.name.casefold()
+        ratio = difflib.SequenceMatcher(None, name, real).ratio()
+        if name != real and ratio > score:
+            best, score = folder, ratio
+    return best if score >= 0.8 else None

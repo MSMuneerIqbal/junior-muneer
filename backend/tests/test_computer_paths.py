@@ -232,3 +232,16 @@ def test_typing_a_path_doesnt_open_the_folders_above_it(pc):
         check(str(user / "Projects"), ctx)
     with pytest.raises(PathRefused, match="outside"):
         check(str(user / "Projects" / "shop2"), ctx)
+
+
+def test_a_nearly_right_folder_name_points_to_the_allowed_one(pc):
+    """Found live: he said "D drive Documents", his folder is really named "Docoments"."""
+    user, c = pc
+    drive = user.parent / "D"  # another drive, like his D:\Docoments
+    (drive / "Docoments").mkdir(parents=True)
+    c.post("/api/computer/folders", json={"path": str(drive / "Docoments")})
+    with pytest.raises(PathRefused, match="almost certainly mean") as refused:
+        check(str(drive / "Documents" / "cv.pdf"))
+    assert str(drive / "Docoments" / "cv.pdf") in str(refused.value)
+    with pytest.raises(PathRefused, match="outside the allowed folders"):
+        check(str(user / "Other" / "diary.txt"))  # not close to any allowed folder: the normal answer
