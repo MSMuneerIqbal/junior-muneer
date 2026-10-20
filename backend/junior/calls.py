@@ -239,6 +239,17 @@ class LiveCall:
     answer_in_response: int | None = None  # the answer saved during the current response
 
 
+def text_from(args: dict) -> str:
+    """All the text in a tool call's arguments, joined (strings and lists of strings)."""
+    parts: list[str] = []
+    for value in args.values():
+        if isinstance(value, str) and value.strip():
+            parts.append(value.strip())
+        elif isinstance(value, list):
+            parts.extend(str(v).strip() for v in value if isinstance(v, (str, int, float)) and str(v).strip())
+    return " ".join(parts)
+
+
 class CallManager:
     """Keeps track of live calls and runs the backend side of each."""
 
@@ -529,6 +540,13 @@ class CallManager:
             args = json.loads(arguments or "{}")
         except ValueError:
             return "Invalid arguments."
+        if not isinstance(args, dict):
+            args = {}
+        # Voice models sometimes name the text argument differently (found live: Gemini Live sent
+        # {"queries": ["find my CV..."]} to ask_junior): use the text it sent, whatever its name.
+        for key in ("query", "question"):
+            if not str(args.get(key) or "").strip():
+                args[key] = text_from(args)
         context = call.context
         if name == "web_search":
             result = await self._quick_search(call, str(args.get("query", "")))

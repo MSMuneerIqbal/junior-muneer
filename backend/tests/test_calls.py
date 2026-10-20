@@ -509,3 +509,11 @@ def test_the_call_agent_knows_it_can_act_through_ask_junior():
     assert "DO or FIND anything" in ASK_JUNIOR_TOOL["description"]
     voice = load_registry().get("junior_muneer_voice").instructions
     assert "never say you can't" in voice and "You can't post, send" not in voice
+
+
+def test_a_differently_named_argument_still_reaches_ask_junior():
+    """Found live: Gemini Live sent {"queries": [...]} to ask_junior, which then said "No question given"."""
+    model = ScriptedModel([chunked_answer("Found it: MUNEER_IQBAL_CV_new.pdf.")])
+    call, _, gw = run_call([heard("find my new CV"), tool("ask_junior", '{"queries": ["find my new CV in D drive"]}', "a1")], model)
+    outputs = {e["item"]["call_id"]: e["item"]["output"] for e in gw.conn.sent if e["type"] == "conversation.item.create"}
+    assert outputs["a1"] == "Found it: MUNEER_IQBAL_CV_new.pdf."
