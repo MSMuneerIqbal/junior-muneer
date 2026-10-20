@@ -548,7 +548,9 @@ outside your allowed folders (or on the blocked list) can be read or changed.
     card approved on the dashboard also reports back on WhatsApp; `send_to_me` takes `pc_file` (25 MB, same guard; `.env`
     refused). Live: a real PC card and `plan.txt` from `Desktop\junior-pc-test` reached his WhatsApp; his tap on Approve
     is the last step (also in P9-08).
-- [ ] **P9-08** Your acceptance test (local), then push
+- [x] **P9-08** Your acceptance test (local), then push
+  - **Accepted 2026-10-20** by Muneer (his Approve on the WhatsApp PC card created the file); pushed. The test folder
+    `Desktop\junior-pc-test` went to the Recycle Bin.
 - [ ] **P9-09** PC Helper (after the VPS is ready): a small program on your PC that connects out to the server, gets
   only approved jobs, runs them with the same guard, sends results; "your PC is offline" when it isn't running
 - [ ] **P9-10** Acceptance test with the VPS + push

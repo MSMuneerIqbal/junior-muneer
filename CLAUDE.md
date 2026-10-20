@@ -36,8 +36,8 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
 - **Now: Phase 9 (your computer), local part built (P9-01 to P9-07):** `junior/computer/` (path guard `paths.py`, tools
   `pc_list/pc_find/pc_read/pc_write/pc_make_folder/pc_move/pc_delete/pc_run`, the Computer sender, `terminal.py`),
   `agents/computer_agent.md`, Settings → Computer. Rules: read Auto; write/move/delete Ask (delete → Recycle Bin);
-  run Ask (locked). Next: P9-08 his acceptance test + push, then P9-09 PC Helper with the VPS.
-- Last pushed to GitHub (`main`) on 2026-10-19 (DeepSeek search, single-scroll sidebar). Later commits not pushed.
+  run Ask (locked). Local part accepted and pushed 2026-10-20; next: P9-09 PC Helper with the VPS.
+- Last pushed to GitHub (`main`) on 2026-10-20 (Phase 9 local part accepted).
 
 ## Safety rules (never break)
 
