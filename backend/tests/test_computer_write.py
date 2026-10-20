@@ -38,7 +38,7 @@ def test_ask_makes_a_card_and_nothing_changes_until_approve(pc_home, bin_):
     user, c = pc_home
     ctx = context_with("make notes.txt on my desktop")
     out = write(ctx, "Desktop/new-notes.txt", "Buy milk\nCall Ali\n")
-    assert "Waiting for their OK" in out and not (user / "Desktop" / "new-notes.txt").exists()
+    assert "NOT done yet - waiting for their OK" in out and not (user / "Desktop" / "new-notes.txt").exists()
     item = card(c, ctx)
     assert item["platform"] == "computer" and item["status"] == "waiting" and item["title"].startswith("Create ")
     done = c.post(f"/api/approvals/{item['id']}/approve", json={}).json()
@@ -58,7 +58,7 @@ def test_outside_text_makes_it_ask_even_on_auto(pc_home, bin_):
     set_rule("computer.write", "auto")
     ctx = context_with("hi")
     ctx.mark_outside()  # e.g. an email or a web page was read in this turn
-    assert "Waiting for their OK" in write(ctx, "Desktop/x.txt", "from an email")
+    assert "NOT done yet - waiting for their OK" in write(ctx, "Desktop/x.txt", "from an email")
     assert not (user / "Desktop" / "x.txt").exists()
 
 

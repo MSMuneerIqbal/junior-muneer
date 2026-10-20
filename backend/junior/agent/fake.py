@@ -160,8 +160,20 @@ class FakeModel(Model):
                 items = [{"text": p, "status": "done"} for p in parts]
                 return [function_call("update_plan", {"items": items}, call_id="fake-plan-2")], False
             return [assistant_message(f"(fake AI) All {len(parts)} parts done.")], False
+        if text.startswith("## Task from") and "pc_list" in tool_names and not (
+            isinstance(last, dict) and last.get("type") == "function_call_output"
+        ):
+            # The Computer Agent: "list FOLDER" or "write FILE: TEXT".
+            task = text.split("\n", 2)[1].strip()
+            if task.lower().startswith("write ") and ":" in task:
+                file, content = task[len("write "):].split(":", 1)
+                return [function_call("pc_write", {"file": file.strip(), "content": content.strip() + "\n"}, call_id="fake-pc-write")], False
+            folder = task[len("list "):].strip() if task.lower().startswith("list ") else "Desktop"
+            return [function_call("pc_list", {"folder": folder}, call_id="fake-pc-list")], False
         if isinstance(last, dict) and last.get("type") == "function_call_output":
             return [assistant_message(f"(fake AI) Tool said: {last.get('output')}")], False
+        if text.lower().startswith("pc ") and "ask_computer_agent" in tool_names:
+            return [function_call("ask_computer_agent", {"task": text[3:].strip()}, call_id="fake-pc")], False
         if "search" in text.lower() and "web_search" in tool_names:
             return [function_call("web_search", {"query": text}, call_id="fake-search")], False
         if text.lower().startswith(("email me ", "whatsapp me ")) and "send_to_me" in tool_names:

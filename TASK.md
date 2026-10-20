@@ -533,8 +533,14 @@ outside your allowed folders (or on the blocked list) can be read or changed.
     environment; an edited card is checked again before it runs. **Honest limit:** word checks can't catch every trick
     (a wildcard like `.e?v` could reach a secret), so commands stay locked to Ask: your Approve on the exact command is
     the real lock.
-- [ ] **P9-06** The Computer Agent (`agents/computer.md`, all the tools) and Junior's handoff to it, plus Junior's quick
+- [x] **P9-06** The Computer Agent (`agents/computer.md`, all the tools) and Junior's handoff to it, plus Junior's quick
   read-only tools. Live check: "what's in my Downloads?", "make notes.txt on my Desktop with ..."
+  - **Done 2026-10-20.** Live with the real AI (Gemini 3.1 Flash-Lite for Junior): "what's in my Desktop\junior-pc-test?"
+    (Junior looked himself, the secret hidden), "make todo.txt there with two lines" (Computer Agent → card → Approve →
+    file), "run git log --oneline -3 in the project" (card → Approve → output). Found live: Junior made up
+    `C:\Users\Muneer\...` instead of `Desktop\...` (the guard refused it); now paths are passed exactly as you wrote them
+    and the Computer Agent is told your real user folder. Also: a waiting card is never called "created". Fake-AI
+    trigger `pc list ...` / `pc write NAME: TEXT` for the e2e test.
 - [ ] **P9-07** WhatsApp: computer approvals with Approve/Reject buttons, results sent back, "send me that file" from
   your PC. Live check on WhatsApp
 - [ ] **P9-08** Your acceptance test (local), then push

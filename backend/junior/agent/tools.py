@@ -1290,3 +1290,52 @@ def _computer_tools() -> list[Tool]:
 
 
 TOOL_FACTORIES["computer"] = _computer_tools
+
+
+# ---- the Computer Agent (Phase 9) -----------------------------------------------------------
+
+
+async def ask_computer_agent_for(context: TurnContext, task: str, call_id: str | None = None) -> str:
+    """Hand a job on the user's PC to the Computer Agent. It shares this turn: its cards show in this chat, and a path
+    in the user's own message counts the same way."""
+    from junior.computer.paths import allowed_folders
+    from junior.costs import BudgetExceeded
+    from junior.settings_store import get_setting
+
+    if context.helpers is None:
+        return "NOT available: the Computer Agent can't be reached here."
+    if not get_setting("computer_enabled"):
+        return "NOT done: the computer tools are off. They can turn them on in Settings → Computer."
+    if call_id:
+        context.emit({"type": "step", "id": call_id, "kind": "tool", "name": "ask_computer_agent",
+                      "label": "Asking the Computer Agent", "status": "running"})
+    folders = "\n".join(f"- {f}" for f in allowed_folders()) or "- (none: only paths they type)"
+    from junior.computer.paths import home
+
+    prompt = (
+        f"## Task from {context.settings['user_name']}\n{task.strip()}\n\n"
+        f"Their user folder on this PC: {home()}\n"
+        f"Allowed folders:\n{folders}\n"
+        "Short paths like Desktop\\notes.txt work as they are. Use the paths exactly as given; never invent a user name.\n"
+    )
+    try:
+        report = await context.helpers.run("computer_agent", prompt, context)
+    except BudgetExceeded as e:
+        return f"NOT done: {e}"
+    return f"{report}\n\n(The Computer Agent's report. Tell them in your own words, briefly; cards it made show under your answer.)"
+
+
+@function_tool
+async def ask_computer_agent(ctx: Ctx, task: str) -> str:
+    """Ask the Computer Agent to do a job on the user's PC: find, read, create, change, move or delete files and
+    folders, or run terminal commands (git, python, npm...). Changes become cards they approve. Use it for anything
+    beyond a quick look (for a quick look use pc_list / pc_find / pc_read yourself).
+
+    Args:
+        task: The whole job in plain words, with any paths, file names and text they gave, copied exactly as they
+            wrote them ("Desktop\\reports" stays that; never make up a full path like C:\\Users\\Name\\...).
+    """
+    return await ask_computer_agent_for(ctx.context, task, getattr(ctx, "tool_call_id", None))
+
+
+TOOL_FACTORIES["computer_agent"] = lambda: [ask_computer_agent]

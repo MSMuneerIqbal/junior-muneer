@@ -81,7 +81,7 @@ def run(ctx, command, folder="Desktop"):
 def test_a_command_waits_for_approve_then_its_output_shows(pc_home):
     user, c = pc_home
     ctx = context_with("hi")
-    assert "Waiting for their OK" in run(ctx, "Write-Output 'hello from junior'; (Get-Location).Path")
+    assert "NOT done yet - waiting for their OK" in run(ctx, "Write-Output 'hello from junior'; (Get-Location).Path")
     item = card(c, ctx)
     assert item["item_type"] == "command" and item["title"] == f"Run in {user / 'Desktop'}"
     done = c.post(f"/api/approvals/{item['id']}/approve", json={}).json()

@@ -277,8 +277,9 @@ async def queue_action(context: TurnContext, action_type: str, item_type: str, t
         return f"It didn't work: {item.meta.get('last_error', '')} Tell them in one line."
     context.pending_events.append({"type": "approval", "item": item.model_dump(mode="json")})
     return (
-        f"Waiting for their OK (card {item.id}, {item.reason}). Nothing changes on their PC until they press Approve. "
-        "Tell them in one line what the card does; don't repeat its content."
+        f"NOT done yet - waiting for their OK on card {item.id} ({item.reason}). Nothing changes on their PC until they "
+        "press Approve. Say it's ready and waits for their Approve (never that it's done or created); one line on what "
+        "the card does, without repeating its content."
     )
 
 

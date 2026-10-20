@@ -23,3 +23,17 @@ test("Settings → Computer: on/off, allowed folders, add and remove, the blocke
   await page.getByRole("button", { name: "Add folder" }).click();
   await expect(page.locator("#computer").getByRole("alert")).toContainText("system folder");
 });
+
+test("Junior hands a PC job to the Computer Agent; the file card waits for you and can be rejected", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "one shared database: once is enough");
+  const name = `junior-e2e-${Date.now()}.txt`;
+  await page.goto("/");
+  const box = page.getByRole("textbox", { name: "Message" });
+  await box.fill(`pc write Desktop/${name}: hello from the e2e test`);
+  await box.press("Enter");
+  const card = page.getByRole("article", { name: new RegExp(`Your PC file: Create .*${name.replace(".", "\\.")}`) });
+  await expect(card.getByTestId("approval-status")).toHaveText("Waiting for you");
+  await expect(card.getByText("hello from the e2e test")).toBeVisible();
+  await card.getByRole("button", { name: "Reject" }).click();
+  await expect(card.getByTestId("approval-status")).toHaveText("Rejected");
+});
