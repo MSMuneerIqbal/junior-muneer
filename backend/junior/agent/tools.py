@@ -1394,6 +1394,9 @@ def use_skill_for(context: TurnContext, name: str, agent: str = "") -> str:
     skill = skills.get((name or "").strip().lower())
     if skill is None:
         return f"There's no skill named {name!r}. The skills: {', '.join(sorted(skills)) or 'none yet'}."
+    if skill.name in context.skills_loaded:
+        return f"The skill {skill.name!r} is already loaded in this request (above): follow it."
+    context.skills_loaded.add(skill.name)
     audit("tool_call", "use_skill", detail={"skill": skill.name, "agent": agent}, conversation_id=context.conversation_id)
     return f"# Skill: {skill.name}\n{skill.description}\n\n{skill.instructions}\n\n(Follow these steps for this job.)"
 

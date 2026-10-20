@@ -91,6 +91,9 @@ def test_use_skill_loads_its_instructions(folder):
         out = use_skill_for(said("review my cv"), "cv_review")
         assert out.startswith("# Skill: cv_review") and "overlapping jobs" in out
         assert "no skill named" in use_skill_for(said("x"), "nope")
+        context = said("review my cv")
+        use_skill_for(context, "cv_review")
+        assert "already loaded" in use_skill_for(context, "cv_review")  # once per request, not four times
 
 
 def test_you_can_make_a_skill_from_chat(folder):

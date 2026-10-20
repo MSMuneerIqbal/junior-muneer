@@ -572,8 +572,11 @@ with its links arrives in the chat you asked from, WhatsApp included.
 - [x] **P10-01** WhatsApp chat replies always reach the phone (also when the message came from the dashboard)
   - **Done 2026-10-20.** Live: a message typed on the dashboard in his WhatsApp chat was answered there and on his phone
     (his question on top). Other chats never go to WhatsApp.
-- [ ] **P10-02** Skills: `skills/*.md` (name, description, instructions), checked at startup, a `use_skill` tool that
+- [x] **P10-02** Skills: `skills/*.md` (name, description, instructions), checked at startup, a `use_skill` tool that
   loads one, "make a skill for ..." from chat. Tests: a broken skill stops startup with a clear error
+  - **Done 2026-10-20** (`junior/skills.py`, `skills/`). Live: "make a skill called repo_status ..." saved a good skill
+    file; in a new chat "repo status for ...junior-muneer" loaded it and the Computer Agent made the two git command
+    cards. Found live: the skill was loaded 4 times in one answer; now once per request.
 - [ ] **P10-03** The Documents & Research Agent (`agents/documents_agent.md`): research + Docs, Sheets, Markdown; Junior
   hands long jobs to it as background tasks by himself
 - [ ] **P10-04** Task status: progress (step, done of planned, started), a time estimate from similar past tasks, a

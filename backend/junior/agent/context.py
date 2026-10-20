@@ -39,6 +39,7 @@ class TurnContext:
     approval_ids: list[int] = field(default_factory=list)
     computer_actions: int = 0  # computer cards made this turn (Phase 9)
     last_pc_file: Any = None  # the PC file just checked for attaching (its real path)
+    skills_loaded: set[str] = field(default_factory=set)  # loaded once per turn (found live: 4 loads in one answer)
     # Jobs that got a proposal card in this turn (one card per job).
     proposal_jobs: set[int] = field(default_factory=set)
     # Every model call so far, kept here so the cost is saved even if the turn fails.
