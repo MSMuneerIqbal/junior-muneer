@@ -57,6 +57,8 @@ class ComputerSender:
                 return self._move(path, recheck(out.meta.get("to", "")))
             if op == "delete":
                 return self._delete(path)
+            if op == "run":
+                return await self._run(path, out.text, float(out.meta.get("seconds") or 120))
         except PathRefused as e:
             return SendResult("failed", str(e))
         except OSError as e:  # nothing (or only the Recycle Bin copy) happened: safe to try again by hand
@@ -113,3 +115,18 @@ class ComputerSender:
             return SendResult("failed", f"{path} is one of your allowed folders; it isn't deleted.")
         to_recycle_bin(path)
         return SendResult("sent", f"{path} is in the Recycle Bin (restore it from there if you need it).")
+
+    @staticmethod
+    async def _run(folder: Path, command: str, seconds: float) -> SendResult:
+        from junior.computer.terminal import refusal, run_powershell
+
+        if why := refusal(command):  # the card's command may have been edited
+            return SendResult("failed", f"That command is never run here ({why}).")
+        if not folder.is_dir():
+            return SendResult("failed", f"The folder {folder} isn't there any more; nothing ran.")
+        ran = await run_powershell(command, str(folder), seconds)
+        if ran.code is None:
+            head = f"Stopped after {seconds:.0f} seconds (the time limit)."
+        else:
+            head = "Finished (exit code 0)." if ran.code == 0 else f"Finished with an error (exit code {ran.code})."
+        return SendResult("sent", f"{head}\n{ran.output or '(no output)'}")

@@ -445,3 +445,38 @@ async def pc_delete(ctx: Ctx, target: str) -> str:
 
 
 WRITE_TOOLS: list[FunctionTool] = [pc_write, pc_make_folder, pc_move, pc_delete]
+
+
+# ---- terminal --------------------------------------------------------------------------------
+
+
+async def run_command_for(context: TurnContext, command: str, folder: str) -> str:
+    from junior.computer.terminal import RUN_SECONDS, refusal
+
+    try:
+        where = check(folder, context)
+    except PathRefused as e:
+        return f"NOT done: {e}"
+    if not where.is_dir():
+        return f"NOT done: {where} isn't a folder. Run commands in a folder."
+    if why := refusal(command):
+        return f"NOT done: that command is never run here ({why})."
+    return await queue_action(context, "computer.run", "command", command.strip(), f"Run in {where}",
+                              {"op": "run", "path": str(where), "seconds": RUN_SECONDS})
+
+
+@function_tool
+async def pc_run(ctx: Ctx, command: str, folder: str) -> str:
+    """Run a terminal command (Windows PowerShell) in a folder on the user's PC, e.g. "git status", "python app.py",
+    "npm test", "dir". It always shows as a card: it runs only when they press Approve, then the card shows the
+    output. 2 minutes at most. Never for deleting (use pc_delete), secrets, admin rights or system changes: those are
+    refused. Prefer pc_list / pc_find / pc_read to look at files.
+
+    Args:
+        command: The exact PowerShell command.
+        folder: The folder to run it in (full path, inside their allowed folders).
+    """
+    return await run_command_for(ctx.context, command, folder)
+
+
+RUN_TOOLS: list[FunctionTool] = [pc_run]

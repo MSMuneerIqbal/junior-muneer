@@ -525,8 +525,14 @@ outside your allowed folders (or on the blocked list) can be read or changed.
   - **Done 2026-10-20.** Live: renamed `shopping.txt`, moved it into `Clients\Acme`, deleted `Clients` (the card said
     "1 file, 20 bytes"), found it in the Recycle Bin and restored it with the file inside. Deleting an allowed folder itself
     (Desktop), a secret file, or something outside the folders is refused; a secret can't be moved out of hiding either.
-- [ ] **P9-05** Terminal: `run_command` (PowerShell, in an allowed folder, 2-minute limit, output capped), always Ask
+- [x] **P9-05** Terminal (`pc_run`, `junior/computer/terminal.py`): `run_command` (PowerShell, in an allowed folder, 2-minute limit, output capped), always Ask
   (locked), dangerous commands refused in code, the result on the card and in the chat. Live check
+  - **Done 2026-10-20.** Live, approved through his backend: `git status` + `git log` in the project, `python --version;
+    node --version`, a `Format-Table` listing, Urdu output; `shutdown` and `type backend\.env` refused before any card.
+    Found live: `Format-Table` was taken for formatting a disk; fixed and tested. The command runs without keys in its
+    environment; an edited card is checked again before it runs. **Honest limit:** word checks can't catch every trick
+    (a wildcard like `.e?v` could reach a secret), so commands stay locked to Ask: your Approve on the exact command is
+    the real lock.
 - [ ] **P9-06** The Computer Agent (`agents/computer.md`, all the tools) and Junior's handoff to it, plus Junior's quick
   read-only tools. Live check: "what's in my Downloads?", "make notes.txt on my Desktop with ..."
 - [ ] **P9-07** WhatsApp: computer approvals with Approve/Reject buttons, results sent back, "send me that file" from

@@ -71,10 +71,11 @@ async def send_item(item_id: int, senders: SenderRegistry) -> ApprovalOut:
         item = s.get(ApprovalItem, item_id)
         item.meta = {**item.meta, "attempts": attempt, "blocked": [], "sending_at": utcnow().isoformat()}
 
+    limit = SEND_SECONDS + float(out.meta.get("seconds") or 0)  # a command on your PC may take its own time limit
     try:
-        result = await asyncio.wait_for(sender.send(out), SEND_SECONDS)
+        result = await asyncio.wait_for(sender.send(out), limit)
     except TimeoutError:
-        result = SendResult("unclear", f"{sender.label} didn't answer in {SEND_SECONDS} seconds; it may or may not have posted.")
+        result = SendResult("unclear", f"{sender.label} didn't answer in {limit:.0f} seconds; it may or may not have posted.")
     except Exception as e:  # never retry: we can't know whether it went out
         log.exception("Sending item %s failed", item_id)
         result = SendResult("unclear", f"Something went wrong while sending to {sender.label} ({type(e).__name__}).")

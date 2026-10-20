@@ -213,11 +213,20 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
             ) : (
               <p className="font-mono text-[13px] whitespace-pre-wrap">{item.text}</p>
             )}
-            {item.status === "posted" && typeof item.meta.result === "string" && (
-              <p role="status" className="mt-1.5 text-xs text-ok">
-                ✓ {item.meta.result}
-              </p>
-            )}
+            {item.status === "posted" && typeof item.meta.result === "string" &&
+              (item.item_type === "command" ? (
+                <pre
+                  role="status"
+                  aria-label="Output"
+                  className="mt-1.5 max-h-80 overflow-auto rounded-lg bg-[#1e1e1e] p-2 font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-[#e5e5e5]"
+                >
+                  {item.meta.result}
+                </pre>
+              ) : (
+                <p role="status" className="mt-1.5 text-xs text-ok">
+                  ✓ {item.meta.result}
+                </p>
+              ))}
           </>
         ) : (
           <p dir="auto" className={`whitespace-pre-wrap text-sm leading-relaxed ${urduClass(item.text)}`}>
