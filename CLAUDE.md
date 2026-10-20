@@ -37,7 +37,11 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
   `pc_list/pc_find/pc_read/pc_write/pc_make_folder/pc_move/pc_delete/pc_run`, the Computer sender, `terminal.py`),
   `agents/computer_agent.md`, Settings → Computer. Rules: read Auto; write/move/delete Ask (delete → Recycle Bin);
   run Ask (locked). Local part accepted and pushed 2026-10-20; next: P9-09 PC Helper with the VPS.
-- Last pushed to GitHub (`main`) on 2026-10-20 (Phase 9 local part accepted).
+- **Also 2026-10-20:** P5-03 + P4-05 built (`junior/freelance/alerts.py`: Upwork/Fiverr emails; P5-01 waits for his
+  Upwork alerts; freelance paused by him). Phase 10 planned (PLAN 14d) and started: P10-01 (dashboard answers in the
+  WhatsApp chat reach his phone) and P10-02 (skills: `skills/*.md`, `junior/skills.py`) done; next P10-03 Documents Agent.
+  Live calls: ask_junior has all tools; wrong-script call transcripts re-heard in Urdu script.
+- Last pushed to GitHub (`main`) on 2026-10-20 (P10-02).
 
 ## Safety rules (never break)
 
