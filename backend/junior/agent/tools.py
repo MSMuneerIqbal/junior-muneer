@@ -1252,7 +1252,8 @@ async def send_to_me(
         file_link: A Google Drive file's link to attach (from drive_search, or a doc you made with google_doc_create).
             PDFs, Word files and images go as they are; Google Docs go as Word, Sheets as Excel, Slides as PowerPoint.
         as_pdf: Send a Google Doc or Slides as PDF instead (when they ask for a PDF).
-        pc_file: A file on their PC to attach: its full path from pc_find / pc_list (only their allowed folders or a
+        pc_file: A file on their PC to attach ("send me / share / WhatsApp me / email me the file" = the file
+            itself, never its text pasted in): its full path from pc_find / pc_list (only their allowed folders or a
             path they typed; up to 25 MB).
     """
     return await send_to_me_for(ctx.context, where, subject, message, your_words, file_link, as_pdf, pc_file)
