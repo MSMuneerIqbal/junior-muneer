@@ -442,6 +442,7 @@ Each phase ends with you testing it. We only move on when it works for you.
 | **6. Developer Agent** | GitHub MCP (read, then approved actions through the Dev Executor), then the terminal (always Ask) | You ask "what changed in my repo this week?" and get a correct answer; an approved issue gets created |
 | **7. Junior Muneer, full power** | Multi-step tasks across subagents, daily briefing, combined reports, smarter memory | "What happened today?" gives a full, correct summary |
 | **8. WhatsApp + VPS** | Chat, voice notes and approvals on WhatsApp (in the same chat history); Docker, HTTPS, login, 24/7 server | It runs for a week without your PC |
+| **10. Documents Agent + skills** | A Documents & Research Agent makes Docs, Sheets, Slides, PDFs and Markdown in the background from research, your PC and Drive; skills (one instruction file per kind of work) any agent can load; Junior tells you what's running and how long it should take (section 14d) | A long research + document job runs in the background while you chat; "status?" says where it is; the result and links reach the chat you asked from (WhatsApp too) |
 | **9. Your computer** | The Computer Agent reads, writes, moves, deletes (to the Recycle Bin) and runs terminal commands on your PC, only in folders you allow and through your Ask/Auto/Deny rules; built locally first, then the PC Helper for the VPS (section 14c) | From WhatsApp you ask for a file on your PC and get it; an approved change and an approved command run, and a refused one doesn't |
 
 Text chat (phase 0) and voice (phase 1) come first, as you chose. You can still change the order of the later phases.
@@ -503,6 +504,29 @@ Program Files, and Junior's own `data` folder. Links and shortcuts can't lead ou
 logs and limits every action; Pause stops them; each approved action runs at most once; results show on the card and
 in the chat (and on WhatsApp when you asked there).
 
+## 14d. Documents Agent and skills (Phase 10, planned 2026-10-20)
+
+**Why:** long research + document jobs done inside Junior's own answer break easily (a busy provider, a quiet model,
+a 10-minute limit) and keep you waiting. A specialist in the background avoids that, and Junior stays free to chat.
+
+**The Documents & Research Agent:** researches (web search, your PC files, Drive) and makes Google Docs, Sheets,
+**Slides** (Google Slides API: reconnect Google once with one more permission), **PDFs** (a Doc or Slides exported)
+and **Markdown** files (Drive, or your PC through a card). It always runs as a background task. Junior hands it any
+long job by himself ("this needs research and a doc: I've started it"), not only when you say "in the background".
+
+**Skills (like Claude's):** `skills/<name>.md`, one per kind of work (CV review, scholarship roadmap, research report,
+pitch deck, proposal...), each with a name and a one-line description. An agent sees only the list and loads the one
+that fits (a `use_skill` tool), so its instructions stay short and each kind of document comes out the same way.
+You can add one by asking ("make a skill for my weekly client report"); it's checked at startup like the playbooks.
+Any agent can be given skills (e.g. the Computer Agent: "set up a Next.js project").
+
+**Status:** each background task keeps its progress (the step it's on, steps done of planned, when it started) and a
+rough estimate from how long similar tasks took ("usually 3-5 minutes"). Ask "status?" / "what are you working on?"
+anywhere; the dashboard shows a "Running now" list. Results and links go to the chat you asked from.
+
+**Also:** every reply in your WhatsApp chat reaches your phone, even when it started on the dashboard (found live
+2026-10-20). Safety stays the same: the gate, your rules, nothing sent to others without your rule allowing it.
+
 ## 15. Using it on another PC
 
 1. Get the code from your private Git repo.
@@ -549,6 +573,8 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 
 ## 18. Change log
 
+- **v9.2 (2026-10-20):** Phase 10 planned (section 14d): Documents & Research Agent in the background, skills, task
+  status with time estimates, WhatsApp-chat replies always reach the phone.
 - **v9.1 (2026-10-20):** Phase 9 planned (section 14c): the Computer Agent works on your PC through shared computer tools,
   allowed folders, an always-blocked list and the Ask/Auto/Deny rules; deletes go to the Recycle Bin; terminal commands
   are always Ask. Built and live-checked locally first; the PC Helper (for the VPS) comes after. Phase 6's terminal runner

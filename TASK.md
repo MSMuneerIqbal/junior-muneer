@@ -554,3 +554,22 @@ outside your allowed folders (or on the blocked list) can be read or changed.
 - [ ] **P9-09** PC Helper (after the VPS is ready): a small program on your PC that connects out to the server, gets
   only approved jobs, runs them with the same guard, sends results; "your PC is offline" when it isn't running
 - [ ] **P9-10** Acceptance test with the VPS + push
+
+## Phase 10: Documents Agent, skills and task status
+
+> Planned 2026-10-20 (PLAN.md section 14d). Muneer: "write this and don't start yet". Each task is live-checked.
+
+**Phase done when:** a long research + document job (e.g. "make my China scholarship roadmap doc") starts in the
+background while you keep chatting, "status?" says which step it's on and roughly how long is left, and the result
+with its links arrives in the chat you asked from, WhatsApp included.
+
+- [ ] **P10-01** WhatsApp chat replies always reach the phone (also when the message came from the dashboard)
+- [ ] **P10-02** Skills: `skills/*.md` (name, description, instructions), checked at startup, a `use_skill` tool that
+  loads one, "make a skill for ..." from chat. Tests: a broken skill stops startup with a clear error
+- [ ] **P10-03** The Documents & Research Agent (`agents/documents_agent.md`): research + Docs, Sheets, Markdown; Junior
+  hands long jobs to it as background tasks by himself
+- [ ] **P10-04** Task status: progress (step, done of planned, started), a time estimate from similar past tasks, a
+  `task_status` tool ("status?"), a "Running now" list on the dashboard
+- [ ] **P10-05** Slides (Google Slides API, one more Google permission) and PDF export
+- [ ] **P10-06** First skills: CV review, scholarship roadmap, research report, pitch deck, proposal
+- [ ] **P10-07** Your acceptance test + push
