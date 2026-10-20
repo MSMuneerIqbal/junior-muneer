@@ -446,6 +446,22 @@ async def post_to_whatsapp(conversation_id: int | None, text: str) -> None:
         log.exception("Couldn't send a background result to WhatsApp")
 
 
+async def mirror_to_whatsapp(conversation_id: int | None, question: str, reply: str, cards: list[dict]) -> None:
+    """You wrote in your WhatsApp chat from the dashboard: the answer (and its cards) reaches your phone too,
+    with your question on top so it makes sense there (P10-01)."""
+    if not configured() or not is_whatsapp_chat(conversation_id) or not (reply or cards):
+        return
+    owner = get_settings().whatsapp_owner_number
+    asked = " ".join(question.split())
+    asked = asked if len(asked) <= 300 else asked[:300] + "…"
+    try:
+        if reply:
+            await client().send_text(owner, f"_You, on the dashboard:_ {asked}\n\n{reply}")
+        await send_drafts(owner, cards)
+    except Exception:  # noqa: BLE001 - most often WhatsApp's 24-hour window; the dashboard has it anyway
+        log.exception("Couldn't send the dashboard answer to WhatsApp")
+
+
 def _new(msg: dict) -> bool:
     """Keep a message until it's answered. False if Meta already delivered it (it does that at times)."""
     from sqlalchemy.exc import IntegrityError

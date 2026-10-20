@@ -200,6 +200,7 @@ async def chat_socket(websocket: WebSocket) -> None:
             # If you leave the page mid-answer, the answer still finishes and is saved
             # (with its approval cards); it's there when you come back.
             gone = False
+            reply, cards = "", []
             async for event in chat.reply(
                 conversation_id,
                 str(data.get("text", "")),
@@ -209,12 +210,19 @@ async def chat_socket(websocket: WebSocket) -> None:
                 else None,
                 paste=data.get("paste"),
             ):
+                if event["type"] == "done":
+                    reply = event.get("text", "")
+                elif event["type"] == "approval":
+                    cards.append(event["item"])
                 if gone:
                     continue
                 try:
                     await websocket.send_json(event)
                 except (WebSocketDisconnect, RuntimeError, OSError):  # the page was closed
                     gone = True
+            from junior.whatsapp import mirror_to_whatsapp
+
+            await mirror_to_whatsapp(conversation_id, str(data.get("text", "")), reply, cards)
             if gone:
                 log.debug("Chat socket closed mid-answer; the answer was saved")
                 return

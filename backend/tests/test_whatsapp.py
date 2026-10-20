@@ -353,3 +353,39 @@ def test_old_or_twice_failed_messages_are_not_answered_after_a_restart(wa):
         assert wa == [] and not model.calls
         skipped = [a for a in c.get("/api/activity?kind=action").json() if a["name"] == "whatsapp_not_resumed"]
         assert len(skipped) == 2
+
+
+# ---- P10-01: answers in your WhatsApp chat reach your phone, even when you wrote on the dashboard ------------
+
+
+def dashboard(c, conversation_id, text):
+    with c.websocket_connect("/ws/chat") as ws:
+        ws.send_json({"type": "message", "conversation_id": conversation_id, "text": text})
+        while (e := ws.receive_json())["type"] not in ("done", "error"):
+            pass
+    return e
+
+
+def test_a_dashboard_message_in_the_whatsapp_chat_is_answered_on_the_phone_too(wa):
+    model = ScriptedModel([
+        chunked_answer("Salam!"),
+        [function_call("add_to_approvals", {"platform": "linkedin", "item_type": "post", "text": "My post."}, call_id="d1")],
+        chunked_answer("Here's the **draft**."),
+    ])
+    with app(model) as c:
+        signed(c, text("Salam"))
+        wait_for(wa, 1)
+        convo = whatsapp.whatsapp_chat()
+        done = dashboard(c, convo, "draft a LinkedIn post")  # typed on the dashboard, in the WhatsApp chat
+        assert done["type"] == "done"
+        answer, card = wait_for(wa, 3)[1:3]
+        assert answer["text"]["body"] == "_You, on the dashboard:_ draft a LinkedIn post\n\nHere's the *draft*."
+        assert card["type"] == "interactive" and "My post." in card["interactive"]["body"]["text"]
+
+
+def test_other_dashboard_chats_never_go_to_whatsapp(wa):
+    model = ScriptedModel([chunked_answer("Hi there.")])
+    with app(model) as c:
+        assert dashboard(c, None, "hello")["type"] == "done"
+        time.sleep(0.3)
+    assert wa == []
