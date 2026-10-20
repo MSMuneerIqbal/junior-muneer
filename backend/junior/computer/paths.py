@@ -169,9 +169,13 @@ def check(text: str, context=None) -> Path:
         return path
     folders = ", ".join(str(f) for f in allowed_folders()) or "none yet"
     if near := closest_allowed(path):  # spoken "D:\Documents" for a folder really named "D:\Docoments" (found live)
-        rest = path.relative_to(Path(*path.parts[: len(near.parts)]))
-        raise PathRefused(f"{path} isn't an allowed folder, but {near} is, and it's almost the same name: they almost "
-                          f"certainly mean {near / rest}. Use that path now (no need to ask them).")
+        # Use the allowed folder: still inside what they allowed, so nothing new is opened. The tools' answers show
+        # the real path. (A hint alone was ignored: the agents treat "NOT done" as final.)
+        corrected = _real(near / path.relative_to(Path(*path.parts[: len(near.parts)])))
+        if reason := blocked_reason(corrected):
+            raise PathRefused(reason)
+        if corrected == near or corrected.is_relative_to(near):
+            return corrected
     raise PathRefused(
         f"{path} is outside the allowed folders ({folders}). They can type the full path in their own message to "
         "use it this time, or add the folder in Settings → Computer."
