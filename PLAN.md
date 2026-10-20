@@ -1,6 +1,8 @@
 # Junior Muneer: Project Plan (v9: safe workflow, no browser bots, more providers)
 
-> Status: Phases 0, 1, 2, 2b, 4, 5 and 7 built; Phase 8 (WhatsApp + server) in progress; 3 and 6 paused. See TASK.md.
+> Status (2026-10-20): Phases 0, 1, 2, 2b, 4, 5 and 7 built; Phase 9 (your computer) built locally, the PC Helper
+> waits for the VPS; Phase 10 (Documents Agent + skills) in progress; Phase 8 (WhatsApp works; server waits for the
+> VPS); 3 and 6 paused. See TASK.md.
 >
 > **What changed in v7:** no browser automation anywhere. Data comes from official APIs, email alerts, RSS or text you paste in.
 > Anything without an official API is copy and paste: you post or submit it yourself in your normal browser.
@@ -573,6 +575,11 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 
 ## 18. Change log
 
+- **v9.3 (2026-10-20):** built: Phase 9 local part (P9-01 to P9-08, accepted; PC Helper waits for the VPS); P5-03 + P4-05
+  (Upwork/Fiverr emails; freelance then paused by Muneer); P10-01 and P10-02 (skills). Also: voice messages with Gemini
+  (engine + hearing/speaking model in Settings), emails to any address with a file from your PC (the Send-email rule
+  decides), live calls with all of Junior's tools and call transcripts in Urdu script, and reliability fixes from
+  live use (busy providers fall back to OpenAI in background tasks too; tools and quiet thinking don't count as silence).
 - **v9.2 (2026-10-20):** Phase 10 planned (section 14d): Documents & Research Agent in the background, skills, task
   status with time estimates, WhatsApp-chat replies always reach the phone.
 - **v9.1 (2026-10-20):** Phase 9 planned (section 14c): the Computer Agent works on your PC through shared computer tools,

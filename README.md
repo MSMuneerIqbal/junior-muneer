@@ -1,8 +1,8 @@
 # Junior Muneer
 
 Your personal AI assistant and friend. He chats in English and Urdu, remembers what you tell him, and works
-for you: social posts, Upwork and Fiverr proposals, your Gmail, Google Docs, Sheets, Calendar and Drive, the news,
-voice messages and live calls, on the dashboard and on WhatsApp.
+for you: social posts, Upwork and Fiverr proposals, your Gmail, Google Docs, Sheets, Calendar and Drive, files and
+the terminal on your PC, the news, voice messages and live calls, on the dashboard and on WhatsApp.
 
 - **Two modes.** Start a message with **"Junior …"** and he works like a professional junior (focused, no emojis).
   Anything else, and he's your friend: relaxed, jokes, emojis welcome.
@@ -18,15 +18,17 @@ The design is in [PLAN.md](PLAN.md); progress and set-up steps per feature are i
 | Area | What |
 |---|---|
 | **Chat** | Streaming chat, memory (only from your own words), web search, file reading, Show work on every answer |
-| **Voice** | Voice messages (🎙), spoken answers, and **📞 live calls** with **OpenAI Realtime** or **Google Gemini Live** |
-| **WhatsApp** | Text, voice notes (answered by voice), photos and documents; draft cards with Approve buttons; important-email alerts |
+| **Voice** | Voice messages (🎙), spoken answers, and **📞 live calls** with **OpenAI Realtime** or **Google Gemini Live**; on a call he can do everything chat can (files, email, Docs, your PC) |
+| **WhatsApp** | Text, voice notes (answered by voice), photos and documents; cards with Approve buttons (drafts, PC actions); important-email alerts; anything you type on the dashboard in your WhatsApp chat is answered on your phone too |
 | **Social** | Writing team (Writer, Checker, Humanizer), Social Media Manager, ideas, planned posts, images on drafts |
-| **Freelance** | Upwork job scoring and scam signs, proposals with screening answers, client replies, Fiverr orders and reminders |
+| **Freelance** | Upwork job scoring and scam signs, proposals with screening answers, client replies, Fiverr orders and reminders; Upwork/Fiverr notification emails read by themselves (job alerts scored, orders tracked, client messages checked for scams) |
 | **Gmail** | Inbox watcher (sorts new mail, important ones to WhatsApp), read and search, drafts sent after Approve (or Auto for new emails) |
 | **Google** | Docs and Sheets (create, read), Calendar (add, list, in the briefing), Drive (find, read, send to you, save files you send) |
 | **News** | AI and Pakistan news from official sources only (fact guard in code), top 5 first, top 5 AI news by email each morning |
 | **Every day** | Morning briefing, "what happened today?", background tasks, your own RSS feeds, weekly memory tidy-up |
-| **Send to you** | "Email me / WhatsApp me this": text, Drive files, docs as Word or PDF |
+| **Send to you** | "Email me / WhatsApp me this": text, Drive files, files from your PC, docs as Word or PDF |
+| **Your PC** | The **Computer Agent**: find, read, create, change, move and delete files (deletes go to the Recycle Bin) and run terminal commands, only in your allowed folders; changes and commands are cards you approve |
+| **Skills** | Step-by-step instruction files in `skills/` for kinds of work ("make a skill for ..." from chat); agents load the one that fits |
 
 ## Models and costs (Settings)
 
@@ -36,9 +38,9 @@ The design is in [PLAN.md](PLAN.md); progress and set-up steps per feature are i
 | Web search | OpenAI (hosted search), **DeepSeek Search API** (~$0.0008 a search) or **Gemini** (Google Search + reading links, free tier) |
 | Reading photos | OpenAI's small vision model or **DeepSeek V4.1 Flash** |
 | Live calls | **OpenAI Realtime** (Natural ~$0.05/min, Economy ~$0.02/min), **Gemini 3.8 Live** or **Gemini 2.5 Flash Live** (~$0.02/min, free tier) |
-| Voice messages | OpenAI transcribe and text-to-speech |
+| Voice messages | **OpenAI** or **Gemini** (Settings → Voice: the engine, plus the hearing and speaking model). Gemini's voice has 10 replies a day on a free key; then OpenAI speaks |
 
-The **Today** panel shows today's spend by type, by provider (OpenAI, DeepSeek) and web search by engine, against
+The **Today** panel shows today's spend by type, by provider (OpenAI, DeepSeek, Gemini) and web search by engine, against
 your daily cap. Every call to an AI is in **Activity**.
 
 ## Start it
@@ -81,7 +83,9 @@ Run it on **one PC at a time**. A Docker set-up for a server (Caddy with HTTPS a
 | Text from another site | 📋 **Paste box** (choose where it's from and what it is, then say what to do) |
 | Attach a file | 📎, drag it onto the chat, or paste a screenshot |
 | Change a setting by asking | "Junior, switch web search to DeepSeek", "reply in Urdu from now on" |
-| Emails to other people | "Junior, email sara@x.com that…": a draft and a card; **Approve** sends it |
+| Emails to other people | "Junior, email sara@x.com that…" (a file from your PC too): your Send-email rule decides: Ask = a card, **Approve** sends it; Auto = sent at once |
+| Files and commands on your PC | "Junior, what's in my Downloads?", "run git status in ...": changes and commands are cards; **Settings → Computer** for your allowed folders |
+| Make a skill | "Junior, make a skill for my weekly client report" (saved in `skills/`) |
 | See or edit what he remembers | **Memory** |
 | See everything he did, with costs | **Activity** |
 | Stop all background work and actions | **Pause everything** in the Today panel |
@@ -99,6 +103,7 @@ Run it on **one PC at a time**. A Docker set-up for a server (Caddy with HTTPS a
 | `agents/` | One file per agent (personality, instructions, model, tools) + `models.toml` (models and prices) |
 | `playbooks/` | One expert file per platform |
 | `news/` | The official news sources |
+| `skills/` | Skills: instructions for kinds of work, loaded when needed |
 | `data/` | Database, backups, files you send (never in Git) |
 
 ## Voice notes
@@ -109,5 +114,7 @@ Run it on **one PC at a time**. A Docker set-up for a server (Caddy with HTTPS a
 
 ## Privacy
 
-Chats go to the AI you chose (OpenAI or DeepSeek), live calls to OpenAI or Google, searches to OpenAI or DeepSeek.
-Everything else stays in `data\` on your PC. API keys live only in `backend\.env`, which is never committed.
+Chats go to the AI you chose (OpenAI, DeepSeek or Gemini), live calls to OpenAI or Google, searches to OpenAI, DeepSeek
+or Google. Everything else stays in `data\` on your PC. API keys live only in `backend\.env`, which is never committed.
+On your PC, Junior can only reach your allowed folders; keys, passwords, `.env` files, `.ssh`, AppData and system
+folders are always blocked, and terminal commands run without your keys.
