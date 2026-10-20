@@ -559,9 +559,14 @@ async def post_approve(item_id: int, request: Request, body: ApproveBody | None 
     if senders is None or later or not approved.action_type or senders.for_action(approved.action_type) is None:
         return approved
     try:
-        return await send_item(item_id, senders)
+        done = await send_item(item_id, senders)
     except SendError:
         return get_item(item_id)  # stays approved; the card shows why it wasn't sent
+    if done.platform == "computer" and done.status == "posted":  # asked on WhatsApp, approved here: the result goes there too
+        from junior.whatsapp import pc_result, post_to_whatsapp
+
+        await post_to_whatsapp(done.conversation_id, f"Done on your PC: {pc_result(done.model_dump(mode='json'))}")
+    return done
 
 
 @router.post("/api/approvals/{item_id}/posted", response_model=ApprovalOut)

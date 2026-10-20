@@ -541,8 +541,13 @@ outside your allowed folders (or on the blocked list) can be read or changed.
     `C:\Users\Muneer\...` instead of `Desktop\...` (the guard refused it); now paths are passed exactly as you wrote them
     and the Computer Agent is told your real user folder. Also: a waiting card is never called "created". Fake-AI
     trigger `pc list ...` / `pc write NAME: TEXT` for the e2e test.
-- [ ] **P9-07** WhatsApp: computer approvals with Approve/Reject buttons, results sent back, "send me that file" from
+- [x] **P9-07** WhatsApp: computer approvals with Approve/Reject buttons, results sent back, "send me that file" from
   your PC. Live check on WhatsApp
+  - **Done 2026-10-20.** PC cards on WhatsApp say what they do ("Your PC: Create ...", the change, or "run this
+    command in ..."), with Approve/Reject; Approve runs it and "Done on your PC: ..." comes back (command output too); a
+    card approved on the dashboard also reports back on WhatsApp; `send_to_me` takes `pc_file` (25 MB, same guard; `.env`
+    refused). Live: a real PC card and `plan.txt` from `Desktop\junior-pc-test` reached his WhatsApp; his tap on Approve
+    is the last step (also in P9-08).
 - [ ] **P9-08** Your acceptance test (local), then push
 - [ ] **P9-09** PC Helper (after the VPS is ready): a small program on your PC that connects out to the server, gets
   only approved jobs, runs them with the same guard, sends results; "your PC is offline" when it isn't running

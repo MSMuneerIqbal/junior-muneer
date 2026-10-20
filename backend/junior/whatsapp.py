@@ -275,7 +275,31 @@ async def send_drafts(to: str, items: list[dict]) -> None:
         body = f"{item['platform_label']} {item['item_type']}{score}\n\n{text}"
         if item.get("platform") == "email":  # who it goes to, and that Approve sends it
             body = f"Email {item['title']}\n\n{text}\n\nApprove sends it from your Gmail."
+        if item.get("platform") == "computer":
+            if item.get("status") == "posted":  # your rule was Auto: already done, nothing to tap
+                await client().send_text(to, f"Done on your PC: {pc_result(item)}")
+                continue
+            body = pc_card(item, text)
         await client().send_buttons(to, body, _buttons(item))
+
+
+def pc_card(item: dict, text: str) -> str:
+    """A PC action as a WhatsApp message: what it does, the change or the command, and what Approve does."""
+    meta = item.get("meta", {})
+    kind = item.get("item_type")
+    if kind == "command":
+        return f"Your PC: run this command in {meta.get('path', '')}\n\n{text}\n\nApprove runs it; the output comes back here."
+    if kind == "file" and meta.get("diff"):
+        diff = meta["diff"] if len(meta["diff"]) <= DRAFT_PREVIEW else meta["diff"][:DRAFT_PREVIEW] + "…"
+        return f"Your PC: {item['title']}\n\n{diff}\n\nApprove makes the change (the old version goes to the Recycle Bin)."
+    if kind == "file":
+        return f"Your PC: {item['title']}\n\n{text}\n\nApprove creates it."
+    return f"Your PC: {text}\n\nApprove does it."
+
+
+def pc_result(item: dict) -> str:
+    result = str(item.get("meta", {}).get("result", "")) or item.get("title", "")
+    return result if len(result) <= MAX_CHARS - 200 else result[: MAX_CHARS - 200] + "\n… (more on the dashboard)"
 
 
 async def answer(app: Any, text: str, audio_id: str | None = None, audio_seconds: float | None = None) -> None:
@@ -337,6 +361,10 @@ async def on_button(button_id: str, app: Any = None) -> str:
             item = await send_item(item.id, senders)
         except SendError as e:
             return f"Approved, but not sent: {e}"
+        if item.platform == "computer":
+            if item.status == "posted":
+                return f"Done on your PC: {pc_result(item.model_dump(mode='json'))}"
+            return f"Approved, but it didn't run: {item.meta.get('last_error', 'check the dashboard')}"
         if item.status == "posted":
             return f"Sent: {item.title}."
         return f"Approved, but it didn't go out: {item.meta.get('last_error', 'check the dashboard')}."

@@ -1134,6 +1134,32 @@ async def _drive_file(file_link: str, as_pdf: bool) -> tuple[tuple[str, bytes, s
         return None, f"the file couldn't be attached ({e}), so its link was sent instead"
 
 
+MAX_PC_FILE_BYTES = 25 * 1024 * 1024  # Gmail's limit for one email
+
+
+def _pc_file(context: TurnContext, path_text: str) -> tuple[tuple[str, bytes, str] | None, str]:
+    """A file on their PC to attach: checked by the path guard and the computer.read rule. (file, why not)."""
+    import mimetypes
+
+    from junior.audit import audit
+    from junior.computer.paths import PathRefused, check
+    from junior.permissions import decide
+
+    if decide("computer.read", from_outside=False).rule != "auto":
+        return None, "reading files on their PC is turned off (Settings → Permissions)"
+    try:
+        path = check(path_text, context)
+    except PathRefused as e:
+        return None, str(e)
+    if not path.is_file():
+        return None, f"{path} isn't a file on their PC"
+    size = path.stat().st_size
+    if size > MAX_PC_FILE_BYTES:
+        return None, f"{path.name} is {size / 1024 / 1024:.0f} MB; files over 25 MB can't be sent"
+    audit("tool_call", "pc_send", detail={"path": str(path), "bytes": size}, conversation_id=context.conversation_id)
+    return (path.name, path.read_bytes(), mimetypes.guess_type(path.name)[0] or "application/octet-stream"), ""
+
+
 async def send_to_me_for(
     context: TurnContext,
     where: str,
@@ -1142,6 +1168,7 @@ async def send_to_me_for(
     your_words: str,
     file_link: str = "",
     as_pdf: bool = False,
+    pc_file: str = "",
 ) -> str:
     """Send the user something they asked for, by Gmail or WhatsApp: only ever to their own address or number."""
     from junior import gate
@@ -1166,7 +1193,11 @@ async def send_to_me_for(
     message = await polish(message, f"a message for them to read on {'Gmail' if where == 'gmail' else 'WhatsApp'}", context)
 
     attachment, note = (None, "")
-    if file_link.strip():
+    if pc_file.strip():
+        attachment, why = _pc_file(context, pc_file)
+        if attachment is None:
+            return f"NOT sent: {why}."
+    elif file_link.strip():
         attachment, note = await _drive_file(file_link, as_pdf)
         if attachment is None:
             message = f"{message.rstrip()}\n\n{file_link.strip()}"
@@ -1207,9 +1238,10 @@ async def send_to_me(
     your_words: str,
     file_link: str = "",
     as_pdf: bool = False,
+    pc_file: str = "",
 ) -> str:
-    """Send the user something they asked for, on Gmail or WhatsApp: news, a draft, notes, a plan, or a file from
-    their Google Drive (their CV, a PDF, a doc you made). It always goes to their own Gmail or their own WhatsApp;
+    """Send the user something they asked for, on Gmail or WhatsApp: news, a draft, notes, a plan, a file from
+    their Google Drive (their CV, a PDF, a doc you made), or a file from their PC. It always goes to their own Gmail or their own WhatsApp;
     nobody else.
 
     Args:
@@ -1220,8 +1252,10 @@ async def send_to_me(
         file_link: A Google Drive file's link to attach (from drive_search, or a doc you made with google_doc_create).
             PDFs, Word files and images go as they are; Google Docs go as Word, Sheets as Excel, Slides as PowerPoint.
         as_pdf: Send a Google Doc or Slides as PDF instead (when they ask for a PDF).
+        pc_file: A file on their PC to attach: its full path from pc_find / pc_list (only their allowed folders or a
+            path they typed; up to 25 MB).
     """
-    return await send_to_me_for(ctx.context, where, subject, message, your_words, file_link, as_pdf)
+    return await send_to_me_for(ctx.context, where, subject, message, your_words, file_link, as_pdf, pc_file)
 
 
 TOOL_FACTORIES["email"] = lambda: [send_to_me]
