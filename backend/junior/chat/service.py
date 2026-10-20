@@ -419,9 +419,26 @@ class ChatService:
                 }
             )
             result: TurnResult | None = None
-            async for event in stream_turn(agent, model_name, router, items, context, budget):
-                if event["type"] == "final":
-                    result = event["result"]
+            try:
+                async for event in stream_turn(agent, model_name, router, items, context, budget):
+                    if event["type"] == "final":
+                        result = event["result"]
+            except (RateLimitError, InternalServerError, APIConnectionError) as e:
+                # Gemini or DeepSeek busy (e.g. "503 high demand"): OpenAI does the task instead, like in chat.
+                # Only when nothing was done yet (no cards, emails or changes), so nothing happens twice.
+                untouched = not (context.actions_done or context.approval_ids or context.computer_actions)
+                if router.provider_of(model_name) == "openai" or not untouched:
+                    raise
+                spec = self.registry.get(MAIN_AGENT)
+                backup = router.model_for(MAIN_AGENT, spec.model)
+                if router.provider_of(backup) != "openai":
+                    backup = router.tiers["strong"]
+                log.warning("Background task %s: %s didn't answer (%s); using %s", task_id, model_name, type(e).__name__, backup)
+                agent, model_name = build_agent(spec, router, provider, model_override=backup)
+                result = None
+                async for event in stream_turn(agent, model_name, router, items, context, budget):
+                    if event["type"] == "final":
+                        result = event["result"]
             assert result is not None
             result.text = f"**Done in the background: {title}**\n\n{result.text}"
             message_id = self._finish(conversation_id, result)
@@ -432,6 +449,11 @@ class ChatService:
         except Exception as e:  # posted to the chat; details in the log
             if isinstance(e, APIConnectionError):
                 why = no_answer_message(e)
+            elif isinstance(e, (RateLimitError, InternalServerError)):
+                log.warning("Background task %s: the AI is busy: %s", task_id, e)
+                why = ("The AI service was busy (too many requests right now), and part of the task was already done, "
+                       "so I didn't start it again. Ask me again in a minute." if context.actions_done or context.approval_ids
+                       else "The AI service was busy (too many requests right now). Ask me again in a minute.")
             elif isinstance(e, (NoApiKeyError, BudgetExceeded)):
                 why = str(e)
             else:

@@ -112,3 +112,46 @@ def test_tasks_stopped_by_a_restart_are_marked_failed():
         assert recover_interrupted() == 1
         task = c.get("/api/tasks").json()[0]
         assert task["status"] == "failed" and "restarted" in task["error"]
+
+
+class BusyAfter(ScriptedModel):
+    """Gemini that answers the chat, then says "503 high demand" for the background turn (found live)."""
+
+    async def stream_response(self, *args, **kwargs):
+        if not self._steps:  # nothing scripted left: the background turn
+            import httpx
+            import openai
+
+            request = httpx.Request("POST", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions")
+            raise openai.InternalServerError("This model is currently experiencing high demand.",
+                                             response=httpx.Response(503, request=request), body=None)
+        async for event in super().stream_response(*args, **kwargs):
+            yield event
+
+
+def test_a_busy_gemini_hands_the_background_task_to_openai():
+    gemini = BusyAfter([[START], chunked_answer("I'm on it.")])
+    openai_model = ScriptedModel([[assistant_message("Here are your 3 posts.")]])
+    used = []
+
+    def provider(name):
+        used.append(name)
+        return gemini if name.startswith("gemini:") else openai_model
+
+    with TestClient(create_app(model_provider=lambda: provider)) as c:
+        c.patch("/api/settings", json={"main_model": "gemini:gemini-3.1-flash-lite"})
+        convo = chat(c, ASK)[-1]["conversation_id"]
+        task = wait_for(c, convo, "done")
+        last = c.get(f"/api/conversations/{convo}/messages").json()[-1]["content"]
+    assert last == "**Done in the background: 3 LinkedIn posts**\n\nHere are your 3 posts."
+    assert used[-1] == "gpt-6.1-sol" and task["status"] == "done"
+
+
+def test_busy_everywhere_gives_a_plain_message_not_the_raw_error():
+    gemini = BusyAfter([[START], chunked_answer("I'm on it.")])
+
+    with TestClient(create_app(model_provider=lambda: (lambda name: gemini))) as c:
+        convo = chat(c, ASK)[-1]["conversation_id"]  # OpenAI is "busy" too here
+        wait_for(c, convo, "failed")
+        last = c.get(f"/api/conversations/{convo}/messages").json()[-1]["content"]
+    assert "The AI service was busy" in last and "Ask me again in a minute" in last and "Error code" not in last
