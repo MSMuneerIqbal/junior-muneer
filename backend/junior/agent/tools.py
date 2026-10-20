@@ -1378,3 +1378,68 @@ async def ask_computer_agent(ctx: Ctx, task: str) -> str:
 
 
 TOOL_FACTORIES["computer_agent"] = lambda: [ask_computer_agent]
+
+
+# ---- skills (P10-02) ------------------------------------------------------------------------
+
+
+def use_skill_for(context: TurnContext, name: str, agent: str = "") -> str:
+    from junior.audit import audit
+    from junior.skills import SkillError, load_skills
+
+    try:
+        skills = load_skills()
+    except SkillError as e:
+        return f"NOT available: {e}"
+    skill = skills.get((name or "").strip().lower())
+    if skill is None:
+        return f"There's no skill named {name!r}. The skills: {', '.join(sorted(skills)) or 'none yet'}."
+    audit("tool_call", "use_skill", detail={"skill": skill.name, "agent": agent}, conversation_id=context.conversation_id)
+    return f"# Skill: {skill.name}\n{skill.description}\n\n{skill.instructions}\n\n(Follow these steps for this job.)"
+
+
+def save_skill_for(context: TurnContext, name: str, description: str, instructions: str, your_words: str) -> str:
+    from junior import gate
+    from junior.audit import audit
+    from junior.skills import SkillError, save_skill
+
+    if context.outside_content_seen:  # a skill steers future work: never from a web page, an email or a paste
+        return ("NOT saved: this turn includes outside text (web results, files, emails or a paste), so a skill can't be "
+                "made from it. Ask them to describe the skill again in a new message.")
+    if not gate.you_said(context, your_words):
+        return "NOT saved: copy their own words asking for this skill into your_words (word for word). Only when they ask."
+    try:
+        path = save_skill(name, description, instructions)
+    except SkillError as e:
+        return f"NOT saved: {e}"
+    audit("action", "skill_saved", detail={"skill": path.stem}, conversation_id=context.conversation_id)
+    return f"Saved the skill {path.stem!r} (skills/{path.name}). From now on it's in the skills list. Tell them in one line."
+
+
+@function_tool
+def use_skill(ctx: Ctx, name: str) -> str:
+    """Load a skill's instructions (see "Your skills" in your instructions) before doing that kind of work, then
+    follow them.
+
+    Args:
+        name: The skill's name, e.g. cv_review.
+    """
+    return use_skill_for(ctx.context, name)
+
+
+@function_tool
+def save_skill(ctx: Ctx, name: str, description: str, instructions: str, your_words: str) -> str:
+    """Make a new skill when they ask ("make a skill for my weekly client report"): a short name, a one-line
+    description of when to use it, and clear step-by-step instructions written from what they told you.
+
+    Args:
+        name: lowercase_with_underscores, e.g. weekly_client_report.
+        description: One line: what it's for and when to use it.
+        instructions: The steps, what to check, and the shape of the result, in Markdown.
+        your_words: Their own words asking for this skill (copied word for word).
+    """
+    return save_skill_for(ctx.context, name, description, instructions, your_words)
+
+
+TOOL_FACTORIES["skills"] = lambda: [use_skill, save_skill]
+

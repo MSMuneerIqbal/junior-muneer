@@ -107,7 +107,14 @@ def render_instructions(spec: AgentSpec, s: dict, query: str = "") -> str:
         profile=profile_for_chat() if "{{profile}}" in spec.instructions else "",
         status=_status(s),
         mode=mode_note(query),
+        skills=_skills_for(spec) if "{{skills}}" in spec.instructions else "",
     )
+
+
+def _skills_for(spec: AgentSpec) -> str:
+    from junior.skills import skills_list
+
+    return skills_list(spec.name)
 
 
 def _status(s: dict) -> str:

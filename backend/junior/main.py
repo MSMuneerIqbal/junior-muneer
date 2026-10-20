@@ -41,6 +41,7 @@ from junior.news.sources import load_sources
 from junior.permissions import router as permissions_router
 from junior.playbooks import load_playbooks
 from junior.playbooks import router as playbooks_router
+from junior.skills import router as skills_router
 from junior.profile import router as profile_router
 from junior.registry import load_registry
 from junior.scheduler import scheduler_loop
@@ -111,6 +112,9 @@ def create_app(
         get_router()
         app.state.registry = load_registry()
         app.state.playbooks = load_playbooks()
+        from junior.skills import load_skills
+
+        app.state.skills = load_skills()  # a broken skill file stops startup with a clear error
         app.state.news_sources = load_sources()
         app.state.senders = senders() if senders is not None else default_senders(settings)
         recover_interrupted_sends()
@@ -180,6 +184,7 @@ def create_app(
     app.include_router(gemini_router)
     app.include_router(profile_router)
     app.include_router(playbooks_router)
+    app.include_router(skills_router)
     app.include_router(permissions_router)
     app.include_router(approvals_router)
     app.include_router(news_router)

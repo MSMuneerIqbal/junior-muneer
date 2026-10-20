@@ -84,7 +84,7 @@ def test_turned_off_means_the_agent_isnt_even_asked(home):
 def test_only_the_computer_agent_can_change_things_and_junior_can_only_look():
     registry = load_registry()
     agent = registry.get("computer_agent")
-    assert agent.tools == ("computer",)
+    assert agent.tools == ("computer", "skills")
     assert set(agent.action_types) == {"computer.write", "computer.move", "computer.delete", "computer.run"}
     junior = registry.get("junior_muneer")
     assert "computer_read" in junior.tools and "computer_agent" in junior.tools and "computer" not in junior.tools

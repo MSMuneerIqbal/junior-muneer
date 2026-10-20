@@ -13,6 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY agents /app/agents
 COPY playbooks /app/playbooks
 COPY news /app/news
+COPY skills /app/skills
 COPY backend /app/backend
 
 # Keys come from backend/.env through docker-compose (env_file), never baked into the image.
