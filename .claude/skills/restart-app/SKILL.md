@@ -21,6 +21,7 @@ the safety check misreads `taskkill /fi` in chained commands):
 
 ```powershell
 Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+& taskkill.exe /fi "WINDOWTITLE eq Junior Muneer - backend*" /t /f 2>$null | Out-Null   # close the old window too (else they pile up: 31 once)
 Start-Process cmd.exe -ArgumentList '/k', 'title Junior Muneer - backend && cd /d "C:\Users\MUNEER IQBAL\Desktop\junior-muneer\backend" && .venv\Scripts\python -m uvicorn junior.main:app --host 127.0.0.1 --port 8000' -WindowStyle Minimized
 for ($i = 0; $i -lt 40; $i++) { try { Invoke-RestMethod http://127.0.0.1:8000/health -TimeoutSec 2 | Out-Null; "backend up"; break } catch { Start-Sleep -Seconds 2 } }
 ```
