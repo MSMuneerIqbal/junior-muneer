@@ -472,3 +472,40 @@ def test_microphone_setting_picks_noise_reduction(mic, expected):
     set_setting("mic_type", mic)
     _, _, gw = run_call([])
     assert gw.sessions[0]["audio"]["input"]["noise_reduction"] == expected
+
+
+def test_ask_junior_can_do_things_on_a_call_with_your_own_words():
+    """Found live: on a call he said he had no access to files or email. ask_junior now gets what you said (for the
+    'your own words' checks) and the turn isn't marked as outside text while he works (so your rules apply)."""
+    seen = {}
+
+    class Recording(ScriptedModel):
+        async def get_response(self, system_instructions, input, *args, **kwargs):
+            seen["input"] = str(input)
+            return await super().get_response(system_instructions, input, *args, **kwargs)
+
+        async def stream_response(self, system_instructions, input, *args, **kwargs):
+            seen["input"] = str(input)
+            async for event in super().stream_response(system_instructions, input, *args, **kwargs):
+                yield event
+
+    model = Recording([chunked_answer("Sent your CV to ali@example.com.")])
+    call, _, gw = run_call(
+        [
+            heard("Junior, mera CV ali@example.com ko email kar do"),
+            tool("ask_junior", '{"question": "Email his CV to ali@example.com"}', "a1"),
+        ],
+        model,
+    )
+    assert "What they just said, word for word" in seen["input"]
+    assert "mera CV ali@example.com ko email kar do" in seen["input"]
+    assert not call.context.outside_content_seen and call.context.memory_locked
+
+
+def test_the_call_agent_knows_it_can_act_through_ask_junior():
+    from junior.calls import ASK_JUNIOR_TOOL
+    from junior.registry import load_registry
+
+    assert "DO or FIND anything" in ASK_JUNIOR_TOOL["description"]
+    voice = load_registry().get("junior_muneer_voice").instructions
+    assert "never say you can't" in voice and "You can't post, send" not in voice

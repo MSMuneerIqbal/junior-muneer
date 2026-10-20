@@ -51,7 +51,9 @@ MEDIA_TYPES = {"webm": "audio/webm", "ogg": "audio/ogg", "m4a": "audio/mp4", "mp
 TRANSCRIBE_PROMPT = (
     "The speaker is {name}, from Pakistan, talking to their AI assistant Junior Muneer. "
     "Write down exactly what they say, in the language they say it; never translate. "
-    "Write Urdu in Urdu script (not Hindi/Devanagari, not Roman Urdu) and English in English. "
+    "They may speak Urdu, English, Punjabi or Saraiki (Pakistan), often mixed. Write Urdu, Punjabi and Saraiki "
+    "in Urdu script (Shahmukhi) - never Hindi/Devanagari, Gurmukhi, Bengali, Chinese or Roman Urdu - and English "
+    "in English. "
     "If there is no speech (only breathing, coughs or background noise), write nothing."
 )
 # Average log-probability of the transcript's words. Measured: whole sentences score
@@ -73,7 +75,13 @@ def is_noise(text: str, logprobs) -> bool:
         return True
     avg = average_logprob(logprobs)
     return avg is not None and avg < NOISE_LOGPROB
-DEVANAGARI = re.compile(r"[\u0900-\u097F]")
+# Scripts Urdu, Punjabi or Saraiki speech must never come out in (heard live 2026-10-20: Hindi, Bengali, Chinese):
+# Devanagari, Bengali, Gurmukhi and the other Indian scripts, Chinese, Japanese, Korean.
+DEVANAGARI = re.compile(r"[\u0900-\u0DFF\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF]")
+
+
+def wrong_script(text: str) -> bool:
+    return bool(DEVANAGARI.search(text or ""))
 
 
 def audio_dir() -> Path:

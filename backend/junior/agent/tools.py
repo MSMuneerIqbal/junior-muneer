@@ -186,7 +186,7 @@ def _normalize(text: str) -> str:
 
 
 def _refuse_if_outside(context: TurnContext, action: str) -> str | None:
-    if context.outside_content_seen:
+    if context.outside_content_seen or context.memory_locked:
         name = context.settings["user_name"]
         return (
             f"NOT {action}: this turn includes outside text (web results or past chats), "

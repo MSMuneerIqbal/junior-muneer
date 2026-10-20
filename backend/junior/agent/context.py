@@ -28,6 +28,7 @@ class TurnContext:
     # Set as soon as outside text (web results, past answers, pasted text...)
     # enters this turn. While set, memory saving is refused.
     outside_content_seen: bool = False
+    memory_locked: bool = False  # live calls: the full Junior is answering this turn, so no memory saving
     # Events from tools (e.g. "memory updated") for the chat to show.
     pending_events: list[dict[str, Any]] = field(default_factory=list)
     # Your message this turn, word for word (the writing team writes about exactly this).

@@ -166,7 +166,7 @@ def test_urdu_language_setting_forces_urdu(client):
 def test_prompt_asks_for_urdu_script(client):
     upload(client)
     assert "never translate" in RecordingVoice.prompts[-1]
-    assert "Write Urdu in Urdu script" in RecordingVoice.prompts[-1]
+    assert "Write Urdu, Punjabi and Saraiki in Urdu script" in RecordingVoice.prompts[-1]  # Saraiki/Punjabi: found live
     # No example sentences: on noise the model would write them out as fake messages.
     assert not any("؀" <= ch <= "ۿ" for ch in RecordingVoice.prompts[-1])
 

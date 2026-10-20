@@ -54,6 +54,7 @@ GEMINI_MODELS = ("gemini-3.8-live", "gemini-2.5-flash-native-audio-preview-12-20
 GOOGLE_SEARCH_LIVE = {"gemini-2.5-flash-native-audio-preview-12-2025"}
 SESSION_LIMIT_SECONDS = 15 * 60  # Gemini Live: audio-only sessions last up to 15 minutes
 INPUT_MIME = "audio/pcm;rate=16000"
+MIC_KEEP_BYTES = 16000 * 2 * 90  # 90 seconds of 16 kHz 16-bit mic audio
 
 # Your words for the Gemini session, word for word.
 URDISH_INSTRUCTION = (
@@ -220,6 +221,10 @@ class GeminiCall:
         self.call: LiveCall | None = None
         self.you, self.junior = "", ""  # this turn's transcript so far
         self.prices = get_router().audio_price(model)
+        # Your voice since your last saved line: Gemini Live writes Urdu, Punjabi and Saraiki in Bengali, Hindi or
+        # Chinese script (tested), so then we hear it again with our own speech-to-text (voice.py).
+        self.mic = bytearray()
+        self.you_saving: asyncio.Task | None = None
 
     async def start(self) -> None:
         local = datetime.now(zone(self.settings["timezone"]))
@@ -290,6 +295,9 @@ class GeminiCall:
                 return
             if message.get("bytes"):
                 await self.gw.send_audio(session, message["bytes"])
+                self.mic.extend(message["bytes"])
+                if len(self.mic) > MIC_KEEP_BYTES:  # keep only the last 90 seconds
+                    del self.mic[: len(self.mic) - MIC_KEEP_BYTES]
             elif message.get("text"):
                 try:
                     command = json.loads(message["text"])
@@ -317,7 +325,10 @@ class GeminiCall:
             heard = getattr(content, "input_transcription", None)
             if heard is not None and getattr(heard, "text", None):
                 self.you += heard.text
-                await self._tell({"type": "you", "text": self.you, "final": False})
+                from junior.voice import wrong_script
+
+                # Wrong script: show "…" until our own speech-to-text has it right.
+                await self._tell({"type": "you", "text": "…" if wrong_script(self.you) else self.you, "final": False})
             said = getattr(content, "output_transcription", None)
             if said is not None and getattr(said, "text", None):
                 if self.you:
@@ -347,6 +358,8 @@ class GeminiCall:
             await self._tell({"type": "checking", "label": fc.name})
             if self.you:
                 await self._save_you()
+            if self.you_saving is not None:  # tools need your words saved (the "your own words" checks)
+                await self.you_saving
             if self.call.context.helpers is None and fc.name in ("web_search", "ai_news", "pakistan_news", "ask_junior"):
                 result = "That needs the OpenAI key (OPENAI_API_KEY in backend/.env), which isn't set. Say so briefly."
             else:
@@ -356,20 +369,45 @@ class GeminiCall:
             await self.gw.send_tool_responses(session, responses)
 
     async def _save_you(self) -> None:
-        call, text = self.call, self.you.strip()
+        from junior.voice import wrong_script
+
+        text, audio = self.you.strip(), bytes(self.mic)
         self.you = ""
+        self.mic.clear()
         if not text:
             return
+        if wrong_script(text) and audio:
+            # Hear it again without holding up his reply; tools and the end of the turn wait for it.
+            self.you_saving = asyncio.create_task(self._hear_again(text, audio))
+            return
+        await self._store_you(text)
+
+    async def _hear_again(self, text: str, audio: bytes) -> None:
+        try:
+            from junior.voice import transcribe_bytes, wrong_script
+
+            heard = await transcribe_bytes(self.ws.app.state.voice, wav(audio, rate=16000), "audio/wav")
+            if heard["text"] and not wrong_script(heard["text"]):
+                text = heard["text"]
+        except Exception:  # keep Gemini's words rather than nothing
+            log.exception("Couldn't hear the call turn again")
+        await self._store_you(text)
+
+    async def _store_you(self, text: str) -> None:
+        call = self.call
         await self._tell({"type": "you", "text": text, "final": True})
         message_id = self.manager._save(call, "user", text)
         call.context.user_message_ids.append(message_id)
-        call.context.outside_content_seen = False  # a new turn of yours
+        call.context.outside_content_seen = call.context.memory_locked = False  # a new turn of yours
         call.language = spoken_language(text)
 
     async def _save_turn(self) -> None:
         """Your words and his answer, saved when his turn ends (with the tools he used and their cost)."""
         if self.you:
             await self._save_you()
+        if self.you_saving is not None:  # your words first, then his answer
+            task, self.you_saving = self.you_saving, None
+            await task
         call, text = self.call, self.junior.strip()
         self.junior = ""
         if not text:

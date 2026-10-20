@@ -92,9 +92,11 @@ ASK_JUNIOR_TOOL = {
     "type": "function",
     "name": "ask_junior",
     "description": (
-        "Ask the full Junior Muneer a question about the user's past chats, spending or "
-        "anything that needs the database. Slower than web_search; not for news. "
-        "Returns the answer as text for you to say."
+        "Ask the full Junior Muneer to DO or FIND anything, with all his tools: find, read or send a file from "
+        "their PC or Google Drive, email anyone (with a file), Google Docs, Sheets and Calendar, WhatsApp them "
+        "something, jobs on their PC, their past chats, memory and spending. He follows their usual rules (some "
+        "things wait for their OK on screen). Slower than web_search; not for news. Returns what he did or found, "
+        "as text for you to say."
     ),
     "parameters": {
         "type": "object",
@@ -387,7 +389,7 @@ class CallManager:
             else:
                 message_id = self._save(call, "user", text)
                 call.context.user_message_ids.append(message_id)
-                call.context.outside_content_seen = False  # a new turn of yours
+                call.context.outside_content_seen = call.context.memory_locked = False  # a new turn of yours
                 language = spoken_language(text)
                 if language != call.language:
                     # You switched language: tell him, for the rest of the call.
@@ -630,6 +632,21 @@ class CallManager:
             save_usage(s, new_usage, call.conversation_id, None, mode="call")
         return text or "Nothing in the news about that."
 
+    @staticmethod
+    def _with_their_words(context, question: str) -> str:
+        """The request, plus what they actually said in this call (the safety checks need their own words, e.g.
+        to send an email or open a path they named)."""
+        from junior.db import Message
+
+        ids = (context.user_message_ids or [])[-4:]
+        if not ids:
+            return question
+        with session_scope() as s:
+            said = [m.content for m in s.query(Message).filter(Message.id.in_(ids)).order_by(Message.id)]
+        lines = "\n".join(f"- {t}" for t in said if t.strip())
+        return (f"{question}\n\n(On a live call. What they just said, word for word; quote from it for your_words:\n"
+                f"{lines})")
+
     async def _ask_junior(self, call: LiveCall, question: str) -> str:
         """The full Junior Muneer (web search, database) answers a question for the call."""
         from junior.agent.builder import build_agent, chosen_model
@@ -637,8 +654,10 @@ class CallManager:
 
         if not question.strip():
             return "No question given."
-        context = call.context
-        context.mark_outside()  # the answer may include web results
+        context = call.context  # outside text (web results, files) is marked by the tools that fetch it
+        # His answer may carry web results or file text: no memory saving for the rest of this turn (set now: other
+        # tools of this turn may run at the same time). The work itself - an email, a file - follows the normal rules.
+        context.memory_locked = True
         spent_before = len(context.usage)
         router_ = get_router()
         spec = self.registry.get("junior_muneer")
@@ -654,7 +673,7 @@ class CallManager:
                 agent,
                 model_name,
                 router_,
-                [{"role": "user", "content": question}],
+                [{"role": "user", "content": self._with_their_words(context, question)}],
                 context,
                 budget_left(context.settings),
             )

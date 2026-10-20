@@ -240,3 +240,48 @@ def test_gemini_voice_sample_without_a_key_says_so(monkeypatch):
             assert r.status_code == 503 and "GEMINI_API_KEY" in r.json()["detail"]
     finally:
         get_settings.cache_clear()
+
+
+def test_urdu_written_in_a_wrong_script_is_heard_again_in_urdu_script(gemini, monkeypatch):
+    """Found live: Gemini Live wrote Urdu, Punjabi and Saraiki speech in Bengali, Hindi or Chinese script."""
+    import junior.voice as voice
+
+    asked = {}
+
+    async def our_stt(factory, data, content_type, seconds=None):
+        asked.update(bytes=len(data), type=content_type, wav=data[:4])
+        return {"text": "میں ٹھیک ہاں، تساں کیویں او؟", "audio_id": "x", "languages": [], "seconds": 2.0, "cost_usd": 0.0}
+
+    monkeypatch.setattr(voice, "transcribe_bytes", our_stt)
+    bengali = "আসসালামু"  # what Gemini wrote for Urdu speech
+
+    class HearsFirst(FakeGemini):
+        """Like the real Gemini: your voice arrives before its transcript of it."""
+
+        async def receive(self):
+            while not self.audio:
+                await asyncio.sleep(0.01)
+            await asyncio.sleep(0.05)
+            async for message in super().receive():
+                yield message
+
+    got = call(monkeypatch, HearsFirst([turn(heard=bengali, said="Main theek hoon!", audio=b"PCM")]), until=1)
+    shown = [m["text"] for m in got["json"] if m["type"] == "you"]
+    assert all(bengali not in t for t in shown) and "…" in shown  # never shown in the wrong script
+    assert shown[-1] == "میں ٹھیک ہاں، تساں کیویں او؟"
+    assert asked["type"] == "audio/wav" and asked["wav"] == b"RIFF" and asked["bytes"] > 44  # your audio, as WAV
+    with session_scope() as s:
+        saved = s.scalars(select(Message.content).where(Message.role == "user")).all()
+    assert saved == ["میں ٹھیک ہاں، تساں کیویں او؟"]
+
+
+def test_right_script_is_kept_without_hearing_again(gemini, monkeypatch):
+    import junior.voice as voice
+
+    def never(*args, **kwargs):
+        raise AssertionError("heard again for no reason")
+
+    monkeypatch.setattr(voice, "transcribe_bytes", never)
+    call(monkeypatch, FakeGemini([turn(heard="آپ کیسے ہیں؟ How are you?", said="Theek!", audio=b"PCM")]), until=1)
+    with session_scope() as s:
+        assert s.scalars(select(Message.content).where(Message.role == "user")).all() == ["آپ کیسے ہیں؟ How are you?"]
