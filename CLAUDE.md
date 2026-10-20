@@ -31,6 +31,12 @@ is the task list with ticks. Read the relevant TASK.md entry before starting a t
   (`writing/polish.py`, `agents/polisher.md`: emails, docs, messages; facts checked in code), Settings as a full page with
   a left menu, ChatGPT-style sidebar, Inter font; **DeepSeek**: Search API (`websearch.py`), V4.1 Flash vision for photos;
   **Gemini Live calls** (`gemini_live.py`, `/ws/call/gemini`, Settings → Live calls → Voice engine; needs `GEMINI_API_KEY`).
+- **Built 2026-10-20:** Gemini chat/search/Live/voice messages (Settings → Voice: engine + hearing/speaking model), audit
+  fixes (10-minute answer limit, WhatsApp messages kept until answered across restarts, log rotation).
+- **Now: Phase 9 (your computer), local part built (P9-01 to P9-07):** `junior/computer/` (path guard `paths.py`, tools
+  `pc_list/pc_find/pc_read/pc_write/pc_make_folder/pc_move/pc_delete/pc_run`, the Computer sender, `terminal.py`),
+  `agents/computer_agent.md`, Settings → Computer. Rules: read Auto; write/move/delete Ask (delete → Recycle Bin);
+  run Ask (locked). Next: P9-08 his acceptance test + push, then P9-09 PC Helper with the VPS.
 - Last pushed to GitHub (`main`) on 2026-10-19 (DeepSeek search, single-scroll sidebar). Later commits not pushed.
 
 ## Safety rules (never break)
