@@ -180,7 +180,7 @@ def test_without_gmail_or_whatsapp_it_says_what_to_set_up(monkeypatch):
 
 def test_there_is_no_way_to_send_to_someone_else():
     assert list(inspect.signature(send_to_me_for).parameters) == [
-        "context", "where", "subject", "message", "your_words", "file_link", "as_pdf"]
+        "context", "where", "subject", "message", "your_words", "file_link", "as_pdf", "pc_file"]  # pc_file: a file, not a recipient
     assert list(inspect.signature(mailer.send_to_self).parameters) == ["subject", "text", "body_html", "attachments"]
 
 
