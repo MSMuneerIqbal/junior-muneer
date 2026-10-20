@@ -569,7 +569,9 @@ outside your allowed folders (or on the blocked list) can be read or changed.
 background while you keep chatting, "status?" says which step it's on and roughly how long is left, and the result
 with its links arrives in the chat you asked from, WhatsApp included.
 
-- [ ] **P10-01** WhatsApp chat replies always reach the phone (also when the message came from the dashboard)
+- [x] **P10-01** WhatsApp chat replies always reach the phone (also when the message came from the dashboard)
+  - **Done 2026-10-20.** Live: a message typed on the dashboard in his WhatsApp chat was answered there and on his phone
+    (his question on top). Other chats never go to WhatsApp.
 - [ ] **P10-02** Skills: `skills/*.md` (name, description, instructions), checked at startup, a `use_skill` tool that
   loads one, "make a skill for ..." from chat. Tests: a broken skill stops startup with a clear error
 - [ ] **P10-03** The Documents & Research Agent (`agents/documents_agent.md`): research + Docs, Sheets, Markdown; Junior
