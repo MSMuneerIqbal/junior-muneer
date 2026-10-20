@@ -115,7 +115,10 @@ async def check_inbox(registry, provider_factory, now: datetime | None = None, f
     added: list[int] = []
     for message in fresh:
         try:
-            sort = await sort_one(message, helpers, context)
+            from junior.freelance.alerts import handle as freelance_email
+
+            # Upwork and Fiverr emails: their own handling (jobs scored, orders saved, client messages checked).
+            sort = await freelance_email(message, helpers, context) or await sort_one(message, helpers, context)
         except Exception as e:  # noqa: BLE001 - one bad email mustn't stop the rest
             log.warning("Couldn't sort an email: %s: %s", type(e).__name__, e)
             sort = EmailSort(category="other", important=False, summary=message.get("subject", "")[:200], why="couldn't sort it", suspicious=False)

@@ -300,7 +300,7 @@ Read-only: these agents never post or send anything. News pages are outside cont
   approval card; the Gmail sender (`senders/gmail.py`) sends exactly the approved text only after Approve (dashboard
   or WhatsApp's Approve button, which now sends too). `gmail.send` Ask, `gmail.reply` locked Ask, Safety Guard
   (placeholders, keys) and the daily limit apply. Fake-API tests.
-- [ ] **P4-05** Upwork and Fiverr alert emails → tasks for the Freelance Manager
+- [x] **P4-05** Upwork and Fiverr alert emails → tasks for the Freelance Manager *(built with P5-03)*
 - [ ] **P4-06** Tests + your acceptance test + push
 
 ## Phase 5: Freelance (Upwork + Fiverr, copy and paste)
@@ -311,7 +311,13 @@ Read-only: these agents never post or send anything. News pages are outside cont
 
 - [ ] **P5-01** You set up Upwork saved-search alerts and Fiverr email notifications to your Gmail (guide for you) *(after Phase 4)*
 - [x] **P5-02** Upwork and Fiverr playbooks + red lines in the Checker and Safety Guard
-- [ ] **P5-03** Email parsers for Upwork job alerts and Fiverr order/message emails (raw email shown when parsing is unsure) *(after Phase 4)*
+- [x] **P5-03** Email parsers for Upwork job alerts and Fiverr order/message emails (raw email shown when parsing is unsure) *(after Phase 4)*
+  - **Done 2026-10-20** (`junior/freelance/alerts.py`, `agents/freelance_reader.md`): the email watcher hands Upwork and
+    Fiverr emails to code: client messages get scam checks and a WhatsApp alert ("paste the whole chat for a reply");
+    job alerts are read, scored and saved (good ones alerted, with "write the proposal for job N"); Fiverr order emails
+    become orders with reminders; anything unclear is shown as it is. Live on his 4 real Fiverr messages (13-17 Oct): all
+    four are the fake-order scam and are flagged (two wordings found live and added). No Upwork job alerts in his Gmail
+    yet: P5-01 first. Freelance paused by Muneer after this (2026-10-20): Phase 10 next.
 - [x] **P5-04** Freelance Manager subagent
 - [x] **P5-05** Job scoring from alert emails and pasted job posts (skill match, budget, client quality, scam signs) *(pasted posts done; alert emails come with P5-03)*
 - [x] **P5-06** Proposal flow: draft → approve → Copy + Open job on Upwork → you paste and Submit → Mark as sent

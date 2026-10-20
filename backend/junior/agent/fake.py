@@ -311,6 +311,16 @@ def _team_answer(schema: str, prompt: str) -> dict:
         return _fake_tidy(prompt)
     if "EmailSort" in schema:
         return _fake_email_sort(prompt)
+    if "JobAlert" in schema:  # the fake freelance reader: one job per "Job: <title>" line in the alert email
+        titles = re.findall(r"^Job: (.+)$", prompt, re.MULTILINE)
+        return {"jobs": [{"title": t.strip(), "url": f"https://www.upwork.com/jobs/~fake{n}", "post": f"(fake) {t.strip()}",
+                          "budget": "$500", "skills": ["Python"], "score": 8 if "agent" in t.lower() else 3,
+                          "verdict": "apply" if "agent" in t.lower() else "skip", "reasons": ["(fake reader)"]}
+                         for n, t in enumerate(titles, 1)]}
+    if "OrderEmail" in schema:
+        buyer = re.search(r"order from (\w+)", prompt, re.IGNORECASE)
+        return {"found": bool(buyer), "buyer": buyer.group(1) if buyer else "", "title": "(fake) a RAG chatbot" if buyer else "",
+                "price": "$150", "due": "", "status": "active"}
     if "Polished" in schema:  # the fake Polisher: the same content, long dashes gone
         content = prompt.split("<content>\n", 1)[-1].rsplit("\n</content>", 1)[0]
         return {"text": content.replace(" — ", ", "), "changes": ["(fake Polisher) simpler words"]}
