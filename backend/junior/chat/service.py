@@ -300,7 +300,7 @@ class ChatService:
                 first = False
                 if event["type"] == "final":
                     result = event["result"]
-                else:
+                elif event["type"] != "alive":  # "still writing": only for the silence check above
                     yield event
             if result is not None and fallback_step:
                 result.steps.insert(0, fallback_step)

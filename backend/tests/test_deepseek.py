@@ -4,7 +4,7 @@ import pytest
 from agents import OpenAIChatCompletionsModel, OpenAIResponsesModel
 from fastapi.testclient import TestClient
 
-from fake_ai import ScriptedModel, chunked_answer, usage
+from fake_ai import ScriptedModel, chunked_answer, function_call, usage
 from junior.agent.builder import NoApiKeyError, openai_model_provider
 from junior.config import get_settings
 from junior.main import create_app
@@ -213,3 +213,40 @@ def test_a_turn_that_never_ends_is_stopped_at_the_overall_limit(monkeypatch):
         events = chat(client, "hi")
     assert events[-1]["type"] == "error"
     assert "took over" in events[-1]["message"] and "background task" in events[-1]["message"]
+
+
+class SlowToolWriter(ScriptedModel):
+    """Like DeepSeek in the live failure: quick steps first, then a long time writing a whole Google Doc into a tool
+    call, with no visible text."""
+
+    calls = 0
+
+    async def stream_response(self, *args, **kwargs):
+        import asyncio
+
+        from openai.types.responses import ResponseFunctionCallArgumentsDeltaEvent
+
+        SlowToolWriter.calls += 1
+        if SlowToolWriter.calls == 2:  # after the first tool step: the slow part
+            for n in range(12):  # 1.2 s of writing, longer than the 0.3 s silence limit below
+                await asyncio.sleep(0.1)
+                yield ResponseFunctionCallArgumentsDeltaEvent(
+                    type="response.function_call_arguments.delta", delta='"more doc text", ', item_id="fc1",
+                    output_index=0, sequence_number=n)
+        async for event in super().stream_response(*args, **kwargs):
+            yield event
+
+
+def test_a_long_tool_call_isnt_mistaken_for_silence(monkeypatch):
+    import junior.agent.runner as runner
+    import junior.chat.service as service
+
+    monkeypatch.setattr(service, "STALL_SECONDS", 0.3)
+    monkeypatch.setattr(runner, "ALIVE_SECONDS", 0.05)
+    SlowToolWriter.calls = 0
+    model = SlowToolWriter([[function_call("spending", {"period": "today"}, call_id="s1")], chunked_answer("Your doc is ready.")])
+    with TestClient(create_app(model_provider=lambda: (lambda name: model))) as client:
+        client.patch("/api/settings", json={"main_model": "deepseek:deepseek-flash"})
+        events = chat(client, "make me a long doc")
+    assert events[-1]["type"] == "done" and events[-1]["text"] == "Your doc is ready."
+    assert not any(e["type"] == "alive" for e in events)  # only for the silence check, never sent to the chat

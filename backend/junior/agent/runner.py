@@ -10,6 +10,7 @@ Tools may add their own events through TurnContext.pending_events.
 import asyncio
 import json
 import re
+import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any
@@ -30,6 +31,7 @@ from junior.audit import audit
 from junior.costs import BudgetExceeded
 from junior.models import ModelRouter
 
+ALIVE_SECONDS = 5  # at most one "still writing" signal this often
 MAX_TURNS = 12  # a request with several parts: a checklist, the parts, checklist updates, the answer
 
 STEP_LABELS = {
@@ -211,6 +213,7 @@ async def stream_turn(
             out.append(event)
         return out
 
+    last_alive = time.monotonic()
     async for event in _with_tool_events(result.stream_events(), context):
         if event is None:  # a tool emitted something mid-run
             for e in pending():
@@ -230,6 +233,11 @@ async def stream_turn(
                     step = steps.setdefault(step["id"], step)
                     step["status"] = "running" if data.type.endswith("added") else "done"
                     yield {"type": "step", **step}
+            elif time.monotonic() - last_alive > ALIVE_SECONDS:
+                # The model is still writing something we don't show (e.g. a long tool call, like a whole Google
+                # Doc): tell the chat it's alive, so its "silent for 60 s" check doesn't give up on it.
+                last_alive = time.monotonic()
+                yield {"type": "alive"}
         elif isinstance(event, RunItemStreamEvent):
             if event.name == "tool_called":
                 step = _function_step(event.item.raw_item)
