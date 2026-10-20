@@ -153,6 +153,12 @@ def check(text: str, context=None) -> Path:
     if not get_setting("computer_enabled"):
         raise PathRefused("The computer tools are off. They can turn them on in Settings → Computer.")
     written = expand(text)
+    users = home().parent
+    if written.is_relative_to(users) and written != users:  # "C:\Users\Muneer\..." when the real one is another name
+        folder = users / written.relative_to(users).parts[0]
+        if folder != home() and not folder.exists():
+            raise PathRefused(f"{folder} doesn't exist on this PC (a made-up path?). Their user folder is {home()}. "
+                              "Use the exact path pc_find or pc_list gave you.")
     path = _real(written)
     for candidate in (written, path):
         if reason := blocked_reason(candidate):

@@ -274,7 +274,8 @@ async def send_drafts(to: str, items: list[dict]) -> None:
         score = f" · {item['meta']['score']}/10" if item.get("meta", {}).get("score") is not None else ""
         body = f"{item['platform_label']} {item['item_type']}{score}\n\n{text}"
         if item.get("platform") == "email":  # who it goes to, and that Approve sends it
-            body = f"Email {item['title']}\n\n{text}\n\nApprove sends it from your Gmail."
+            attached = f"\n\nAttached: {item['meta']['attachment']}" if item.get("meta", {}).get("attachment") else ""
+            body = f"Email {item['title']}\n\n{text}{attached}\n\nApprove sends it from your Gmail."
         if item.get("platform") == "computer":
             if item.get("status") == "posted":  # your rule was Auto: already done, nothing to tap
                 await client().send_text(to, f"Done on your PC: {pc_result(item)}")

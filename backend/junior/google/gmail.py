@@ -128,8 +128,12 @@ def valid_addresses(text: str) -> list[str]:
     return found
 
 
-def raw_email(to: str, subject: str, body: str, cc: str = "", in_reply_to: str = "", references: str = "") -> str:
-    """The email as Gmail wants it (RFC 822, base64url)."""
+Attachment = tuple[str, bytes, str]  # file name, its bytes, its type (e.g. application/pdf)
+
+
+def raw_email(to: str, subject: str, body: str, cc: str = "", in_reply_to: str = "", references: str = "",
+              attachments: list[Attachment] | None = None) -> str:
+    """The email as Gmail wants it (RFC 822, base64url), with any files attached."""
     message = EmailMessage()
     message["To"] = ", ".join(valid_addresses(to))
     if cc.strip():
@@ -139,22 +143,26 @@ def raw_email(to: str, subject: str, body: str, cc: str = "", in_reply_to: str =
         message["In-Reply-To"] = in_reply_to
         message["References"] = f"{references} {in_reply_to}".strip()
     message.set_content(body)
+    for name, data, mime in attachments or []:
+        main, _, sub = (mime or "application/octet-stream").partition("/")
+        message.add_attachment(data, maintype=main, subtype=sub or "octet-stream", filename=name)
     return base64.urlsafe_b64encode(message.as_bytes()).decode()
 
 
-async def make_draft(to: str, subject: str, body: str, cc: str = "", thread_id: str = "", in_reply_to: str = "", references: str = "") -> str:
+async def make_draft(to: str, subject: str, body: str, cc: str = "", thread_id: str = "", in_reply_to: str = "", references: str = "",
+                     attachments: list[Attachment] | None = None) -> str:
     """A draft in your Gmail Drafts (nothing is sent). Returns its id."""
-    message = {"raw": raw_email(to, subject, body, cc, in_reply_to, references)}
+    message = {"raw": raw_email(to, subject, body, cc, in_reply_to, references, attachments)}
     if thread_id:
         message["threadId"] = thread_id
     return (await call("POST", f"{API}/drafts", json={"message": message}))["id"]
 
 
 async def send_draft(draft_id: str, to: str, subject: str, body: str, cc: str = "", thread_id: str = "",
-                     in_reply_to: str = "", references: str = "") -> dict:
+                     in_reply_to: str = "", references: str = "", attachments: list[Attachment] | None = None) -> dict:
     """Put exactly the approved text into the draft, then send it. If you deleted the draft in Gmail, it's sent
     as a new message with the same content. Returns Google's sent message (id, threadId)."""
-    message = {"raw": raw_email(to, subject, body, cc, in_reply_to, references)}
+    message = {"raw": raw_email(to, subject, body, cc, in_reply_to, references, attachments)}
     if thread_id:
         message["threadId"] = thread_id
     if draft_id:

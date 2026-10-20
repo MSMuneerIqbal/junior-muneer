@@ -1157,6 +1157,7 @@ def _pc_file(context: TurnContext, path_text: str) -> tuple[tuple[str, bytes, st
     if size > MAX_PC_FILE_BYTES:
         return None, f"{path.name} is {size / 1024 / 1024:.0f} MB; files over 25 MB can't be sent"
     audit("tool_call", "pc_send", detail={"path": str(path), "bytes": size}, conversation_id=context.conversation_id)
+    context.last_pc_file = path
     return (path.name, path.read_bytes(), mimetypes.guess_type(path.name)[0] or "application/octet-stream"), ""
 
 
@@ -1225,7 +1226,10 @@ async def send_to_me_for(
         gate.failed(context, action, reason)
         return f"NOT sent: {reason}. Offer the other way (Gmail or WhatsApp)."
     gate.done(context, action, {"subject": subject[:200], "characters": len(message), "file": attachment[0] if attachment else ""})
-    done = f"Sent to {sent_to}" + (f" with the file {attachment[0]!r}" if attachment else "") + "."
+    done = f"Sent to {sent_to}" + (f" with the file {attachment[0]!r}" if attachment else "") + (
+        f". That's their OWN {'Gmail' if where == 'gmail' else 'WhatsApp'} (send_to_me can't reach anyone else; for "
+        "another address they gave, use gmail_draft)")
+    done += "."
     return done + (f" Note: {note}." if note else "") + " Tell the user in one line."
 
 

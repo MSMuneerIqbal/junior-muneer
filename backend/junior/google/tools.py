@@ -426,7 +426,8 @@ async def gmail_read_for(context: TurnContext, email: str) -> str:
 
 
 async def gmail_draft_for(
-    context: TurnContext, to: str, subject: str, body: str, your_words: str, reply_to: str = "", cc: str = ""
+    context: TurnContext, to: str, subject: str, body: str, your_words: str, reply_to: str = "", cc: str = "",
+    pc_file: str = "",
 ) -> str:
     from junior.approvals import ApprovalError, create_item
     from junior.google.gmail import make_draft, read, valid_addresses
@@ -458,11 +459,19 @@ async def gmail_draft_for(
         return "NOT done: who should it go to? Ask them for the email address."
     if len(recipients) + len(valid_addresses(cc)) > 10:
         return "NOT done: at most 10 people per email."
+    attachments, attached = [], ""
+    if pc_file.strip():
+        from junior.agent.tools import _pc_file
+
+        file, why = _pc_file(context, pc_file)
+        if file is None:
+            return f"NOT done: {why}. Nothing was drafted."
+        attachments, attached = [file], str(context.last_pc_file)
     from junior.writing.polish import polish
 
     body = await polish(body, "an email" + (" reply" if reply_to.strip() else ""), context)
     try:
-        draft_id = await make_draft(to, subject, body, cc, thread_id, in_reply_to, references)
+        draft_id = await make_draft(to, subject, body, cc, thread_id, in_reply_to, references, attachments)
     except GoogleError as e:
         gate.failed(context, "gmail.draft", str(e))
         return f"NOT done: {e}"
@@ -474,7 +483,8 @@ async def gmail_draft_for(
             title=f"To {', '.join(recipients)}: {subject}"[:200],
             from_outside=reply or context.outside_content_seen, conversation_id=context.conversation_id,
             meta={"to": to, "cc": cc, "subject": subject, "thread_id": thread_id, "in_reply_to": in_reply_to,
-                  "references": references, "draft_id": draft_id, "reply_to": reply_to.strip()},
+                  "references": references, "draft_id": draft_id, "reply_to": reply_to.strip(),
+                  **({"pc_file": attached, "attachment": attachments[0][0]} if attached else {})},
         )
     except ApprovalError as e:
         return f"NOT done: {e}"
@@ -526,9 +536,11 @@ async def gmail_read(ctx: Ctx, email: str) -> str:
 
 
 @function_tool
-async def gmail_draft(ctx: Ctx, to: str, subject: str, body: str, your_words: str, reply_to: str = "", cc: str = "") -> str:
-    """Write an email for the user to someone else, or a reply. It goes into their Gmail Drafts and shows as a card:
-    it's sent only when they approve it. Write the complete email, ready to send, signed with their name.
+async def gmail_draft(ctx: Ctx, to: str, subject: str, body: str, your_words: str, reply_to: str = "", cc: str = "",
+                      pc_file: str = "") -> str:
+    """Write an email for the user to someone else (any address they give), or a reply, with a file from their PC
+    attached if they want. It goes into their Gmail Drafts and follows their "Send a new email" rule: Ask shows a card
+    and waits for Approve; Auto sends it at once. Write the complete email, ready to send, signed with their name.
 
     Args:
         to: The recipient's email address (several separated by commas). For a reply, leave empty to answer the sender.
@@ -537,8 +549,9 @@ async def gmail_draft(ctx: Ctx, to: str, subject: str, body: str, your_words: st
         your_words: The user's exact words asking for this email (copied word for word).
         reply_to: For a reply: the email's id from gmail_search, or its number N from "email N".
         cc: Anyone to copy, if they said.
+        pc_file: A file on their PC to attach (its full path from pc_find / pc_list), e.g. their CV.
     """
-    return await gmail_draft_for(ctx.context, to, subject, body, your_words, reply_to, cc)
+    return await gmail_draft_for(ctx.context, to, subject, body, your_words, reply_to, cc, pc_file)
 
 
 GOOGLE_TOOLS = [

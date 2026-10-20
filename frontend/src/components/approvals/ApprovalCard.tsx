@@ -278,6 +278,11 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
           </div>
         )}
         {item.meta.image_idea && <p className="mt-2 text-xs text-muted">🖼 Image idea: {item.meta.image_idea}</p>}
+        {typeof item.meta.attachment === "string" && item.meta.attachment && (
+          <p className="mt-2 text-xs text-muted" title={typeof item.meta.pc_file === "string" ? item.meta.pc_file : undefined}>
+            📎 {item.meta.attachment} (from your PC)
+          </p>
+        )}
         {waiting && item.needs_image && (
           <p className="mt-2 text-xs font-medium text-warn">{item.platform_label} posts need an image: add one before posting.</p>
         )}

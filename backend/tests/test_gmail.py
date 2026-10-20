@@ -272,3 +272,57 @@ def test_junior_muneer_has_the_gmail_tools():
     names = [t.name for t in TOOL_FACTORIES["google"]()]
     assert {"gmail_search", "gmail_read", "gmail_draft"} <= set(names)
     assert "email_sorter" in load_registry().names()
+
+
+# ---- a file from your PC, to any address you give (found live: the CV went to his own Gmail) ----------------
+
+
+@pytest.fixture
+def cv(tmp_path, monkeypatch):
+    from junior.computer import paths
+
+    user = tmp_path / "home"
+    for name in ("Desktop", "Documents", "Downloads"):
+        (user / name).mkdir(parents=True)
+    (user / "Documents" / "MUNEER_IQBAL_CV_new.pdf").write_bytes(b"%PDF-1.4 the new cv")
+    monkeypatch.setattr(paths, "home", lambda: user)
+    return user / "Documents" / "MUNEER_IQBAL_CV_new.pdf"
+
+
+def test_a_file_from_your_pc_goes_to_the_address_you_give_with_the_rule_on_auto(gmail, cv):
+    from junior.permissions import set_rule
+
+    _, said, google, _ = gmail
+    set_rule("gmail.send", "auto")
+    words = "send my new cv to aiengr@example.com"
+    context = said(words)
+    answer = run(gmail_draft_for(context, "aiengr@example.com", "My CV", "Hi,\n\nMy CV is attached.\n\nMuneer", words,
+                                 pc_file=str(cv)))
+    assert answer.startswith("Sent from their Gmail to aiengr@example.com")
+    email = sent_email(google)
+    assert email["To"] == "aiengr@example.com"
+    [attached] = list(email.iter_attachments())
+    assert attached.get_filename() == "MUNEER_IQBAL_CV_new.pdf" and attached.get_content() == b"%PDF-1.4 the new cv"
+    assert context.pending_events[-1]["item"]["meta"]["attachment"] == "MUNEER_IQBAL_CV_new.pdf"
+
+
+def test_with_ask_the_card_waits_and_approve_sends_the_file(gmail, cv):
+    client, said, google, _ = gmail
+    words = "send my new cv to aiengr@example.com"
+    context = said(words)
+    run(gmail_draft_for(context, "aiengr@example.com", "My CV", "Hi,\n\nAttached.\n\nMuneer", words, pc_file=str(cv)))
+    card = context.pending_events[-1]["item"]
+    assert card["status"] == "waiting" and google.sent == []
+    client.post(f"/api/approvals/{card['id']}/approve")
+    [attached] = list(sent_email(google).iter_attachments())
+    assert attached.get_filename() == "MUNEER_IQBAL_CV_new.pdf"
+
+
+def test_a_secret_or_made_up_path_isnt_attached_and_nothing_is_drafted(gmail, cv):
+    _, said, google, _ = gmail
+    (cv.parent / ".env").write_text("KEY=1")
+    words = "email the file to aiengr@example.com"
+    assert "secrets" in run(gmail_draft_for(said(words), "aiengr@example.com", "x", "y", words, pc_file=str(cv.parent / ".env")))
+    made_up = cv.parent.parent.parent / "Muneer" / "Documents" / cv.name  # found live: a guessed user folder
+    answer = run(gmail_draft_for(said(words), "aiengr@example.com", "x", "y", words, pc_file=str(made_up)))
+    assert "made-up path" in answer and google.drafts == {}

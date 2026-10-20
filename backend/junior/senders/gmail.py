@@ -25,10 +25,21 @@ class GmailSender:
         meta = out.meta
         if not meta.get("to"):
             return SendResult("failed", "The email has no recipient; nothing was sent.")
+        attachments = []
+        if meta.get("pc_file"):  # a file from your PC: read again now, through the path guard
+            import mimetypes
+
+            from junior.computer.paths import PathRefused, recheck
+
+            try:
+                path = recheck(meta["pc_file"])
+                attachments.append((path.name, path.read_bytes(), mimetypes.guess_type(path.name)[0] or "application/octet-stream"))
+            except (PathRefused, OSError) as e:
+                return SendResult("failed", f"The file to attach couldn't be read ({e}); nothing was sent.")
         try:
             sent = await send_draft(
                 meta.get("draft_id", ""), meta["to"], meta.get("subject", ""), out.text, meta.get("cc", ""),
-                meta.get("thread_id", ""), meta.get("in_reply_to", ""), meta.get("references", ""),
+                meta.get("thread_id", ""), meta.get("in_reply_to", ""), meta.get("references", ""), attachments,
             )
         except GoogleError as e:
             reason = str(e)
