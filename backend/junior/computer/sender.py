@@ -53,6 +53,10 @@ class ComputerSender:
                 return self._write(path, out.text, bool(out.meta.get("replace")), out.meta.get("old_sha", ""))
             if op == "mkdir":
                 return self._mkdir(path)
+            if op == "move":
+                return self._move(path, recheck(out.meta.get("to", "")))
+            if op == "delete":
+                return self._delete(path)
         except PathRefused as e:
             return SendResult("failed", str(e))
         except OSError as e:  # nothing (or only the Recycle Bin copy) happened: safe to try again by hand
@@ -85,3 +89,27 @@ class ComputerSender:
                               f"{path} already exists." if path.is_dir() else f"{path} is a file, not a folder.")
         path.mkdir(parents=True)
         return SendResult("sent", f"Made the folder {path}.")
+
+    @staticmethod
+    def _move(src: Path, dest: Path) -> SendResult:
+        import shutil
+
+        if not src.exists():
+            return SendResult("failed", f"{src} isn't there any more; nothing was moved.")
+        if dest.exists():
+            return SendResult("failed", f"{dest} exists now; nothing was moved.")
+        if not dest.parent.is_dir():
+            return SendResult("failed", f"The folder {dest.parent} doesn't exist; nothing was moved.")
+        shutil.move(str(src), str(dest))
+        return SendResult("sent", f"Moved {src} to {dest}.")
+
+    @staticmethod
+    def _delete(path: Path) -> SendResult:
+        from junior.computer.tools import _is_allowed_root
+
+        if not path.exists():
+            return SendResult("sent", f"{path} was already gone.")
+        if _is_allowed_root(path):
+            return SendResult("failed", f"{path} is one of your allowed folders; it isn't deleted.")
+        to_recycle_bin(path)
+        return SendResult("sent", f"{path} is in the Recycle Bin (restore it from there if you need it).")

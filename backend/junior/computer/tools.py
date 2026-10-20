@@ -362,4 +362,86 @@ async def pc_make_folder(ctx: Ctx, folder: str) -> str:
     return await make_folder_for(ctx.context, folder)
 
 
-WRITE_TOOLS: list[FunctionTool] = [pc_write, pc_make_folder]
+# ---- move and delete ---------------------------------------------------------------------
+
+
+def _is_allowed_root(path: Path) -> bool:
+    from junior.computer.paths import allowed_folders
+
+    return any(path == folder for folder in allowed_folders())
+
+
+def _what(path: Path) -> str:
+    """'the file x.txt (3 KB)' or 'the folder Clients (12 files, 4.1 MB)'."""
+    if path.is_dir():
+        count = size = 0
+        for root, _, files in os.walk(path):
+            for f in files:
+                count += 1
+                try:
+                    size += (Path(root) / f).stat().st_size
+                except OSError:
+                    pass
+        return f"the folder {path} ({count} file{'s' if count != 1 else ''}, {_size(size)})"
+    return f"the file {path} ({_size(path.stat().st_size)})"
+
+
+async def move_for(context: TurnContext, source: str, destination: str) -> str:
+    try:
+        src = check(source, context)
+        dest = check(destination, context)
+    except PathRefused as e:
+        return f"NOT done: {e}"
+    if not src.exists():
+        return f"NOT done: {src} doesn't exist."
+    if _is_allowed_root(src):
+        return f"NOT done: {src} is one of their allowed folders; it isn't moved."
+    if dest.is_dir():
+        dest = dest / src.name  # into that folder
+    if dest.exists():
+        return f"NOT done: {dest} already exists. Pick another name, or delete that one first."
+    if not dest.parent.is_dir():
+        return f"NOT done: the folder {dest.parent} doesn't exist. Make it first with pc_make_folder."
+    if src.is_dir() and dest.is_relative_to(src):
+        return "NOT done: a folder can't go inside itself."
+    verb = "Rename" if src.parent == dest.parent else "Move"
+    return await queue_action(context, "computer.move", "move", f"{verb} {_what(src)}\nto {dest}", f"{verb} {src.name}",
+                              {"op": "move", "path": str(src), "to": str(dest)})
+
+
+async def delete_for(context: TurnContext, target: str) -> str:
+    try:
+        path = check(target, context)
+    except PathRefused as e:
+        return f"NOT done: {e}"
+    if not path.exists():
+        return f"NOT done: {path} doesn't exist."
+    if _is_allowed_root(path):
+        return f"NOT done: {path} is one of their allowed folders; it isn't deleted."
+    return await queue_action(context, "computer.delete", "delete", f"Delete {_what(path)}\n(it goes to the Recycle Bin)",
+                              f"Delete {path.name}", {"op": "delete", "path": str(path)})
+
+
+@function_tool
+async def pc_move(ctx: Ctx, source: str, destination: str) -> str:
+    """Move or rename a file or folder on the user's PC. Shows as a card like pc_write.
+
+    Args:
+        source: The file or folder to move (full path).
+        destination: The new full path, or a folder to move it into.
+    """
+    return await move_for(ctx.context, source, destination)
+
+
+@function_tool
+async def pc_delete(ctx: Ctx, target: str) -> str:
+    """Delete a file or folder on the user's PC. It always goes to the Recycle Bin (never deleted for good), so it can
+    be restored. Shows as a card like pc_write; the card says how many files a folder has.
+
+    Args:
+        target: The file or folder's full path.
+    """
+    return await delete_for(ctx.context, target)
+
+
+WRITE_TOOLS: list[FunctionTool] = [pc_write, pc_make_folder, pc_move, pc_delete]

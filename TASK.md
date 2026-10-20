@@ -520,8 +520,11 @@ outside your allowed folders (or on the blocked list) can be read or changed.
     was stopped by the Safety Guard; Pictures was refused. Also: the path is checked again just before it runs (a link
     swapped in is caught), a file changed since the card isn't overwritten, at most 20 computer actions per message, and
     files keep their exact text (cards used to trim it).
-- [ ] **P9-04** Move and delete: `move_file`, `delete_file` (to the Recycle Bin, `send2trash`). Live check: delete, then
+- [x] **P9-04** Move and delete (`pc_move`, `pc_delete`): `move_file`, `delete_file` (to the Recycle Bin, `send2trash`). Live check: delete, then
   find it in the Recycle Bin and restore it
+  - **Done 2026-10-20.** Live: renamed `shopping.txt`, moved it into `Clients\Acme`, deleted `Clients` (the card said
+    "1 file, 20 bytes"), found it in the Recycle Bin and restored it with the file inside. Deleting an allowed folder itself
+    (Desktop), a secret file, or something outside the folders is refused; a secret can't be moved out of hiding either.
 - [ ] **P9-05** Terminal: `run_command` (PowerShell, in an allowed folder, 2-minute limit, output capped), always Ask
   (locked), dangerous commands refused in code, the result on the card and in the chat. Live check
 - [ ] **P9-06** The Computer Agent (`agents/computer.md`, all the tools) and Junior's handoff to it, plus Junior's quick
