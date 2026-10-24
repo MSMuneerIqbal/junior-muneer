@@ -602,6 +602,9 @@ with its links arrives in the chat you asked from, WhatsApp included.
     the successful check. Opened/exported with installed PowerPoint and inspected all 6 slides. Earlier live
     checks exposed and fixed reviewer/export-stage confusion and overstrict citation checks on unused fields.
     Backend restarted after a database backup; health and Documents Agent registration confirmed on port 8000.
+  - **Follow-up live test 2026-10-24:** sent an NLP request through the running app in the WhatsApp chat.
+    It generated 8 editable slides with source notes; Meta accepted the actual PowerPoint document message.
+    ~86 seconds including sending; $0.061059484 including the chat reply. Phone delivery/read receipts were not checked.
 - [ ] **P10-05** Slides (Google Slides API, one more Google permission) and PDF export
 - [ ] **P10-06** First skills: CV review, scholarship roadmap, research report, pitch deck, proposal
 - [ ] **P10-07** Your acceptance test + push
