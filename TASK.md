@@ -577,6 +577,11 @@ with its links arrives in the chat you asked from, WhatsApp included.
   - **Done 2026-10-20** (`junior/skills.py`, `skills/`). Live: "make a skill called repo_status ..." saved a good skill
     file; in a new chat "repo status for ...junior-muneer" loaded it and the Computer Agent made the two git command
     cards. Found live: the skill was loaded 4 times in one answer; now once per request.
+- [x] **P10-02a** Skills library + Settings management (requested 2026-10-23): ten reviewed starter skills,
+  Settings → Skills (search, add, edit, delete), validated persistent edits, agent scope checks and live task matching.
+  **Done 2026-10-24.** Backend suite and focused desktop/phone E2E passed; real-model throwaway-data check
+  matched and used skills for two ordinary requests ($0.042215 total). Next.js and matching ESLint config updated
+  to 16.4.3 after audit found critical advisories in 16.4.0. Extends P10-02; does not complete P10-03 or P10-06.
 - [ ] **P10-03** The Documents & Research Agent (`agents/documents_agent.md`): research + Docs, Sheets, Markdown; Junior
   hands long jobs to it as background tasks by himself
 - [ ] **P10-04** Task status: progress (step, done of planned, started), a time estimate from similar past tasks, a

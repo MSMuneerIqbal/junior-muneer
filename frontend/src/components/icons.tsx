@@ -175,6 +175,12 @@ const SETTINGS_PATHS: Record<string, React.ReactNode> = {
       <path d="M3.5 6.5l8.5 6.5 8.5-6.5" />
     </>
   ),
+  skills: (
+    <>
+      <path d="M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1zM12 5v15" />
+      <path d="M6 8h3M6 11h3M15 8h3M15 11h3" />
+    </>
+  ),
   computer: (
     <>
       <rect x="3" y="4" width="18" height="12.5" rx="2" />

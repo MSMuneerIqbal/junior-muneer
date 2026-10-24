@@ -172,6 +172,9 @@ class FakeModel(Model):
             return [function_call("pc_list", {"folder": folder}, call_id="fake-pc-list")], False
         if isinstance(last, dict) and last.get("type") == "function_call_output":
             return [assistant_message(f"(fake AI) Tool said: {last.get('output')}")], False
+        if text.lower().startswith("use skill ") and "use_skill" in tool_names:
+            name = next(iter(text[len("use skill "):].strip().split()), "")
+            return [function_call("use_skill", {"name": name}, call_id="fake-skill")], False
         if text.lower().startswith("pc ") and "ask_computer_agent" in tool_names:
             return [function_call("ask_computer_agent", {"task": text[3:].strip()}, call_id="fake-pc")], False
         if "search" in text.lower() and "web_search" in tool_names:

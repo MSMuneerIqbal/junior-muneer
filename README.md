@@ -86,6 +86,7 @@ Run it on **one PC at a time**. A Docker set-up for a server (Caddy with HTTPS a
 | Emails to other people | "Junior, email sara@x.com that…" (a file from your PC too): your Send-email rule decides: Ask = a card, **Approve** sends it; Auto = sent at once |
 | Files and commands on your PC | "Junior, what's in my Downloads?", "run git status in ...": changes and commands are cards; **Settings → Computer** for your allowed folders |
 | Make a skill | "Junior, make a skill for my weekly client report" (saved in `skills/`) |
+| Manage skills | **Settings → Skills**: search the ten starter skills, add your own, edit instructions or delete a skill; changes apply to the next message |
 | See or edit what he remembers | **Memory** |
 | See everything he did, with costs | **Activity** |
 | Stop all background work and actions | **Pause everything** in the Today panel |

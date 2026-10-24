@@ -157,7 +157,7 @@ def build_agent(
         name=spec.name,
         instructions=instructions,
         model=model_provider(model_name),
-        tools=build_tools(spec.tools),
+        tools=build_tools(spec.tools, spec.name),
         output_type=output_type,
     )
     return agent, model_name

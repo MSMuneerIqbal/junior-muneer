@@ -210,9 +210,13 @@ export function ChatHistory({ query = "" }: { query?: string }) {
 function useRecentsOpen(): [boolean, () => void] {
   const [open, setOpen] = useState(true);
   useEffect(() => {
-    try {
-      if (localStorage.getItem("recents") === "closed") setOpen(false);
-    } catch {}
+    // Hydrate this browser preference after the server's initial open state.
+    const frame = requestAnimationFrame(() => {
+      try {
+        if (localStorage.getItem("recents") === "closed") setOpen(false);
+      } catch {}
+    });
+    return () => cancelAnimationFrame(frame);
   }, []);
   const toggle = () =>
     setOpen((o) => {

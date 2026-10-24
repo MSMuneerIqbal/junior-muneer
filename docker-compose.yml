@@ -23,6 +23,7 @@ services:
       PUBLIC_HOSTS: ${DOMAIN}
     volumes:
       - ./data:/app/data
+      - ./skills:/app/skills
     restart: unless-stopped
     logging: *logging
 

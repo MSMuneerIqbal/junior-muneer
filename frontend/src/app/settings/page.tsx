@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import useSWR, { useSWRConfig } from "swr";
 import { GitHubConnect } from "@/components/GitHubConnect";
 import { SettingsIcon } from "@/components/icons";
+import SkillsSettings from "@/components/SkillsSettings";
 import { BACKEND_URL, fetcher, send } from "@/lib/api";
 import { PERMISSIONS_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
 import type { Settings } from "@/lib/types";
@@ -41,7 +42,7 @@ type Permissions = {
 // The left menu: one section shows at a time. "#news" in the address opens that section.
 type SectionId =
   | "profile" | "budget" | "models" | "search" | "voice" | "calls" | "connections" | "whatsapp" | "posting" | "news"
-  | "computer" | "permissions" | "advanced";
+  | "computer" | "skills" | "permissions" | "advanced";
 type MenuItem = { id: SectionId; title: string }; // its icon: SettingsIcon by id
 const GROUPS: { title: string; items: MenuItem[] }[] = [
   { title: "Account", items: [{ id: "profile", title: "Profile" }, { id: "budget", title: "Budget" }] },
@@ -62,7 +63,7 @@ const GROUPS: { title: string; items: MenuItem[] }[] = [
       { id: "posting", title: "Posting" },
     ],
   },
-  { title: "Automation", items: [{ id: "news", title: "News & email" }, { id: "computer", title: "Computer" }] },
+  { title: "Automation", items: [{ id: "skills", title: "Skills" }, { id: "news", title: "News & email" }, { id: "computer", title: "Computer" }] },
   {
     title: "Safety",
     items: [
@@ -928,6 +929,9 @@ function SettingsForm({ initial }: { initial: Settings }) {
       <ConnectionsSection />
 
       <ComputerSection enabled={form.computer_enabled} onEnabled={(v) => set("computer_enabled", v)} />
+      <Section id="skills" title="Skills" description="Teach Junior how you like work done. Add, edit or delete instructions for your everyday tasks.">
+        <SkillsSettings />
+      </Section>
 
       <Section id="posting" title="Posting" description="Posts that go out through the official APIs (Facebook Page, Instagram, LinkedIn).">
         <Row
@@ -1192,13 +1196,18 @@ function GoogleConnection() {
     const q = new URLSearchParams(window.location.search);
     const result = q.get("google");
     if (!result) return;
-    setMessage(
-      result === "connected"
-        ? { ok: true, text: `Connected${q.get("account") ? ` as ${q.get("account")}` : ""}.` }
-        : { ok: false, text: q.get("message") || "Google didn't connect." },
-    );
-    window.history.replaceState(null, "", `${window.location.pathname}#connections`);
-    void mutate();
+    // Apply the external redirect result after the initial render. Cleanup also
+    // leaves the query intact when React replays this effect in development.
+    const frame = requestAnimationFrame(() => {
+      setMessage(
+        result === "connected"
+          ? { ok: true, text: `Connected${q.get("account") ? ` as ${q.get("account")}` : ""}.` }
+          : { ok: false, text: q.get("message") || "Google didn't connect." },
+      );
+      window.history.replaceState(null, "", `${window.location.pathname}#connections`);
+      void mutate();
+    });
+    return () => cancelAnimationFrame(frame);
   }, [mutate]);
 
   async function disconnect() {
