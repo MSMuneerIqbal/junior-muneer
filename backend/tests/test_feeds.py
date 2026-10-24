@@ -124,6 +124,14 @@ def test_no_feeds_yet():
 def test_feeds_are_read_every_3_hours_but_not_while_paused(client, monkeypatch):
     import junior.feeds as feeds
 
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return NOW if tz else NOW.replace(tzinfo=None)
+
+    # Keep scheduler assertions independent of wall-clock changes during the full suite.
+    monkeypatch.setattr(feeds, "datetime", FixedDatetime)
+
     reads = []
 
     async def fake_refresh(transport=None):

@@ -1,7 +1,8 @@
 """Google Drive: find your files by name, fetch one to send to you, and save new files you send.
 
-Your existing files are read-only to the app (`drive.readonly`): it can see and download them, never change,
-move or delete them. Saving only ever adds new files (`drive.file`), so nothing is overwritten.
+Existing files are only read by these tools. Saving adds new copies and never overwrites, moves or deletes originals.
+The default connection uses drive.readonly + drive.file; optional broader Drive consent permits adding new files
+inside folders the user created outside Junior. A save is never redirected to another destination.
 Google's own files are exported (a Doc as Word or PDF, a Sheet as Excel, Slides as PowerPoint or PDF);
 everything else comes as it is.
 """
@@ -71,7 +72,7 @@ async def _folder_named(name: str, parent: str) -> dict | None:
 
 async def _new_folder(name: str, parent: str) -> dict:
     return await call(
-        "POST", FILES, params={"fields": "id,name,webViewLink"},
+        "POST", FILES, params={"fields": "id,name,webViewLink", "supportsAllDrives": "true"},
         json={"name": name, "mimeType": FOLDER, "parents": [parent]},
     )
 
@@ -85,36 +86,58 @@ async def _send_file(name: str, data: bytes, mime: str, parent: str) -> dict:
         f"--{boundary}\r\nContent-Type: {mime or 'application/octet-stream'}\r\n\r\n"
     ).encode() + data + f"\r\n--{boundary}--\r\n".encode()
     return await call(
-        "POST", UPLOAD, params={"uploadType": "multipart", "fields": "id,name,webViewLink"},
+        "POST", UPLOAD, params={"uploadType": "multipart", "fields": "id,name,webViewLink", "supportsAllDrives": "true"},
         content=body, headers={"Content-Type": f"multipart/related; boundary={boundary}"},
     )
+
+
+async def resolve_folder(folder: str, *, create: bool = False) -> dict:
+    """Resolve an exact folder path or Google Drive folder URL; never choose between duplicate names."""
+    from urllib.parse import urlparse
+    folder = folder.strip()
+    if folder.startswith(("https://", "http://")):
+        url = urlparse(folder)
+        match = re.fullmatch(r"/drive/(?:u/\d+/)?folders/([A-Za-z0-9_-]+)/*", url.path)
+        if url.scheme != "https" or url.hostname != "drive.google.com" or not match:
+            raise GoogleError("Use a Google Drive folder link or an exact folder path such as University/NLP.")
+        row = await call("GET", f"{FILES}/{match.group(1)}", params={"fields": "id,name,mimeType,trashed", "supportsAllDrives": "true"})
+        if row.get("mimeType") != FOLDER or row.get("trashed"):
+            raise GoogleError("That Drive link isn't an available folder.")
+        return row
+    parts = folder.replace("\\", "/").split("/") if folder else []
+    if len(parts) > 12 or any(not p.strip() or p.strip() in (".", "..") for p in parts):
+        raise GoogleError("Use a clear Drive folder path with at most 12 nonempty levels.")
+    parent = {"id": "root", "name": "My Drive", "mimeType": FOLDER}
+    for part in parts:
+        part = part.strip()
+        query = f"name = {_quoted(part)} and mimeType = '{FOLDER}' and {_quoted(parent['id'])} in parents and trashed = false"
+        result = await call("GET", FILES, params={"q": query, "pageSize": "2", "fields": "nextPageToken,files(id,name,mimeType)",
+                                                 "supportsAllDrives": "true", "includeItemsFromAllDrives": "true"})
+        rows = result.get("files", [])
+        if len(rows) > 1 or result.get("nextPageToken"):
+            raise GoogleError(f"More than one Drive folder is named {part!r} here. Send the exact folder link.")
+        if not rows and not create:
+            raise GoogleError(f"Drive folder {part!r} was not found. Give the exact path or folder link.")
+        parent = rows[0] if rows else await _new_folder(part, parent["id"])
+    return parent
+
+
+async def save_exact(name: str, data: bytes, mime: str, folder: str = "") -> dict:
+    """Create a new file at precisely the requested destination. Never redirect to a fallback folder."""
+    if len(data) > MAX_BYTES:
+        raise GoogleError("The file is over the 20 MB Drive transfer limit.")
+    parent = await resolve_folder(folder, create=True)
+    try:
+        return await _send_file(name, data, mime, parent["id"])
+    except GoogleError as e:
+        raise GoogleError(f"Couldn't confirm saving in the requested Drive folder. Check that folder before retrying. "
+                          f"For an existing folder the app cannot access, use Settings → Connections → Allow existing Drive folders. {e}") from e
 
 
 async def save_file(name: str, data: bytes, mime: str, folder: str = "") -> tuple[dict, str]:
     """Add a new file to your Drive, in a folder if you named one ("University" or "Work/Invoices").
     A folder that doesn't exist is made. Returns (the file, a note for you: '' or why it's somewhere else)."""
-    if len(data) > MAX_BYTES:
-        raise GoogleError("That file is too big to save from here (over 20 MB).")
-    parent, note = "root", ""
-    names = [p.strip() for p in folder.replace("\\", "/").split("/") if p.strip()][:5]
-    for part in names:
-        found = await _folder_named(part, parent)
-        parent = found["id"] if found else (await _new_folder(part, parent))["id"]
-    try:
-        return await _send_file(name, data, mime, parent), note
-    except GoogleError as e:
-        refused = "access" in str(e).lower() or "find" in str(e).lower()  # Google's 403 / 404 for the folder
-        if parent == "root" or not refused:
-            raise
-    # Your own folder: the app's permission covers only files and folders it made. Use one it made, next to yours.
-    fallback = " ".join(names) + " (Junior Muneer)"
-    found = await _folder_named(fallback, "root")
-    parent = found["id"] if found else (await _new_folder(fallback, "root"))["id"]
-    note = (
-        f"Google didn't let the app put it into your own folder {folder!r} (the app may only add to folders it made), "
-        f"so it's in a new folder {fallback!r}. You can drag it across in Drive."
-    )
-    return await _send_file(name, data, mime, parent), note
+    return await save_exact(name, data, mime, folder), ""
 
 
 async def search(words: str, limit: int = 10) -> list[dict]:

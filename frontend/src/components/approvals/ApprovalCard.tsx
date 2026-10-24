@@ -15,7 +15,7 @@ const STATUS: Record<ApprovalStatus, { label: string; style: string }> = {
 };
 
 // Proposals and messages are "sent"; posts are "posted".
-const SENT_KINDS = new Set(["proposal", "message", "reply", "delivery", "email"]);
+const SENT_KINDS = new Set(["proposal", "message", "reply", "delivery", "email", "file_transfer"]);
 const isSent = (item: ApprovalItem) => SENT_KINDS.has(item.item_type) || item.platform === "upwork" || item.platform === "fiverr";
 // Files, folders and commands on your PC are "done".
 const onPc = (item: ApprovalItem) => item.platform === "computer";
@@ -167,7 +167,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
     >
       <header className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-2.5">
         <span className="text-sm font-semibold">{item.platform_label}</span>
-        <span className="text-sm capitalize text-muted">{item.item_type}</span>
+        <span className="text-sm capitalize text-muted">{item.item_type.replaceAll("_", " ")}</span>
         {item.meta.score !== undefined && (
           <span className="text-xs text-muted" title="Checker score">
             · {item.meta.score}/10
@@ -259,6 +259,9 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
               </li>
             ))}
           </ul>
+        )}
+        {item.item_type === "file_transfer" && typeof item.meta.snapshot_id === "number" && (
+          <a href={`${BACKEND_URL}/api/files/${item.meta.snapshot_id}/download`} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm text-accent underline">Download prepared file</a>
         )}
         {Array.isArray(item.meta.answers) && item.meta.answers.length > 0 && (
           <ScreeningAnswers answers={item.meta.answers as { question: string; answer: string }[]} />
@@ -392,13 +395,15 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
             )}
             {item.status === "posted" && typeof item.meta.post_url === "string" && item.meta.post_url && (
               <a href={item.meta.post_url} target="_blank" rel="noopener noreferrer" className={button}>
-                View post ↗
+                {item.item_type === "file_transfer" ? "Open file ↗" : "View post ↗"}
               </a>
             )}
             {waiting && item.kind === "api" && (
               <>
                 <button type="button" className={primary} disabled={busy} onClick={() => run("approve")}>
-                  {busy && item.can_send ? "Posting…" : item.can_send ? "Approve & post" : "Approve"}
+                  {busy && item.can_send ? "Working…" : item.can_send ? (item.item_type === "file_transfer"
+                    ? item.platform === "computer" ? "Approve & copy" : item.platform === "google" ? "Approve & save" : "Approve & send"
+                    : "Approve & post") : "Approve"}
                 </button>
                 {item.can_always_allow && (
                   <button
@@ -415,7 +420,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
             )}
             {waiting && (
               <>
-                <button type="button" className={button} disabled={busy} onClick={() => setEditing(item.text)}>
+                <button type="button" className={button} disabled={busy || item.item_type === "file_transfer"} onClick={() => setEditing(item.text)}>
                   Edit
                 </button>
                 {item.item_type === "post" && (

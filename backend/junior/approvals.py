@@ -63,6 +63,7 @@ PLATFORM_LABELS = {
     "email": "Email",
     "github": "GitHub",
     "computer": "Your PC",
+    "whatsapp": "Your WhatsApp",
     "other": "Other",
 }
 
@@ -202,11 +203,17 @@ def create_item(
         if not action_type:
             raise ApprovalError("An API item needs an action type, e.g. linkedin.post.")
         decision = decide(action_type, from_outside=from_outside)
+        additional = [decide(key, from_outside=from_outside) for key in (meta or {}).get("required_actions", [])]
+        if any(d.rule == "deny" for d in additional):
+            raise ApprovalError(next(d.reason for d in additional if d.rule == "deny"))
         if decision.rule == "deny":
             audit("action", "approval_refused", result="blocked", detail={"type": action_type, "reason": decision.reason})
             raise ApprovalError(decision.reason)
         reason = decision.reason
-        if decision.rule == "auto":
+        needs_additional_ok = any(d.rule == "ask" for d in additional)
+        if needs_additional_ok:
+            reason = "This operation also needs your OK: " + next(d.reason for d in additional if d.rule == "ask")
+        if decision.rule == "auto" and not needs_additional_ok:
             status = "approved"
             # The sender sends exactly this text; your Auto rule approved it.
             meta = {**(meta or {}), "approved_text": text, "approved_by": "auto rule"}
@@ -300,6 +307,8 @@ def edit_item(item_id: int, text: str) -> ApprovalOut:
     def fn(item: ApprovalItem) -> None:
         nonlocal text
         _need(item, "waiting")
+        if item.item_type == "file_transfer":
+            raise ApprovalError("This card pins exact file bytes and a destination. Ask Junior to prepare a new transfer to change it.")
         if item.platform != "computer":
             text = text.strip()
         if text != item.text:
@@ -567,6 +576,9 @@ async def post_approve(item_id: int, request: Request, body: ApproveBody | None 
         from junior.whatsapp import pc_result, post_to_whatsapp
 
         await post_to_whatsapp(done.conversation_id, f"Done on your PC: {pc_result(done.model_dump(mode='json'))}")
+    elif done.platform == "google" and done.item_type == "file_transfer" and done.status == "posted":
+        from junior.whatsapp import post_to_whatsapp
+        await post_to_whatsapp(done.conversation_id, str(done.meta.get("result", "Saved your file.")) + "\n" + str(done.meta.get("post_url", "")))
     return done
 
 

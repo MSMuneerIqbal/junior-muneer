@@ -49,6 +49,9 @@ class ComputerSender:
         op = out.meta.get("op", "")
         try:
             path = recheck(out.meta.get("path", ""))
+            if op == "copy_document":
+                from junior.transfers.sender import copy_to_pc
+                return copy_to_pc(out)
             if op == "write":
                 return self._write(path, out.text, bool(out.meta.get("replace")), out.meta.get("old_sha", ""))
             if op == "mkdir":
@@ -59,7 +62,7 @@ class ComputerSender:
                 return self._delete(path)
             if op == "run":
                 return await self._run(path, out.text, float(out.meta.get("seconds") or 120))
-        except PathRefused as e:
+        except (PathRefused, ValueError) as e:
             return SendResult("failed", str(e))
         except OSError as e:  # nothing (or only the Recycle Bin copy) happened: safe to try again by hand
             return SendResult("failed", f"Windows refused it: {e.strerror or e}")

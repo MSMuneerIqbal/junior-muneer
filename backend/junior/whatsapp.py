@@ -367,6 +367,10 @@ async def on_button(button_id: str, app: Any = None) -> str:
                 return f"Done on your PC: {pc_result(item.model_dump(mode='json'))}"
             return f"Approved, but it didn't run: {item.meta.get('last_error', 'check the dashboard')}"
         if item.status == "posted":
+            if item.item_type == "file_transfer":
+                result = str(item.meta.get("result", "Done: " + item.title))
+                link = str(item.meta.get("post_url", ""))
+                return result + ("\n" + link if link and link not in result else "")
             return f"Sent: {item.title}."
         return f"Approved, but it didn't go out: {item.meta.get('last_error', 'check the dashboard')}."
     return f"{done}: {item.platform_label} {item.item_type}."

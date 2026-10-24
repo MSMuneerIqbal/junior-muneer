@@ -135,6 +135,16 @@ class FakeModel(Model):
         if text.startswith("## Request from") and "score_job" in tool_names:
             return self._fake_freelance(input, text), False
         last = input[-1] if isinstance(input, list) and input else None
+        if "place_document" in tool_names and text.lower().startswith("place document "):
+            if isinstance(last, dict) and last.get("type") == "function_call_output":
+                return [assistant_message(last.get("output", ""))], False
+            args, _ = json.JSONDecoder().raw_decode(text[len("place document "):])
+            return [function_call("place_document", {**args, "your_words": text}, call_id="fake-place-document")], False
+        if "zip_folder" in tool_names and text.lower().startswith("zip folder "):
+            if isinstance(last, dict) and last.get("type") == "function_call_output":
+                return [assistant_message(last.get("output", ""))], False
+            args, _ = json.JSONDecoder().raw_decode(text[len("zip folder "):])
+            return [function_call("zip_folder", {**args, "your_words": text}, call_id="fake-zip-folder")], False
         if "find_class_notes" in tool_names and text.lower().startswith("find class notes"):
             if isinstance(last, dict) and last.get("type") == "function_call_output":
                 return [assistant_message(last.get("output", ""))], False

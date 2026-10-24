@@ -61,6 +61,7 @@ def test_signing_in_saves_the_login_encrypted(google):
     assert back.headers["location"] == "http://localhost:3000/settings?google=connected&account=you%40example.com#connections"
     status = client.get("/api/google/status").json()
     assert status == {"configured": True, "connected": True, "account": "you@example.com", "missing": [],
+                      "drive_folder_access": False,
                       "redirect_uri": "http://127.0.0.1:8000/api/google/callback"}
     with session_scope() as s:
         row = s.query(Connection).filter_by(provider="google").one()

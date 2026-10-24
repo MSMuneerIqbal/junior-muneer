@@ -7,7 +7,7 @@ from junior.senders.base import Outgoing, SendResult
 
 class GoogleWorkspaceSender:
     label = "Google Drive"
-    action_types = ("google.docs.create", "google.sheets.create")
+    action_types = ("google.docs.create", "google.sheets.create", "google.drive.save")
 
     def is_connected(self):
         return auth.configured() and auth.is_connected() and auth.has_scope("drive.file")
@@ -16,6 +16,9 @@ class GoogleWorkspaceSender:
         from junior.google.docs import create_doc
         from junior.google.sheets import create_sheet
         try:
+            if out.action_type == "google.drive.save":
+                from junior.transfers.sender import save_to_drive
+                return await save_to_drive(out)
             if out.action_type == "google.docs.create":
                 remote_id, link = await create_doc(out.text.splitlines()[0].lstrip("# ")[:160], out.text)
             else:
@@ -31,6 +34,8 @@ class GoogleWorkspaceSender:
                 except (ValueError, TypeError, KeyError):
                     return SendResult("failed", "The approved sheet must contain JSON headers and rows; nothing was created.")
                 remote_id, link = await create_sheet(data.get("title", "Research spreadsheet"), headers, rows)
+        except ValueError as e:
+            return SendResult("failed", str(e))
         except GoogleError as e:
             # Creating may succeed before formatting fails. Never silently create a second copy.
             return SendResult("unclear", f"Google couldn't confirm completion ({e}). Check Drive before trying again.")

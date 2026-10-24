@@ -28,7 +28,7 @@ AGENTS_DIR = REPO_DIR / "agents"
 KNOWN_TOOLS = frozenset({"web_search", "hosted_web_search", "database", "memory", "approvals", "writing", "ideas", "social",
                           "ai_official_search", "pakistan_official_search", "news",
                           "jobs", "orders", "freelance", "plan", "background", "reports", "feeds", "settings", "email", "google", "files",
-                          "computer", "computer_read", "computer_agent", "skills", "documents", "document_sources", "notes"})
+                          "computer", "computer_read", "computer_agent", "skills", "documents", "document_sources", "notes", "transfers"})
 NOT_AGENT_FILES = {"README.md"}
 
 _NAME = re.compile(r"^[a-z][a-z0-9_]{1,49}$")

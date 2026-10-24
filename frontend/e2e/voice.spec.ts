@@ -5,9 +5,9 @@ test("hold the mic, release, and the voice message is sent and answered", async 
   const mic = page.getByRole("button", { name: "Record a voice message" });
   await expect(mic).toBeVisible();
 
-  const box = await mic.boundingBox();
-  if (!box) throw new Error("mic button not visible");
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(mic).toBeEnabled();
+  // Locator hover waits for a stable position; a cached bounding box can miss the mic as mobile layout settles.
+  await mic.hover();
   await page.mouse.down();
   await expect(page.getByText(/release to send/)).toBeVisible();
   await page.waitForTimeout(1500);

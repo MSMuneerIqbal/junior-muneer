@@ -49,6 +49,7 @@ SCOPES = {
     "https://www.googleapis.com/auth/gmail.compose": "making Gmail drafts and sending the ones you approve",
 }
 _ALIASES = {"https://www.googleapis.com/auth/userinfo.email": "email"}
+DRIVE_FOLDERS_SCOPE = "https://www.googleapis.com/auth/drive"
 
 TRANSPORT: httpx.AsyncBaseTransport | None = None  # tests put a fake Google here
 _flows: dict[str, dict] = {}  # sign-ins in progress: state -> {verifier, expires_at}
@@ -112,12 +113,15 @@ def _short(scopes: str) -> str:
 
 def missing_scopes(granted: str) -> list[str]:
     have = set(_short(granted).split())
+    if "drive" in have:
+        have.update(("drive.file", "drive.readonly"))
     return [what for scope, what in SCOPES.items() if scope.removeprefix(_PREFIX) not in have]
 
 
 def has_scope(scope_end: str) -> bool:
     """Was this permission allowed (e.g. 'calendar.events')?"""
-    return any(s.endswith(scope_end) for s in stored()[2].split())
+    have = stored()[2].split()
+    return any(s.endswith(scope_end) for s in have) or (scope_end in ("drive.file", "drive.readonly") and "drive" in have)
 
 
 def _save(account: str, refresh_token: str, scopes: str) -> None:
@@ -213,7 +217,7 @@ def _message(r: httpx.Response) -> str:
 # ---- signing in ------------------------------------------------------------------------
 
 
-def consent_url() -> str:
+def consent_url(drive_folders: bool = False) -> str:
     """Google's consent page for this app, with a one-time state and PKCE (the code can't be used by anyone else)."""
     if not configured():
         raise GoogleError(
@@ -223,13 +227,14 @@ def consent_url() -> str:
     for state in [k for k, v in _flows.items() if v["expires_at"] < now]:
         _flows.pop(state)
     state, verifier = secrets.token_urlsafe(24), secrets.token_urlsafe(48)
-    _flows[state] = {"verifier": verifier, "expires_at": now + FLOW_SECONDS}
+    _flows[state] = {"verifier": verifier, "expires_at": now + FLOW_SECONDS, "drive_folders": drive_folders}
+    requested = list(SCOPES) + ([DRIVE_FOLDERS_SCOPE] if drive_folders else [])
     s = get_settings()
     params = {
         "client_id": s.google_client_id,
         "redirect_uri": s.google_redirect_uri,
         "response_type": "code",
-        "scope": " ".join(SCOPES),
+        "scope": " ".join(requested),
         "access_type": "offline",  # a refresh token, so you stay connected
         "prompt": "consent",
         "include_granted_scopes": "true",
@@ -238,7 +243,7 @@ def consent_url() -> str:
         "code_challenge_method": "S256",
     }
     if _fake():  # a pretend Google approves at once
-        return f"{s.google_redirect_uri}?{urlencode({'code': 'fake-code', 'state': state, 'scope': ' '.join(SCOPES)})}"
+        return f"{s.google_redirect_uri}?{urlencode({'code': 'fake-code', 'state': state, 'scope': ' '.join(requested)})}"
     return f"{AUTH_URL}?{urlencode(params)}"
 
 
@@ -263,7 +268,10 @@ async def finish(code: str, state: str) -> str:
     if not refresh:
         raise GoogleError("Google didn't give a lasting login. Disconnect the app at myaccount.google.com/permissions and connect again.")
     account = who.json().get("email", "") if who.status_code == 200 else ""
-    _save(account, refresh, got.get("scope", ""))
+    granted = got.get("scope", "")
+    if _fake() and flow.get("drive_folders"):
+        granted += " " + DRIVE_FOLDERS_SCOPE
+    _save(account, refresh, granted)
     _access["token"] = (got["access_token"], time.monotonic() + int(got.get("expires_in", 3600)))
     return account
 
@@ -287,9 +295,9 @@ def _back(**params) -> RedirectResponse:
 
 
 @router.get("/api/google/connect")
-def connect() -> RedirectResponse:
+def connect(drive_folders: bool = False) -> RedirectResponse:
     try:
-        return RedirectResponse(consent_url(), status_code=303)
+        return RedirectResponse(consent_url(drive_folders), status_code=303)
     except GoogleError as e:
         return _back(google="error", message=str(e))
 
@@ -314,6 +322,7 @@ def status() -> dict:
         "connected": bool(refresh),
         "account": account,
         "missing": missing_scopes(scopes) if refresh else [],
+        "drive_folder_access": "drive" in scopes.split(),
         "redirect_uri": get_settings().google_redirect_uri,
     }
 

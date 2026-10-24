@@ -69,6 +69,8 @@ STEP_LABELS = {
     "ask_documents_agent": "Delegating research and document work",
     "task_status": "Checking task progress",
     "make_class_notes": "Preparing your saved class notes",
+    "place_document": "Preparing the file's destination",
+    "zip_folder": "Packaging the folder as ZIP",
     "find_class_notes": "Finding your class notes",
     "read_class_note": "Reading saved class notes",
     "list_note_folders": "Looking at your Notes folders",

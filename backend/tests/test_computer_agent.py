@@ -81,13 +81,14 @@ def test_turned_off_means_the_agent_isnt_even_asked(home):
     assert events[-1]["text"] == "The computer tools are off." and len(model.calls) == 2  # no Computer Agent run
 
 
-def test_only_the_computer_agent_can_change_things_and_junior_can_only_look():
+def test_computer_changes_are_scoped_and_junior_has_only_bounded_transfer_tools():
     registry = load_registry()
     agent = registry.get("computer_agent")
-    assert agent.tools == ("computer", "skills")
-    assert set(agent.action_types) == {"computer.write", "computer.move", "computer.delete", "computer.run"}
+    assert agent.tools == ("computer", "transfers", "skills")
+    assert set(agent.action_types) == {"computer.write", "computer.move", "computer.delete", "computer.run", "google.drive.save", "files.archive_whatsapp"}
     junior = registry.get("junior_muneer")
     assert "computer_read" in junior.tools and "computer_agent" in junior.tools and "computer" not in junior.tools
+    assert "transfers" in junior.tools
     for name in registry.names():
         if name != "computer_agent":
             assert "computer" not in registry.get(name).tools, name  # least power: nobody else changes your PC

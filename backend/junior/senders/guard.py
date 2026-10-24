@@ -65,6 +65,12 @@ def check(item: ApprovalItem, text: str) -> list[str]:
         problems.append("Everything is paused. It goes out after you resume.")
     elif decision.rule == "ask" and item.meta.get("approved_by") != "you":
         problems.append(f"It needs your OK first ({decision.reason.rstrip('.')}).")
+    for key in item.meta.get("required_actions", []):
+        required = decide(key, from_outside=item.from_outside)
+        if required.rule == "deny" or required.held:
+            problems.append(required.reason)
+        elif required.rule == "ask" and item.meta.get("approved_by") != "you":
+            problems.append(f"It also needs your OK for {key}.")
 
     approved = item.meta.get("approved_text")
     if approved is None or text != approved or item.text != approved:

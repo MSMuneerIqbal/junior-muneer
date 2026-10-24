@@ -32,6 +32,15 @@ The design is in [PLAN.md](PLAN.md); progress and set-up steps per feature are i
 | **Researched PowerPoint** | Give Junior a topic: he researches the internet and returns an editable `.pptx` with citations and speaker notes, as a download and a real WhatsApp document |
 | **Documents & Research Agent** | Researched Word, Markdown and Excel files in the background; Google Docs/Sheets requests create approval cards; progress, cost, time limits and Stop are visible |
 | **Class notes** | Turn class text, photos, slides or documents into saved notes with title, class date and course. Name a Notes folder: Junior reuses it or creates it. Search, read, edit, download, archive and restore on **Notes** |
+| **File placement and ZIPs** | Copy an actual document to a PC drive/folder or Google Drive folder. ZIP local/Drive folders with subfolders; download the ZIP or approve sending its private Drive download link to your WhatsApp. Manage `file_transfer` in Settings → Skills |
+
+For example: “Put this PDF in `D:\Classes\NLP`” or “Zip `D:\Classes\NLP` and send it to my WhatsApp.”
+Source files are kept and existing documents are never overwritten. Missing destination folders are created as part
+of the permitted action. If Google cannot access a folder you created, use **Settings → Connections → Allow existing
+Drive folders** to grant optional broader Drive access; Junior does not redirect a save to a different folder.
+The official WhatsApp API rejects ZIP uploads (verified with the connected account), so archives reach WhatsApp as
+private Google Drive download links. Both Google and WhatsApp must be connected. No public sharing permission is added.
+Folder archives support up to 500 entries, 100 MB of source material, a 20 MB ZIP and two minutes of preparation.
 
 ## Models and costs (Settings)
 

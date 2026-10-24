@@ -222,7 +222,12 @@ class FakeGoogle:
                 and all(f["mimeType"] == m for m in mime)
                 and all(p in f.get("parents", ["root"]) for p in parent)
             ]
-            return httpx.Response(200, json={"files": found})
+            offset = int(request.url.params.get("pageToken", "0"))
+            count = int(request.url.params.get("pageSize", "100"))
+            result = {"files": found[offset:offset + count]}
+            if offset + count < len(found):
+                result["nextPageToken"] = str(offset + count)
+            return httpx.Response(200, json=result)
         m = re.match(r"^/drive/v3/files/([^/]+)(/export)?$", path)
         if not m or m.group(1) not in files:
             return httpx.Response(404, json={"error": {"message": "File not found."}})
@@ -243,7 +248,8 @@ class FakeGoogle:
         head, data = parts[2].split(b"\r\n\r\n", 1)
         parent = meta.get("parents", ["root"])[0]
         folder = self.files.get(parent)
-        if parent != "root" and not (folder and folder.get("app")):
+        from junior.google.auth import has_scope
+        if parent != "root" and not (folder and (folder.get("app") or has_scope("drive"))):
             # The app may only add to folders it made (drive.file); Google answers as if it can't see yours.
             return httpx.Response(404, json={"error": {"message": f"File not found: {parent}."}})
         fid = self._id("upload")

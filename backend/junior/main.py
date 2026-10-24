@@ -83,6 +83,8 @@ def default_senders(settings) -> SenderRegistry:
     from junior.computer.sender import ComputerSender
 
     registry.add(ComputerSender())  # approved file changes and commands on this PC (Phase 9)
+    from junior.transfers.sender import ArchiveWhatsAppSender
+    registry.add(ArchiveWhatsAppSender())
     if settings.fake_ai and not registry.for_action("facebook.page.post"):
         from junior.senders.fake import FakeSender
 

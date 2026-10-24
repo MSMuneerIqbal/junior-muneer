@@ -1076,6 +1076,14 @@ def _notes_tools():
 TOOL_FACTORIES["notes"] = _notes_tools
 
 
+def _transfer_tools():
+    from junior.transfers.tools import TRANSFER_TOOLS
+    return list(TRANSFER_TOOLS)
+
+
+TOOL_FACTORIES["transfers"] = _transfer_tools
+
+
 def _document_sources():
     from junior.computer.tools import pc_read, pc_find, pc_list
     from junior.google.tools import google_doc_read, google_sheet_read, drive_search, drive_read, drive_folder

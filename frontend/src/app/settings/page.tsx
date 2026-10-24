@@ -1201,7 +1201,7 @@ function ConnectionRow({ p }: { p: Platform }) {
   );
 }
 
-type GoogleStatus = { configured: boolean; connected: boolean; account: string; missing: string[]; redirect_uri: string };
+type GoogleStatus = { configured: boolean; connected: boolean; account: string; missing: string[]; redirect_uri: string; drive_folder_access: boolean };
 
 /** Google Docs, Sheets and Calendar: Google's own consent page, then back here. */
 function GoogleConnection() {
@@ -1270,6 +1270,13 @@ function GoogleConnection() {
             Not allowed on Google: {data.missing.join(", ")}. Use “Connect again” and tick them, if you want those.
           </p>
         )}
+        {data.connected && !data.drive_folder_access && (
+          <div className="mt-1 text-xs text-muted">
+            <p>To save directly into folders you already created, Google requires broader Drive access. Junior still adds copies and keeps existing files.</p>
+            <a href={`${BACKEND_URL}/api/google/connect?drive_folders=true`} className="mt-1 inline-block text-accent underline">Allow existing Drive folders</a>
+          </div>
+        )}
+        {data.connected && data.drive_folder_access && <p className="text-xs text-muted">Saving into your existing Drive folders is allowed on Google.</p>}
         {!data.configured && (
           <p className="text-xs leading-relaxed text-muted">
             First add your Google Cloud project&apos;s OAuth client to <code>backend/.env</code> (<code>GOOGLE_CLIENT_ID</code>,{" "}
@@ -1279,7 +1286,7 @@ function GoogleConnection() {
         {data.configured && !data.connected && (
           <p className="text-xs text-muted">
             Asks only for: files the app creates, finding and reading your Drive files (read-only: never changes or
-            deletes them), and your calendar events. Never your Gmail.
+            deletes them), calendar events, reading Gmail and making drafts you approve.
           </p>
         )}
         {message && (

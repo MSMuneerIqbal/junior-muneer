@@ -94,13 +94,12 @@ def test_a_folder_is_made_once_and_reused(app):
     assert {f["parents"][0] for f in uploaded(google)} == {next(k for k, f in google.files.items() if f["name"] == "Semester 3")}
 
 
-def test_your_own_folder_falls_back_and_says_so(app):
+def test_inaccessible_existing_folder_never_redirects_the_save(app):
     _, said, google = app
     number, _ = files.save_received(b"x", "invoice.pdf", "application/pdf", "chat")
     answer = run(drive_save_for(said("save it in my Work folder"), number, "save it in my Work folder", "Work"))
-    assert "Google didn't let the app put it into your own folder 'Work'" in answer and "'Work (Junior Muneer)'" in answer
-    [saved] = uploaded(google)
-    assert google.files[saved["parents"][0]]["name"] == "Work (Junior Muneer)"
+    assert "NOT done" in answer and "Allow existing Drive folders" in answer
+    assert uploaded(google) == []
     assert google.files["folder-work"].get("app") is None  # yours, untouched
 
 

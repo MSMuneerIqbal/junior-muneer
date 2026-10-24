@@ -619,6 +619,27 @@ with its links arrives in the chat you asked from, WhatsApp included.
     Database backed up before the new migration; backend restarted and health, Notes/folder APIs, skill and agent
     registration checked on port 8000. Focused reading/provider and notes safety checks also passed after tightening
     model-price-aware vision bounds and shared retry handling.
+- [x] **P10-04c** Exact document placement + ZIP delivery (requested 2026-10-24): copy real document bytes from
+  chat/generated files, PC, Google Drive or saved notes into a specified PC/Drive folder; preserve source and create
+  missing folders. ZIP local/Drive folders recursively and send the archive's private download link to the owner's
+  WhatsApp through approvals. No redirected destinations, silent omissions or terminal scripts. Settings skill + tests.
+  - **Done 2026-10-24.** `junior/transfers/`, place_document/zip_folder and `skills/file_transfer.md`. Copy from chat,
+    generated files, PC, Google Drive or Notes; exact PC/Drive destinations and reviewable immutable snapshots.
+    Optional Google consent enables user-created Drive folders; normal connection scopes stay unchanged. A real
+    application/zip upload was rejected by Meta, so ZIP delivery uses a private My Drive file link, never a renamed
+    attachment or public sharing grant. Compound Drive/WhatsApp rules are checked before work and execution, and
+    again between upload and sending. Interrupted/uncertain sends are not replayed; deliberate retries reuse the upload.
+  - **Checks:** final full backend suite passed; unreadable-subfolder check also passed. Full browser run: 95 passed,
+    14 skipped, one voice-test failure from a stale mobile button position. Fixed the test to wait for a stable locator;
+    final desktop/phone transfer + voice run: all 6 passed. TypeScript/ESLint passed. Earlier backend failures were an
+    outdated tool-scope assertion and a scheduler test using a changing clock; corrected and passed in the final full run.
+  - **Real check (throwaway app data, synthetic PDF only):** natural prompts copied matching bytes into a new PC
+    folder and Google Drive folder; local and Drive ZIPs reopened with matching PDF bytes; Meta accepted the actual
+    private ZIP-link WhatsApp message. Two model turns: 35.7s/$0.0628076 and 19.5s/$0.0315434 ($0.094351 total AI cost;
+    approval/API verification time additional). Phone delivery/read receipts and real broader Drive consent were not
+    checked. Existing-folder consent, permissions, stale paths, collisions, nested folders, pagination, exports,
+    partial failure/retry and Pause between stages are covered with controlled services. Backend backed up/restarted;
+    health, archive permission and runtime skill registration confirmed. P10-05 remains next planned work.
 - [ ] **P10-05** Slides (Google Slides API, one more Google permission) and PDF export
 - [ ] **P10-06** First skills: CV review, scholarship roadmap, research report, pitch deck, proposal
 - [ ] **P10-07** Your acceptance test + push

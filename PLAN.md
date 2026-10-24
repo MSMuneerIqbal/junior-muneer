@@ -565,6 +565,30 @@ embedded images or scanned/illustrated pages). PDF batches are limited to 120 pa
 smaller sections; unclear text is disclosed. The ordinary task cost/time/retry limits, Pause and Plan still apply.
 Native PowerPoint `.ppt` and Word `.doc` require conversion to `.pptx`, `.docx` or PDF.
 
+## 14f. Exact file placement and ZIP delivery (requested 2026-10-24)
+
+`place_document` copies an uploaded/generated document, PC file, Google Drive file or saved note into an exact PC
+or Google Drive folder. It preserves binary content, keeps the source and creates missing folders. A collision
+is refused; no existing document is overwritten. Prepared snapshots are hashed and reviewable before approval.
+PC copies use computer.write and its path guard; Drive copies use google.drive.save. Destinations are rechecked
+at execution. Google folder paths must be unambiguous, or the user supplies the folder URL; saves never fall back
+to another folder. Existing-folder write access can be granted through an optional broader Google Drive consent
+in Settings → Connections; the default Google connection keeps its original narrow write scope.
+
+`zip_folder` packages a PC or Drive folder recursively, retaining subfolders and empty folders. Google-native files
+are exported (Docs → DOCX, Sheets → XLSX, Slides → PPTX). All pages of folder listings are read. Blocked secrets,
+links/shortcuts, changing content, duplicate archive names and oversize batches produce an explicit failure instead
+of an incomplete ZIP. Bounds: 500 entries, 100 MB uncompressed material, 20 MB ZIP, 120 seconds. Compression/copying
+uses deterministic Python code and never model-written shell programs. The runtime skill is file_transfer.
+
+The connected Meta API was tested and rejects application/zip. ZIP delivery therefore uploads a new private file
+to My Drive and sends its authenticated Drive download link to the owner's WhatsApp. The files.archive_whatsapp
+permission defaults to Ask; google.drive.save and whatsapp.to_self rules are also checked before preparation and
+again at execution. No public sharing grant is created. A confirmed upload's link is persisted before sending;
+uncertain delivery waits for a manual check, and deliberate retries reuse the saved upload. A local downloadable
+ZIP is available even when delivery connections are missing. Prepared transfer cards cannot have their descriptive
+text edited into a different operation: a changed request creates a new plan.
+
 ## 15. Using it on another PC
 
 1. Get the code from your private Git repo.
