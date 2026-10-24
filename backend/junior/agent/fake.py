@@ -135,6 +135,23 @@ class FakeModel(Model):
         if text.startswith("## Request from") and "score_job" in tool_names:
             return self._fake_freelance(input, text), False
         last = input[-1] if isinstance(input, list) and input else None
+        if "find_class_notes" in tool_names and text.lower().startswith("find class notes"):
+            if isinstance(last, dict) and last.get("type") == "function_call_output":
+                return [assistant_message(last.get("output", ""))], False
+            return [function_call("find_class_notes", {"query": text[len("find class notes"):].strip()}, call_id="fake-notes-find")], False
+        if "read_class_note" in tool_names and text.lower().startswith("read class note "):
+            if isinstance(last, dict) and last.get("type") == "function_call_output":
+                return [assistant_message(last.get("output", ""))], False
+            found = re.search(r"read class note (\d+)", text, re.I)
+            return [function_call("read_class_note", {"note_id": int(found.group(1))}, call_id="fake-notes-read")], False
+        if "make_class_notes" in tool_names and re.search(r"(?:make|save|prepare|create)\s+(?:my\s+)?class notes", text, re.I):
+            if isinstance(last, dict) and last.get("type") == "function_call_output":
+                said = last.get("output", "")
+                return [assistant_message("(fake AI) " + (said if said.startswith("NOT ") else "I'm preparing your class notes. They will be saved in Notes."))], False
+            folder = re.search(r"in folder (.+?):", text, re.I)
+            title = re.search(r"titled (.+?):", text, re.I)
+            return [function_call("make_class_notes", {"your_words": text, "folder_name": folder.group(1) if folder else "Class notes",
+                "title": title.group(1) if title else "Class notes", "file_numbers": [int(n) for n in re.findall(r"\[file (\d+):", text)]}, call_id="fake-class-notes")], False
         if "task_status" in tool_names and text.lower().strip() in ("status?", "task status", "is it ready?", "how long?"):
             if isinstance(last, dict) and last.get("type") == "function_call_output":
                 return [assistant_message(last.get("output", ""))], False
@@ -328,6 +345,13 @@ def _fake_order(their: str) -> dict:
 def _team_answer(schema: str, prompt: str) -> dict:
     """Fake Writer, Checker and Humanizer answers (structured, like the real ones)."""
     request = next((line[len("Request: "):] for line in prompt.splitlines() if line.startswith("Request: ")), "")
+    if "ClassNotesDraft" in schema:
+        ids = re.search(r"Actual source file IDs: (\[[^\n]*\])", prompt)
+        material = prompt.split("START OF THEIR TEXT", 1)[-1].split("END OF THEIR TEXT", 1)[0][-5000:]
+        return {"sufficient_material": True, "title": "Class notes", "subject": "Study material",
+                "summary": "(fake) Organized class notes based on the supplied material.",
+                "body": "## Key ideas\n\n" + material + "\n\n## Revision questions\n\n- Explain the main idea in your own words.",
+                "source_file_ids": json.loads(ids.group(1)) if ids else [], "uncertainties": []}
     if "DocumentReview" in schema:
         return {"passes": True, "issues": []}
     if "ResearchDocument" in schema:

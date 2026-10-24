@@ -323,6 +323,36 @@ class BackgroundTask(Base):
     finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
 
 
+class NotesFolder(Base):
+    __tablename__ = "notes_folders"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(80))
+    name_key: Mapped[str] = mapped_column(String(100), unique=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
+class ClassNote(Base):
+    """Dated class notes, kept separately from personal memory with their source files."""
+
+    __tablename__ = "class_notes"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(200))
+    folder_id: Mapped[int] = mapped_column(ForeignKey("notes_folders.id"), index=True)
+    folder: Mapped["NotesFolder"] = relationship()
+    subject: Mapped[str] = mapped_column(String(120), default="")
+    class_date: Mapped[str] = mapped_column(String(10), index=True)
+    summary: Mapped[str] = mapped_column(Text, default="")
+    body: Mapped[str] = mapped_column(Text)
+    source_text: Mapped[str] = mapped_column(Text, default="")
+    sources: Mapped[list[Any]] = mapped_column(default=list)
+    warnings: Mapped[list[Any]] = mapped_column(default=list)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    conversation_id: Mapped[int | None] = mapped_column(ForeignKey("conversations.id", ondelete="SET NULL"), nullable=True)
+    task_id: Mapped[int | None] = mapped_column(ForeignKey("background_tasks.id", ondelete="SET NULL"), nullable=True, unique=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
 class Connection(Base):
     """An account you connected in the app (GitHub). The token is encrypted (junior/secrets.py)."""
 

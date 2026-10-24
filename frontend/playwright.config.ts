@@ -30,7 +30,7 @@ export default defineConfig({
       command: "node e2e/start-backend.mjs",
       url: "http://127.0.0.1:8100/health",
       reuseExistingServer: false,
-      timeout: 60_000,
+      timeout: 180_000, // allow cold Windows imports/migrations while the backend suite is also running
     },
     {
       command: "npx next build && npx next start -p 3100",

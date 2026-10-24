@@ -224,6 +224,10 @@ class ChatService:
             conversation_id, request[:100], request, saved_paste, context,
             worker="documents_agent", output_format=fmt, slide_count=slides
         )
+        context.start_notes = lambda options: self.start_background(
+            conversation_id, options["title"] or "Class notes", context.user_text, saved_paste, context,
+            worker="notes_agent", output_format="class_notes", notes_options=options
+        )
         try:
             budget = budget_left(settings)
             provider = self.model_provider()
@@ -374,7 +378,7 @@ class ChatService:
 
     def start_background(
         self, conversation_id: int, title: str, request: str, paste: dict | None = None, context: TurnContext | None = None,
-        *, worker: str = MAIN_AGENT, output_format: str = "text", slide_count: int = 10
+        *, worker: str = MAIN_AGENT, output_format: str = "text", slide_count: int = 10, notes_options: dict | None = None
     ) -> str:
         """Start a long request in the background (after this turn's answer); its result is posted to this chat."""
         from junior.background import MAX_RUNNING, new_task, running_count
@@ -392,8 +396,8 @@ class ChatService:
 
         def launch() -> None:
             work = (self._documents_background(task_id, conversation_id, title, request, paste, output_format, slide_count, origin_ids,
-                                               context.user_text if context else request)
-                    if worker == "documents_agent" else self._background(task_id, conversation_id, title, request, paste))
+                                               context.user_text if context else request, notes_options)
+                    if worker in ("documents_agent", "notes_agent") else self._background(task_id, conversation_id, title, request, paste))
             job = asyncio.create_task(work)
             _BACKGROUND.add(job)
             job.add_done_callback(_BACKGROUND.discard)
@@ -536,7 +540,8 @@ class ChatService:
         assert result is not None
         return result
 
-    async def _documents_background(self, task_id, conversation_id, title, request, paste, output_format, slide_count, origin_ids, origin_text):
+    async def _documents_background(self, task_id, conversation_id, title, request, paste, output_format, slide_count, origin_ids, origin_text,
+                                    notes_options=None):
         from junior.background import finish_task, progress
         from junior.db import BackgroundTask
         from junior.documents.limits import task_provider
@@ -549,7 +554,12 @@ class ChatService:
             context.check_task_limits()
             provider = task_provider(self.model_provider(), context)
             context.helpers = HelperRunner(self.registry, provider)
-            text = await self._guarded_work(context, run_documents(context, request, output_format, slide_count))
+            if notes_options is not None:
+                from junior.notes.worker import run_notes
+                work = run_notes(context, request, notes_options)
+            else:
+                work = run_documents(context, request, output_format, slide_count)
+            text = await self._guarded_work(context, work)
             result = TurnResult(text=f"**Done in the background: {title}**\n\n{text}", usage=context.usage,
                                 steps=[e for e in context.pending_events if e.get("type") == "step"])
             context.check_task_limits()
@@ -557,7 +567,8 @@ class ChatService:
             attach_to_message(context.approval_ids, message_id)
             progress(task_id, "Finished", 5, context)
             finish_task(task_id, "done", message_id, cost_usd=result.cost_usd)
-            self._audit_run(conversation_id, context, "ok", background_task=task_id, worker="documents_agent")
+            self._audit_run(conversation_id, context, "ok", background_task=task_id,
+                            worker="notes_agent" if notes_options is not None else "documents_agent")
             await post_to_whatsapp(conversation_id, result.text, file_ids=context.generated_file_ids, approval_ids=context.approval_ids)
         except Exception as e:
             why = no_answer_message(e) if isinstance(e, APIConnectionError) else str(e)

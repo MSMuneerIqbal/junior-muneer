@@ -65,7 +65,7 @@ def new_task(conversation_id: int | None, title: str, request: str, *, worker="j
     settings = settings or all_settings()
     with session_scope() as s:
         task = BackgroundTask(conversation_id=conversation_id, title=title.strip()[:200] or "A task", request=request.strip(),
-                              worker=worker, output_format=output_format, total_steps=5 if worker == "documents_agent" else 4,
+                              worker=worker, output_format=output_format, total_steps=5 if worker in ("documents_agent", "notes_agent") else 4,
                               cost_limit_usd=settings["task_budget_usd"], time_limit_seconds=settings["task_timeout_seconds"],
                               max_retries=settings["task_max_retries"])
         s.add(task)

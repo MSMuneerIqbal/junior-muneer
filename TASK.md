@@ -605,6 +605,20 @@ with its links arrives in the chat you asked from, WhatsApp included.
   - **Follow-up live test 2026-10-24:** sent an NLP request through the running app in the WhatsApp chat.
     It generated 8 editable slides with source notes; Meta accepted the actual PowerPoint document message.
     ~86 seconds including sending; $0.061059484 including the chat reply. Phone delivery/read receipts were not checked.
+- [x] **P10-04b** Class notes + folders (requested 2026-10-24): turn supplied text/images/PPTX/DOCX/PDF/TXT/Markdown
+  into checked notes, auto-save with class date/title/course, reuse or create the named Notes folder, preserve source
+  uploads, and find/read/edit/download/archive/restore from a Notes page. Local Markdown storage; existing task limits.
+  - **Done 2026-10-24.** Separate Notes Agent + editable `class_notes` skill in Settings. Folder matching is
+    case-insensitive; IDs prevent repeated titles from overwriting notes. PPTX text/tables/charts/speaker notes,
+    embedded images and scanned-PDF reading; explicit batch limits and bounded vision calls. Source text is data,
+    never profile memory or authorization. Full backend suite passed; browser: 94 passed/14 skipped, Notes on desktop
+    and phone visually inspected; final Notes-only browser checks: 2 passed after applying Markdown formatting.
+    TypeScript/ESLint passed. Real-model throwaway-data test saved NLP slides + a
+    whiteboard photo to an existing folder in 66 seconds, $0.0530214 including chat; sources and negation preserved.
+    Two successful real-model checks cost $0.0911926 total. No live WhatsApp note message was sent in these checks.
+    Database backed up before the new migration; backend restarted and health, Notes/folder APIs, skill and agent
+    registration checked on port 8000. Focused reading/provider and notes safety checks also passed after tightening
+    model-price-aware vision bounds and shared retry handling.
 - [ ] **P10-05** Slides (Google Slides API, one more Google permission) and PDF export
 - [ ] **P10-06** First skills: CV review, scholarship roadmap, research report, pitch deck, proposal
 - [ ] **P10-07** Your acceptance test + push

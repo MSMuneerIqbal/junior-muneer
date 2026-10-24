@@ -48,6 +48,8 @@ class TurnContext:
     start_background: Any = None
     background: bool = False  # this turn is itself a background task
     start_documents: Any = None
+    start_notes: Any = None
+    task_visuals: int = 0
     task_id: int | None = None
     task_budget_usd: float | None = None
     task_deadline: float | None = None

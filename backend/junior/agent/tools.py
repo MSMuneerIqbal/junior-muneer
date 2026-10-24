@@ -1068,6 +1068,14 @@ def ask_documents_agent(ctx: Ctx, request: str, your_words: str,
 TOOL_FACTORIES["documents"] = lambda: [ask_documents_agent]
 
 
+def _notes_tools():
+    from junior.notes.tools import NOTES_TOOLS
+    return list(NOTES_TOOLS)
+
+
+TOOL_FACTORIES["notes"] = _notes_tools
+
+
 def _document_sources():
     from junior.computer.tools import pc_read, pc_find, pc_list
     from junior.google.tools import google_doc_read, google_sheet_read, drive_search, drive_read, drive_folder

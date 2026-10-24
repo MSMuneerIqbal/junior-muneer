@@ -68,6 +68,10 @@ STEP_LABELS = {
     "save_skill": "Saving your skill",
     "ask_documents_agent": "Delegating research and document work",
     "task_status": "Checking task progress",
+    "make_class_notes": "Preparing your saved class notes",
+    "find_class_notes": "Finding your class notes",
+    "read_class_note": "Reading saved class notes",
+    "list_note_folders": "Looking at your Notes folders",
 }
 
 

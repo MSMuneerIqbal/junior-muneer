@@ -50,6 +50,7 @@ export function SendIcon(p: IconProps) {
 
 /** Line icons for the sidebar, by name. */
 const NAV_PATHS: Record<string, React.ReactNode> = {
+  notes: <><path d="M5 3.5h10l4 4V21H5zM15 3.5V8h4M8 12h8M8 16h6" /></>,
   newchat: (
     <>
       <path d="M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6" />

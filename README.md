@@ -31,6 +31,7 @@ The design is in [PLAN.md](PLAN.md); progress and set-up steps per feature are i
 | **Skills** | Step-by-step instruction files in `skills/` for kinds of work ("make a skill for ..." from chat); agents load the one that fits |
 | **Researched PowerPoint** | Give Junior a topic: he researches the internet and returns an editable `.pptx` with citations and speaker notes, as a download and a real WhatsApp document |
 | **Documents & Research Agent** | Researched Word, Markdown and Excel files in the background; Google Docs/Sheets requests create approval cards; progress, cost, time limits and Stop are visible |
+| **Class notes** | Turn class text, photos, slides or documents into saved notes with title, class date and course. Name a Notes folder: Junior reuses it or creates it. Search, read, edit, download, archive and restore on **Notes** |
 
 ## Models and costs (Settings)
 
@@ -92,6 +93,9 @@ Run it on **one PC at a time**. A Docker set-up for a server (Caddy with HTTPS a
 | Make a presentation | "Make 10 slides about NLP for beginners." Junior researches, checks and attaches the finished PowerPoint; 1–24 slides including cover/sources |
 | Check a long task | Ask "status?" in its chat, or see its current step in the chat and **Running now & recent work** in the Today panel |
 | Control background cost | **Settings → Background tasks**: allowance per task (default $0.50), time limit (600 seconds) and shared retry/revision limit (one). The daily cap still applies |
+| Save a lecture | Attach your material and say: "Make class notes titled Introduction to NLP, date 2026-10-24, in folder NLP." The existing folder is reused; missing folders are created automatically |
+| Revise from saved notes | "Find my NLP class notes" then "Explain tokenization from those notes." Or open **Notes** and filter by folder/date |
+| Notes input limits | Up to 8 source files, 80,000 extracted characters and 8 visual readings per task. PDF: up to 120 pages; split larger batches. Supports PPTX, DOCX, PDF, images, TXT and MD; old PPT/DOC need conversion |
 | See or edit what he remembers | **Memory** |
 | See everything he did, with costs | **Activity** |
 | Stop all background work and actions | **Pause everything** in the Today panel |

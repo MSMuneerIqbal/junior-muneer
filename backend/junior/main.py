@@ -28,6 +28,7 @@ from junior.freelance.jobs import router as jobs_router
 from junior.freelance.orders import router as orders_router
 from junior.github.oauth import router as github_router
 from junior.files import router as files_router
+from junior.notes.store import router as notes_router
 from junior.inbox import router as inbox_router
 from junior.google.auth import router as google_router
 from junior.ideas import router as ideas_router
@@ -197,6 +198,7 @@ def create_app(
     app.include_router(github_router)
     app.include_router(google_router)
     app.include_router(files_router)
+    app.include_router(notes_router)
     app.include_router(inbox_router)
     app.include_router(tasks_router)
     app.include_router(reports_router)

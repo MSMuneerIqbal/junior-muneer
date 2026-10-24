@@ -545,6 +545,26 @@ actions are never retried by the task. The app's own generated files do not requ
 **Also:** every reply in your WhatsApp chat reaches your phone, even when it started on the dashboard (found live
 2026-10-20). Safety stays the same: the gate, your rules, nothing sent to others without your rule allowing it.
 
+## 14e. Class notes and folders (requested 2026-10-24)
+
+Junior makes and saves class notes from supplied text, photos, PPTX (text, tables, charts and speaker notes),
+DOCX, PDFs (including scanned pages), TXT and Markdown. It uses a separate Notes Agent and the existing bounded
+background-task pipeline. The material supplies the facts; the notes task does not automatically research the web.
+The user may name a Notes folder; a matching name is reused (case-insensitive), otherwise it is created when the
+note is saved. Unspecified folders use the course or Class notes. These are folders inside Junior's Notes library;
+arbitrary PC paths remain computer actions with their existing permission checks.
+
+Notes have title, class date (default today in the user's timezone), course, summary, Markdown body and source
+provenance. SQLite stores the canonical note, and `data/notes/<folder-id>-<name>/<date> <id>-<title>.md` stores
+an atomic Markdown mirror. Originals stay in `data/files`. IDs keep repeated titles from overwriting older notes.
+The Notes page searches/filter by folder/date, reads, edits, downloads Markdown, archives and restores; edits use
+revision checks. Notes are academic source material and never automatically become personal profile memory.
+
+One notes job accepts up to eight source files, 80,000 extracted characters and eight visual readings (photos,
+embedded images or scanned/illustrated pages). PDF batches are limited to 120 pages. Oversized batches ask for
+smaller sections; unclear text is disclosed. The ordinary task cost/time/retry limits, Pause and Plan still apply.
+Native PowerPoint `.ppt` and Word `.doc` require conversion to `.pptx`, `.docx` or PDF.
+
 ## 15. Using it on another PC
 
 1. Get the code from your private Git repo.
@@ -590,6 +610,9 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 - **Terminal access** is powerful. It stays limited to one folder and an allowed-commands list, every command needs your OK, and dangerous commands are always denied.
 
 ## 18. Change log
+
+- **v9.5 (2026-10-24):** class-notes skill/agent, dated Notes library with named folders, source reading for PPTX
+  and scanned/illustrated PDFs, visual class material and persistent Markdown storage.
 
 - **v9.4 (2026-10-24):** Documents/research background pipeline, local PPTX export, persistent task progress and
   configurable task limits; Google research-file creation uses existing approvals. Google Slides/PDF remain planned.

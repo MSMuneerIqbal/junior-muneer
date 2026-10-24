@@ -445,6 +445,7 @@ async def post_to_whatsapp(conversation_id: int | None, text: str, *, file_ids: 
         owner = get_settings().whatsapp_owner_number
         # A localhost dashboard download is not usable on their phone. Deliver the actual finished file.
         phone_text = re.sub(r"\[Download[^\]]*\]\(/api/files/\d+/download\)", "The finished file is attached below.", text)
+        phone_text = re.sub(r"\[Open saved notes\]\(/notes\?id=\d+\)", "Saved in your Notes library in the dashboard.", phone_text)
         await client().send_text(owner, phone_text)
         if file_ids:
             from junior.files import received
