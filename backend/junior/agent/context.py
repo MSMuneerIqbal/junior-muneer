@@ -47,6 +47,21 @@ class TurnContext:
     # Long requests: starts one in the background (set by the chat; None in calls and background work).
     start_background: Any = None
     background: bool = False  # this turn is itself a background task
+    start_documents: Any = None
+    task_id: int | None = None
+    task_budget_usd: float | None = None
+    task_deadline: float | None = None
+    task_model_calls: int = 0
+    task_searches: int = 0
+    task_max_retries: int = 0
+    task_retries_used: int = 0
+    research_sources: dict[str, str] = field(default_factory=dict)  # real search-provider citations only
+    generated_file_ids: list[int] = field(default_factory=list)
+
+    def check_task_limits(self) -> None:
+        if self.task_id is not None:
+            from junior.background import check_limits
+            check_limits(self)
     # Run when this turn's answer is saved (background tasks it started), and their ids.
     after_turn: list[Any] = field(default_factory=list)
     queued_tasks: list[int] = field(default_factory=list)

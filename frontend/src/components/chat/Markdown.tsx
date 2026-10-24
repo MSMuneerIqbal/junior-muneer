@@ -4,6 +4,7 @@ import type { ElementType, ReactNode } from "react";
 import { textOf, urduClass } from "@/lib/urdu";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { BACKEND_URL } from "@/lib/api";
 
 type Props = { node?: unknown } & Record<string, unknown>;
 
@@ -19,7 +20,9 @@ function withAutoDir(Tag: ElementType) {
 
 function Link({ node, ...props }: Props) {
   void node;
-  return <a {...props} target="_blank" rel="noopener noreferrer" />;
+  const href = typeof props.href === "string" && /^\/api\/files\/\d+\/download$/.test(props.href)
+    ? BACKEND_URL + props.href : props.href as string | undefined;
+  return <a {...props} href={href} target="_blank" rel="noopener noreferrer" />;
 }
 
 const components = {

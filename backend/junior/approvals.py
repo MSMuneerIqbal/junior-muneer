@@ -53,6 +53,7 @@ OPEN_URLS = {
     "github": "https://github.com/",
 }
 PLATFORM_LABELS = {
+    "google": "Google Drive",
     "linkedin": "LinkedIn",
     "facebook": "Facebook",
     "instagram": "Instagram",

@@ -582,10 +582,26 @@ with its links arrives in the chat you asked from, WhatsApp included.
   **Done 2026-10-24.** Backend suite and focused desktop/phone E2E passed; real-model throwaway-data check
   matched and used skills for two ordinary requests ($0.042215 total). Next.js and matching ESLint config updated
   to 16.4.3 after audit found critical advisories in 16.4.0. Extends P10-02; does not complete P10-03 or P10-06.
-- [ ] **P10-03** The Documents & Research Agent (`agents/documents_agent.md`): research + Docs, Sheets, Markdown; Junior
+- [x] **P10-03** The Documents & Research Agent (`agents/documents_agent.md`): research + Docs, Sheets, Markdown; Junior
   hands long jobs to it as background tasks by himself
-- [ ] **P10-04** Task status: progress (step, done of planned, started), a time estimate from similar past tasks, a
+  - **Done 2026-10-24.** `junior/documents/`: bounded research via the selected search API, actual citation catalog,
+    structured writing and an independent content checker; exports DOCX/XLSX/Markdown/PPTX. Google Docs/Sheets
+    requests queue approval cards and use a guarded sender. Downloads return to the original chat; WhatsApp
+    attachment delivery is covered with the fake service. No model-generated programs or arbitrary execution.
+- [x] **P10-04** Task status: progress (step, done of planned, started), a time estimate from similar past tasks, a
   `task_status` tool ("status?"), a "Running now" list on the dashboard
+  - **Done 2026-10-24.** Persistent progress, elapsed time and median estimates from similar completed tasks;
+    cancellation, pause/Plan checks, restart interruption, per-task cost/time/retry limits in Settings. Provider
+    calls have bounded output and conservative cost preflight; the daily cap also applies. External actions are
+    never retried by the task. Final backend suite passed; full browser run: 92 passed, 14 skipped; final feature
+    browser run: all 4 passed (desktop/phone, including saved task limits). TypeScript and ESLint passed.
+- [x] **P10-04a** Local PowerPoint: researched, editable PPTX returned as a download and WhatsApp document. Requested
+  2026-10-24 together with P10-03/04; no generated script or manual Python execution.
+  - **Done 2026-10-24.** Real-model isolated check: ordinary NLP request automatically delegated and produced
+    6 editable slides in ~94 seconds, $0.0593174 for the task ($0.0850729 including the chat turn), no retries on
+    the successful check. Opened/exported with installed PowerPoint and inspected all 6 slides. Earlier live
+    checks exposed and fixed reviewer/export-stage confusion and overstrict citation checks on unused fields.
+    Backend restarted after a database backup; health and Documents Agent registration confirmed on port 8000.
 - [ ] **P10-05** Slides (Google Slides API, one more Google permission) and PDF export
 - [ ] **P10-06** First skills: CV review, scholarship roadmap, research report, pitch deck, proposal
 - [ ] **P10-07** Your acceptance test + push

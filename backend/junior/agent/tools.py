@@ -1015,7 +1015,67 @@ def run_in_background(ctx: Ctx, title: str, request: str) -> str:
     return run_in_background_for(ctx.context, title, request)
 
 
-TOOL_FACTORIES["background"] = lambda: [run_in_background]
+@function_tool
+def task_status(ctx: Ctx, task_id: int = 0) -> str:
+    """Progress, current step, elapsed time, estimated time left, cost and downloads for tasks in this chat.
+    Use when the user asks 'status?', 'how long?', 'is it ready?' or the same in Urdu/Roman Urdu.
+    """
+    from junior.background import status_for
+    return status_for(ctx.context, task_id)
+
+
+TOOL_FACTORIES["background"] = lambda: [run_in_background, task_status]
+
+
+def documents_for(context: TurnContext, request: str, output_format: str, slide_count: int, your_words: str) -> str:
+    from junior import gate
+    from junior.permissions import plan_mode_refusal
+    if refusal := plan_mode_refusal():
+        return refusal
+    if context.background or context.start_documents is None:
+        return "NOT started: document jobs must start in a text chat, not inside another background job."
+    if not gate.you_said(context, your_words):
+        return "NOT started: your_words must quote the user's own request exactly."
+    if not request.strip() or len(request) > 12000:
+        return "NOT started: provide the complete request, up to 12,000 characters."
+    if output_format not in ("pptx", "docx", "markdown", "xlsx", "google_doc", "google_sheet"):
+        return "NOT started: supported formats are pptx, docx, markdown, xlsx, google_doc and google_sheet."
+    if not 1 <= slide_count <= 24:
+        return "NOT started: a PowerPoint can have 1 to 24 slides."
+    if output_format.startswith("google_") and not any(w in your_words.lower() for w in ("google", "گوگل")):
+        return "NOT started: Google file creation must be explicitly requested. Use a local docx or xlsx otherwise."
+    if context.queued_tasks:
+        return "NOT started: a job was already queued in this answer. Tell the user its task number."
+    return context.start_documents(request, output_format, slide_count)
+
+
+@function_tool
+def ask_documents_agent(ctx: Ctx, request: str, your_words: str,
+                        output_format: Literal["pptx", "docx", "markdown", "xlsx", "google_doc", "google_sheet"] = "docx",
+                        slide_count: int = 10) -> str:
+    """Delegate internet research and produce a finished PowerPoint, report or spreadsheet in the background.
+    Use for any request to make slides/PPT/presentation (pptx), researched document (docx/markdown) or
+    researched spreadsheet (xlsx). Internet research, citations, review and actual file creation are included.
+    Return the job number; its completed FILE will arrive in this chat, also as a document on WhatsApp.
+    Never substitute a script, instructions or pc_run for this tool. Preserve the full topic, audience,
+    language and requested slide count (1–24 total, including cover and sources). Default to 10 slides.
+    Google formats require an explicit Google request and wait for approval before creating in Drive.
+    your_words must be an exact quote of the user's own request.
+    """
+    return documents_for(ctx.context, request, output_format, slide_count, your_words)
+
+
+TOOL_FACTORIES["documents"] = lambda: [ask_documents_agent]
+
+
+def _document_sources():
+    from junior.computer.tools import pc_read, pc_find, pc_list
+    from junior.google.tools import google_doc_read, google_sheet_read, drive_search, drive_read, drive_folder
+    # The research writer can only read. It has no sending, command or external creation tools.
+    return [pc_read, pc_find, pc_list, read_file, google_doc_read, google_sheet_read, drive_search, drive_read, drive_folder]
+
+
+TOOL_FACTORIES["document_sources"] = _document_sources
 
 
 # ---- What happened (P7-03) ------------------------------------------------------------

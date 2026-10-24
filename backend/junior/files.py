@@ -12,6 +12,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 
 from junior.config import get_settings
 from junior.db import ReceivedFile, session_scope
@@ -37,6 +38,8 @@ def _size(n: int) -> str:
 
 
 def _kind(mime: str, name: str) -> str:
+    if name.lower().endswith(".pptx"):
+        return "PowerPoint"
     if mime == "application/pdf":
         return "PDF"
     if mime.startswith("image/"):
@@ -96,3 +99,18 @@ async def upload(file: UploadFile) -> dict:
     except ValueError as e:
         raise HTTPException(400, str(e)) from None
     return {"id": number, "tag": label}
+
+
+@router.get("/api/files/{file_id}/download")
+def download_generated(file_id: int):
+    """Serve only application-generated artifacts; never accept a filesystem path from the model or URL."""
+    with session_scope() as s:
+        row = s.get(ReceivedFile, file_id)
+        if row is None or row.source != "generated":
+            raise HTTPException(404, "Generated file not found.")
+        root = files_dir().resolve()
+        path = root / row.stored_as
+        if path.is_symlink() or path.resolve().parent != root or not path.is_file():
+            raise HTTPException(404, "Generated file not found.")
+        return FileResponse(path, media_type=row.mime, filename=row.filename,
+                            headers={"X-Content-Type-Options": "nosniff"})

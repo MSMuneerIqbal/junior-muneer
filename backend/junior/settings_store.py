@@ -11,6 +11,9 @@ DEFAULTS: dict[str, Any] = {
     "language": "match",
     "timezone": "Asia/Karachi",
     "daily_cap_usd": 5.0,
+    "task_budget_usd": 0.5,
+    "task_timeout_seconds": 600,
+    "task_max_retries": 1,
     "paused": False,
     # Voice (phase 1)
     "tts_voice": "marin",

@@ -36,8 +36,9 @@ class HelperRunner:
         agent, model_name = build_agent(
             self.registry.get(agent_name), router, self.model_provider, output_type=output_type
         )
-        spent_this_turn = sum(u.cost_usd for u in context.usage)
-        budget = budget_left(context.settings) - spent_this_turn
+        budget = budget_left(context.settings)
+        if context.task_budget_usd is not None:
+            budget = min(budget, context.task_budget_usd)
         return await run_once(
             agent, model_name, router, [{"role": "user", "content": prompt}], context, budget
         )

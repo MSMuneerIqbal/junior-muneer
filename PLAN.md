@@ -526,6 +526,22 @@ Any agent can be given skills (e.g. the Computer Agent: "set up a Next.js projec
 rough estimate from how long similar tasks took ("usually 3-5 minutes"). Ask "status?" / "what are you working on?"
 anywhere; the dashboard shows a "Running now" list. Results and links go to the chat you asked from.
 
+**2026-10-24 implementation scope (requested by Muneer):** P10-03 and P10-04 are built together with local,
+editable PowerPoint export. A topic request delegates directly to the Documents Agent, researches through the
+selected search API, writes structured content, checks it against that evidence, and exports PPTX/DOCX/XLSX/Markdown
+inside the app's data folder. A script is never substituted for a deck. Sources are collected from the search
+provider's actual citations; drafts use numeric source IDs. The local download returns to the original chat;
+WhatsApp receives the real document attachment. Google Docs/Sheets creation uses approval cards after research.
+Google Slides API and PDF export remain later work under P10-05.
+
+Each task snapshots its cost allowance (default $0.50), wall-clock limit (600 seconds), and shared retry/revision
+limit (one), configurable in Settings → Background tasks. Responses have output-token bounds and a conservative
+input allowance; provider billing may differ slightly. Tasks have at most 12 model calls and four search requests.
+Progress, cost, files and failures persist in SQLite. Estimates use median duration of similar completed jobs,
+and remain unknown without history. Pause/Plan/cancel stops active work; restarts mark unfinished tasks interrupted
+and never replay external actions. Read/model failures may be retried within the shared allowance; external
+actions are never retried by the task. The app's own generated files do not require a terminal-command approval.
+
 **Also:** every reply in your WhatsApp chat reaches your phone, even when it started on the dashboard (found live
 2026-10-20). Safety stays the same: the gate, your rules, nothing sent to others without your rule allowing it.
 
@@ -574,6 +590,9 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 - **Terminal access** is powerful. It stays limited to one folder and an allowed-commands list, every command needs your OK, and dangerous commands are always denied.
 
 ## 18. Change log
+
+- **v9.4 (2026-10-24):** Documents/research background pipeline, local PPTX export, persistent task progress and
+  configurable task limits; Google research-file creation uses existing approvals. Google Slides/PDF remain planned.
 
 - **v9.3 (2026-10-20):** built: Phase 9 local part (P9-01 to P9-08, accepted; PC Helper waits for the VPS); P5-03 + P4-05
   (Upwork/Fiverr emails; freelance then paused by Muneer); P10-01 and P10-02 (skills). Also: voice messages with Gemini

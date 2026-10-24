@@ -77,6 +77,8 @@ def default_senders(settings) -> SenderRegistry:
     from junior.senders.gmail import GmailSender
 
     registry.add(GmailSender())  # sends only when Google is connected with Gmail drafts allowed
+    from junior.senders.google_workspace import GoogleWorkspaceSender
+    registry.add(GoogleWorkspaceSender())
     from junior.computer.sender import ComputerSender
 
     registry.add(ComputerSender())  # approved file changes and commands on this PC (Phase 9)

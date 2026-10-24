@@ -436,12 +436,27 @@ async def handle(app: Any, msg: dict) -> None:
                 log.exception("Couldn't even send the error to WhatsApp")
 
 
-async def post_to_whatsapp(conversation_id: int | None, text: str) -> None:
+async def post_to_whatsapp(conversation_id: int | None, text: str, *, file_ids: list[int] | None = None,
+                           approval_ids: list[int] | None = None) -> None:
     """A background task finished in your WhatsApp chat: send its result there too."""
     if not configured() or not is_whatsapp_chat(conversation_id):
         return
     try:
-        await client().send_text(get_settings().whatsapp_owner_number, text)
+        owner = get_settings().whatsapp_owner_number
+        # A localhost dashboard download is not usable on their phone. Deliver the actual finished file.
+        phone_text = re.sub(r"\[Download[^\]]*\]\(/api/files/\d+/download\)", "The finished file is attached below.", text)
+        await client().send_text(owner, phone_text)
+        if file_ids:
+            from junior.files import received
+            for number in file_ids:
+                found = received(number)
+                if found and found[0].source == "generated" and found[0].conversation_id == conversation_id:
+                    row, data = found
+                    await client().send_document(owner, data, row.filename, row.mime)
+        if approval_ids:
+            from junior.approvals import get_item
+            cards = [get_item(i).model_dump(mode="json") for i in approval_ids]
+            await send_drafts(owner, cards)
     except Exception:
         log.exception("Couldn't send a background result to WhatsApp")
 

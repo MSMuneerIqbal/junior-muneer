@@ -153,7 +153,7 @@ class ChatService:
             s.get(Conversation, conversation_id).updated_at = utcnow()
             return message.id
 
-    def _save_partial_usage(self, conversation_id: int, context: TurnContext) -> None:
+    def _save_partial_usage(self, conversation_id: int | None, context: TurnContext) -> None:
         """A failed or stopped turn still cost money: record it."""
         if context.usage:
             with session_scope() as s:
@@ -219,6 +219,10 @@ class ChatService:
         )
         context.start_background = lambda title, request: self.start_background(
             conversation_id, title, request, saved_paste, context
+        )
+        context.start_documents = lambda request, fmt, slides: self.start_background(
+            conversation_id, request[:100], request, saved_paste, context,
+            worker="documents_agent", output_format=fmt, slide_count=slides
         )
         try:
             budget = budget_left(settings)
@@ -369,7 +373,8 @@ class ChatService:
     # ---- background tasks (P7-02) ---------------------------------------------
 
     def start_background(
-        self, conversation_id: int, title: str, request: str, paste: dict | None = None, context: TurnContext | None = None
+        self, conversation_id: int, title: str, request: str, paste: dict | None = None, context: TurnContext | None = None,
+        *, worker: str = MAIN_AGENT, output_format: str = "text", slide_count: int = 10
     ) -> str:
         """Start a long request in the background (after this turn's answer); its result is posted to this chat."""
         from junior.background import MAX_RUNNING, new_task, running_count
@@ -377,12 +382,19 @@ class ChatService:
 
         if is_paused():
             return "NOT started: everything is paused. Do it now in this answer instead."
+        from junior.permissions import plan_mode_refusal
+        if refusal := plan_mode_refusal():
+            return refusal
         if running_count() >= MAX_RUNNING:
             return f"NOT started: {MAX_RUNNING} tasks are already running in the background. Do it now instead, or ask them to wait."
-        task_id = new_task(conversation_id, title, request)
+        task_id = new_task(conversation_id, title, request, worker=worker, output_format=output_format)
+        origin_ids = list(context.user_message_ids) if context else []
 
         def launch() -> None:
-            job = asyncio.create_task(self._background(task_id, conversation_id, title, request, paste))
+            work = (self._documents_background(task_id, conversation_id, title, request, paste, output_format, slide_count, origin_ids,
+                                               context.user_text if context else request)
+                    if worker == "documents_agent" else self._background(task_id, conversation_id, title, request, paste))
+            job = asyncio.create_task(work)
             _BACKGROUND.add(job)
             job.add_done_callback(_BACKGROUND.discard)
 
@@ -414,8 +426,10 @@ class ChatService:
         context = TurnContext(conversation_id=conversation_id, settings=settings, paste=paste, user_text=request)
         context.background = True
         try:
-            budget = budget_left(settings)
-            provider = self.model_provider()
+            self._configure_task(context, task_id)
+            from junior.documents.limits import task_provider
+            budget = min(budget_left(settings), context.task_budget_usd)
+            provider = task_provider(self.model_provider(), context)
             router = get_router()
             agent, model_name = build_agent(self.registry.get(MAIN_AGENT), router, provider)
             context.helpers = HelperRunner(self.registry, provider)
@@ -431,15 +445,14 @@ class ChatService:
             )
             result: TurnResult | None = None
             try:
-                async for event in stream_turn(agent, model_name, router, items, context, budget):
-                    if event["type"] == "final":
-                        result = event["result"]
+                result = await self._guarded_work(context, self._background_stream(agent, model_name, router, items, context, budget))
             except (RateLimitError, InternalServerError, APIConnectionError) as e:
                 # Gemini or DeepSeek busy (e.g. "503 high demand"): OpenAI does the task instead, like in chat.
                 # Only when nothing was done yet (no cards, emails or changes), so nothing happens twice.
                 untouched = not (context.actions_done or context.approval_ids or context.computer_actions)
-                if router.provider_of(model_name) == "openai" or not untouched:
+                if router.provider_of(model_name) == "openai" or not untouched or context.task_retries_used >= context.task_max_retries:
                     raise
+                context.task_retries_used += 1
                 spec = self.registry.get(MAIN_AGENT)
                 backup = router.model_for(MAIN_AGENT, spec.model)
                 if router.provider_of(backup) != "openai":
@@ -447,9 +460,7 @@ class ChatService:
                 log.warning("Background task %s: %s didn't answer (%s); using %s", task_id, model_name, type(e).__name__, backup)
                 agent, model_name = build_agent(spec, router, provider, model_override=backup)
                 result = None
-                async for event in stream_turn(agent, model_name, router, items, context, budget):
-                    if event["type"] == "final":
-                        result = event["result"]
+                result = await self._guarded_work(context, self._background_stream(agent, model_name, router, items, context, budget))
             assert result is not None
             result.text = f"**Done in the background: {title}**\n\n{result.text}"
             message_id = self._finish(conversation_id, result)
@@ -470,12 +481,105 @@ class ChatService:
             else:
                 log.exception("Background task %s failed", task_id)
                 why = f"{type(e).__name__}: {e}"
-            self._save_partial_usage(conversation_id, context)
-            self._audit_run(conversation_id, context, "error", error=why, background_task=task_id)
+            with session_scope() as s:
+                deleted = s.get(Conversation, conversation_id) is None
+            self._save_partial_usage(None if deleted else conversation_id, context)
+            self._audit_run(None if deleted else conversation_id, context, "error", error=why, background_task=task_id)
+            if deleted:
+                finish_task(task_id, "failed", error="The originating chat was deleted.", cost_usd=sum(u.cost_usd for u in context.usage))
+                return
             failed = TurnResult(text=f"**I couldn't finish “{title}” in the background.** {why}", usage=[])
             message_id = self._finish(conversation_id, failed)
-            finish_task(task_id, "failed", message_id, error=why, cost_usd=sum(u.cost_usd for u in context.usage))
+            from junior.db import BackgroundTask
+            with session_scope() as s:
+                cancelled = s.get(BackgroundTask, task_id).status == "cancelled"
+            finish_task(task_id, "cancelled" if cancelled else "failed", message_id, error=why, cost_usd=sum(u.cost_usd for u in context.usage))
             await post_to_whatsapp(conversation_id, failed.text)
+
+    def _configure_task(self, context: TurnContext, task_id: int) -> None:
+        from junior.background import progress
+        from junior.db import BackgroundTask
+        with session_scope() as s:
+            task = s.get(BackgroundTask, task_id)
+            context.task_id, context.background = task_id, True
+            context.task_budget_usd = task.cost_limit_usd
+            context.task_deadline = time.monotonic() + task.time_limit_seconds
+            context.task_max_retries = task.max_retries
+        progress(task_id, "Starting", 0, context)
+
+    async def _guarded_work(self, context, work):
+        """Pause, cancel and time limits also interrupt a provider/tool that is not emitting events."""
+        job = asyncio.create_task(work)
+        try:
+            while True:
+                done, _ = await asyncio.wait({job}, timeout=.5)
+                if job in done:
+                    return job.result()
+                context.check_task_limits()
+        finally:
+            if not job.done():
+                job.cancel()
+                import contextlib
+                with contextlib.suppress(asyncio.CancelledError):
+                    await job
+
+    async def _background_stream(self, agent, model_name, router, items, context, budget):
+        from junior.background import progress
+        result = None
+        async for event in stream_turn(agent, model_name, router, items, context, budget):
+            if event["type"] == "step":
+                progress(context.task_id, event.get("label", "Working"), 1, context)
+            elif event["type"] == "final":
+                result = event["result"]
+        context.check_task_limits()
+        progress(context.task_id, "Returning the result", 3, context)
+        assert result is not None
+        return result
+
+    async def _documents_background(self, task_id, conversation_id, title, request, paste, output_format, slide_count, origin_ids, origin_text):
+        from junior.background import finish_task, progress
+        from junior.db import BackgroundTask
+        from junior.documents.limits import task_provider
+        from junior.documents.worker import run_documents
+        from junior.whatsapp import post_to_whatsapp
+        context = TurnContext(conversation_id=conversation_id, settings=all_settings(), paste=paste, user_text=origin_text)
+        context.user_message_ids = origin_ids
+        try:
+            self._configure_task(context, task_id)
+            context.check_task_limits()
+            provider = task_provider(self.model_provider(), context)
+            context.helpers = HelperRunner(self.registry, provider)
+            text = await self._guarded_work(context, run_documents(context, request, output_format, slide_count))
+            result = TurnResult(text=f"**Done in the background: {title}**\n\n{text}", usage=context.usage,
+                                steps=[e for e in context.pending_events if e.get("type") == "step"])
+            context.check_task_limits()
+            message_id = self._finish(conversation_id, result)
+            attach_to_message(context.approval_ids, message_id)
+            progress(task_id, "Finished", 5, context)
+            finish_task(task_id, "done", message_id, cost_usd=result.cost_usd)
+            self._audit_run(conversation_id, context, "ok", background_task=task_id, worker="documents_agent")
+            await post_to_whatsapp(conversation_id, result.text, file_ids=context.generated_file_ids, approval_ids=context.approval_ids)
+        except Exception as e:
+            why = no_answer_message(e) if isinstance(e, APIConnectionError) else str(e)
+            log.exception("Document task %s stopped", task_id)
+            with session_scope() as s:
+                deleted = s.get(Conversation, conversation_id) is None
+            self._save_partial_usage(None if deleted else conversation_id, context)
+            self._audit_run(None if deleted else conversation_id, context, "error", background_task=task_id, error=why)
+            if deleted:
+                finish_task(task_id, "failed", error="The originating chat was deleted.", cost_usd=sum(u.cost_usd for u in context.usage))
+                return
+            text = f"**I couldn't finish “{title}”.** {why[:1200]}"
+            if context.generated_file_ids:
+                text += "\n\nFiles already prepared: " + " ".join(f"[Download](/api/files/{i}/download)" for i in context.generated_file_ids)
+            message_id = self._finish(conversation_id, TurnResult(text=text))
+            attach_to_message(context.approval_ids, message_id)
+            with session_scope() as s:
+                task = s.get(BackgroundTask, task_id)
+                cancelled = task is not None and task.status == "cancelled"
+            progress(task_id, "Stopped", 0, context)
+            finish_task(task_id, "cancelled" if cancelled else "failed", message_id, why, sum(u.cost_usd for u in context.usage))
+            await post_to_whatsapp(conversation_id, text)
 
 
 # Running background jobs (kept so they aren't garbage-collected mid-way).

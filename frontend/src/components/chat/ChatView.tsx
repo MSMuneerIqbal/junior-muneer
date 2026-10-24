@@ -8,6 +8,7 @@ import { Composer } from "@/components/chat/Composer";
 import type { VoiceMessage } from "@/components/chat/MicButton";
 import { AssistantMessage, ErrorNotice, UserMessage } from "@/components/chat/MessageView";
 import { PastedMessage } from "@/components/chat/PasteBox";
+import { TaskProgress } from "@/components/TaskProgress";
 import type { PasteDraft } from "@/lib/paste";
 import { fetcher } from "@/lib/api";
 import { isApprovalsKey, isChatsKey, isFreelanceKey, isTasksKey, PAUSE_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
@@ -178,15 +179,18 @@ export function ChatView() {
   const runningTasks = tasks?.filter((t) => t.status === "running") ?? [];
   const running = runningTasks.length;
   const wasRunning = useRef(0);
+  const latestResult = Math.max(0, ...(tasks ?? []).map((t) => t.message_id ?? 0));
+  const lastResult = useRef(0);
   useEffect(() => {
-    if (running < wasRunning.current) {
+    if (running < wasRunning.current || latestResult > lastResult.current) {
       void mutate(); // the finished task's answer
       mutateGlobal(isApprovalsKey);
       mutateGlobal(isChatsKey);
       mutateGlobal(USAGE_KEY);
     }
     wasRunning.current = running;
-  }, [running, mutate, mutateGlobal]);
+    lastResult.current = latestResult;
+  }, [running, latestResult, mutate, mutateGlobal]);
 
   // Only show the live turn in the chat it belongs to.
   const liveTurn = turn && turn.conversationId === conversationId ? turn : null;
@@ -295,12 +299,7 @@ export function ChatView() {
             )}
             {liveTurn?.status === "error" && <ErrorNotice message={liveTurn.error ?? "Error"} />}
             {runningTasks.map((t) => (
-              <p key={t.id} role="status" className="flex items-center gap-2 text-sm text-muted">
-                <span aria-hidden className="animate-pulse">
-                  ⏳
-                </span>
-                Working on it in the background: {t.title}
-              </p>
+              <TaskProgress key={t.id} task={t} />
             ))}
           </div>
         )}

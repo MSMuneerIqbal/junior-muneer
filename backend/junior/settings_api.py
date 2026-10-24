@@ -24,6 +24,9 @@ class SettingsUpdate(BaseModel):
     language: Literal["match", "english", "urdu"] | None = None
     timezone: str | None = None
     daily_cap_usd: float | None = Field(default=None, ge=0, le=1000)
+    task_budget_usd: float | None = Field(default=None, ge=0.01, le=10, allow_inf_nan=False)
+    task_timeout_seconds: int | None = Field(default=None, ge=30, le=1800)
+    task_max_retries: int | None = Field(default=None, ge=0, le=2)
     tts_voice: Literal[TTS_VOICES] | None = None  # type: ignore[valid-type]
     voice_accent: Literal["pakistani", "indian", "neutral"] | None = None
     tts_speed: float | None = Field(default=None, ge=0.5, le=2.0)

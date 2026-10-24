@@ -127,10 +127,28 @@ class FakeModel(Model):
             return [assistant_message(f"(fake news agent) From today's digest: {first or 'nothing yet.'}")], False
         if hosted_search:
             # The web researcher: pretend to search, then report.
-            return [assistant_message(f"- (fake search result for: {text})")], True
+            from openai.types.responses.response_output_text import AnnotationURLCitation
+            message = assistant_message(f"- (fake search result for: {text})")
+            message.content[0].annotations = [AnnotationURLCitation(type="url_citation", url="https://example.org/research",
+                title="Research reference (fake)", start_index=0, end_index=10)]
+            return [message], True
         if text.startswith("## Request from") and "score_job" in tool_names:
             return self._fake_freelance(input, text), False
         last = input[-1] if isinstance(input, list) and input else None
+        if "task_status" in tool_names and text.lower().strip() in ("status?", "task status", "is it ready?", "how long?"):
+            if isinstance(last, dict) and last.get("type") == "function_call_output":
+                return [assistant_message(last.get("output", ""))], False
+            return [function_call("task_status", {}, call_id="fake-task-status")], False
+        if "ask_documents_agent" in tool_names and (re.search(r"\b(pptx?|powerpoint|slides|presentation)\b", text, re.I)
+                                                    or text.lower().startswith("research report:")):
+            if isinstance(last, dict) and last.get("type") == "function_call_output":
+                said = last.get("output", "")
+                return [assistant_message("(fake AI) " + (said if said.startswith("NOT ") else
+                    "I'm researching the topic and making your file. You can keep chatting; it will appear here."))], False
+            fmt = "docx" if text.lower().startswith("research report:") else "pptx"
+            count = re.search(r"(\d+)\s*(?:slides|slide)", text, re.I)
+            return [function_call("ask_documents_agent", {"request": text, "your_words": text, "output_format": fmt,
+                "slide_count": int(count.group(1)) if count else 10}, call_id="fake-documents")], False
         if text.startswith("## Morning briefing facts"):
             needs = next((ln[2:] for ln in text.splitlines() if ln.startswith("- Waiting for your OK")), "Nothing needs you yet.")
             return [assistant_message(f"(fake AI) Good morning! {needs}")], False
@@ -237,6 +255,8 @@ class FakeModel(Model):
     async def get_response(self, system_instructions, input, model_settings, tools, output_schema, handoffs, tracing, **kwargs) -> ModelResponse:  # noqa: E501
         if output_schema is not None and not output_schema.is_plain_text():
             answer = _team_answer(output_schema.name(), _last_user_text(input))
+            if "ResearchDocument" in output_schema.name():
+                await asyncio.sleep(2)
             await asyncio.sleep(0.4)  # long enough to watch the steps arrive
             output = [assistant_message(json.dumps(answer))]
             return ModelResponse(output=output, usage=_usage(str(input), str(output)), response_id="fake")
@@ -308,6 +328,17 @@ def _fake_order(their: str) -> dict:
 def _team_answer(schema: str, prompt: str) -> dict:
     """Fake Writer, Checker and Humanizer answers (structured, like the real ones)."""
     request = next((line[len("Request: "):] for line in prompt.splitlines() if line.startswith("Request: ")), "")
+    if "DocumentReview" in schema:
+        return {"passes": True, "issues": []}
+    if "ResearchDocument" in schema:
+        count = re.search(r"Content slide count: (\d+)", prompt)
+        return {"title": request[:100] or "Research report", "summary": "(fake) Researched findings, examples and limitations.",
+                "sections": [{"heading": "Findings", "text": "(fake) A sourced explanation with an example and limitations.", "source_ids": [1]}],
+                "slides": [{"title": "Introduction" if i == 0 else f"Key point {i}", "layout": "cover" if i == 0 else "points",
+                            "bullets": ["(fake) A concise research finding", "A concrete example and its limitations"],
+                            "notes": "(fake) Explain this finding and discuss the example.", "source_ids": [1]}
+                           for i in range(int(count.group(1)) if count else 9)],
+                "headers": ["Finding", "Source"], "rows": [["A sourced finding", "https://example.org/research"]]}
     if "DigestIn" in schema:
         return _fake_digest(prompt)
     if "TidyOut" in schema:

@@ -258,13 +258,13 @@ function BackgroundWork() {
     refreshInterval: (d) => (d?.some((t) => t.status === "running") ? 3000 : 30_000),
   });
   if (!data?.length) return null;
-  const mark = { running: "⏳", done: "✅", failed: "⚠" } as const;
+  const mark = { running: "⏳", done: "✅", failed: "⚠", cancelled: "■" } as const;
   return (
     <section aria-label="Background work" className="rounded-lg border border-line px-3 py-2">
-      <p className="text-sm font-medium">Background work</p>
+      <p className="text-sm font-medium">Running now & recent work</p>
       <ul className="mt-1 flex flex-col gap-1 text-xs">
         {data.map((t) => (
-          <li key={t.id} className="flex items-baseline gap-1.5">
+          <li key={t.id} className="flex flex-wrap items-baseline gap-1.5">
             <span aria-hidden>{mark[t.status]}</span>
             {t.conversation_id ? (
               <Link href={`/?c=${t.conversation_id}`} className="truncate hover:underline">
@@ -274,6 +274,7 @@ function BackgroundWork() {
               <span className="truncate">{t.title}</span>
             )}
             <span className="ml-auto shrink-0 text-muted">{t.status === "running" ? "working" : t.status}</span>
+            {t.status === "running" && <p className="w-full pl-5 text-muted">{t.stage} · {t.completed_steps}/{t.total_steps} · {t.elapsed_seconds}s elapsed{t.eta_seconds != null && t.eta_seconds > 0 ? ` · ~${t.eta_seconds}s left` : ""}</p>}
           </li>
         ))}
       </ul>

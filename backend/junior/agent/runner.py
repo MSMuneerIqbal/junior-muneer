@@ -66,6 +66,8 @@ STEP_LABELS = {
     "my_feeds": "Reading your feeds",
     "use_skill": "Loading task instructions",
     "save_skill": "Saving your skill",
+    "ask_documents_agent": "Delegating research and document work",
+    "task_status": "Checking task progress",
 }
 
 
@@ -99,6 +101,9 @@ class TurnHooks(RunHooks[TurnContext]):
         self.budget = budget
 
     async def on_llm_start(self, context, agent, system_prompt, input_items) -> None:
+        context.context.check_task_limits()
+        if context.context.task_id is not None:
+            context.context.task_model_calls += 1
         spent = sum(u.cost_usd for u in context.context.usage)
         if self.budget is not None and spent >= self.budget:
             raise BudgetExceeded(
@@ -109,6 +114,8 @@ class TurnHooks(RunHooks[TurnContext]):
         self, context: RunContextWrapper[TurnContext], agent: Agent[Any], response: ModelResponse
     ) -> None:
         searches = [item for item in response.output if _get(item, "type") == "web_search_call"]
+        from junior.documents.sources import collect_response_sources
+        collect_response_sources(context.context, response.output)
         if searches:
             # Web results are outside text: no memory saving for the rest of this turn.
             context.context.mark_outside()
@@ -138,6 +145,12 @@ class TurnHooks(RunHooks[TurnContext]):
                 cost_usd=cost,
             )
         )
+        if context.context.task_id is not None:
+            from junior.background import progress
+            progress(context.context.task_id, "", 0, context.context)
+
+    async def on_tool_start(self, context, agent, tool) -> None:
+        context.context.check_task_limits()
 
     async def on_tool_end(
         self, context: RunContextWrapper[TurnContext], agent: Agent[Any], tool: Any, result: object

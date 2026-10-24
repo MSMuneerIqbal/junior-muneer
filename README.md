@@ -29,6 +29,8 @@ The design is in [PLAN.md](PLAN.md); progress and set-up steps per feature are i
 | **Send to you** | "Email me / WhatsApp me this": text, Drive files, files from your PC, docs as Word or PDF |
 | **Your PC** | The **Computer Agent**: find, read, create, change, move and delete files (deletes go to the Recycle Bin) and run terminal commands, only in your allowed folders; changes and commands are cards you approve |
 | **Skills** | Step-by-step instruction files in `skills/` for kinds of work ("make a skill for ..." from chat); agents load the one that fits |
+| **Researched PowerPoint** | Give Junior a topic: he researches the internet and returns an editable `.pptx` with citations and speaker notes, as a download and a real WhatsApp document |
+| **Documents & Research Agent** | Researched Word, Markdown and Excel files in the background; Google Docs/Sheets requests create approval cards; progress, cost, time limits and Stop are visible |
 
 ## Models and costs (Settings)
 
@@ -86,7 +88,10 @@ Run it on **one PC at a time**. A Docker set-up for a server (Caddy with HTTPS a
 | Emails to other people | "Junior, email sara@x.com that…" (a file from your PC too): your Send-email rule decides: Ask = a card, **Approve** sends it; Auto = sent at once |
 | Files and commands on your PC | "Junior, what's in my Downloads?", "run git status in ...": changes and commands are cards; **Settings → Computer** for your allowed folders |
 | Make a skill | "Junior, make a skill for my weekly client report" (saved in `skills/`) |
-| Manage skills | **Settings → Skills**: search the ten starter skills, add your own, edit instructions or delete a skill; changes apply to the next message |
+| Manage skills | **Settings → Skills**: search the starter library, add your own, edit instructions or delete a skill; changes apply to the next message |
+| Make a presentation | "Make 10 slides about NLP for beginners." Junior researches, checks and attaches the finished PowerPoint; 1–24 slides including cover/sources |
+| Check a long task | Ask "status?" in its chat, or see its current step in the chat and **Running now & recent work** in the Today panel |
+| Control background cost | **Settings → Background tasks**: allowance per task (default $0.50), time limit (600 seconds) and shared retry/revision limit (one). The daily cap still applies |
 | See or edit what he remembers | **Memory** |
 | See everything he did, with costs | **Activity** |
 | Stop all background work and actions | **Pause everything** in the Today panel |

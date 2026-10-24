@@ -42,7 +42,7 @@ type Permissions = {
 // The left menu: one section shows at a time. "#news" in the address opens that section.
 type SectionId =
   | "profile" | "budget" | "models" | "search" | "voice" | "calls" | "connections" | "whatsapp" | "posting" | "news"
-  | "computer" | "skills" | "permissions" | "advanced";
+  | "computer" | "skills" | "tasks" | "permissions" | "advanced";
 type MenuItem = { id: SectionId; title: string }; // its icon: SettingsIcon by id
 const GROUPS: { title: string; items: MenuItem[] }[] = [
   { title: "Account", items: [{ id: "profile", title: "Profile" }, { id: "budget", title: "Budget" }] },
@@ -63,7 +63,7 @@ const GROUPS: { title: string; items: MenuItem[] }[] = [
       { id: "posting", title: "Posting" },
     ],
   },
-  { title: "Automation", items: [{ id: "skills", title: "Skills" }, { id: "news", title: "News & email" }, { id: "computer", title: "Computer" }] },
+  { title: "Automation", items: [{ id: "skills", title: "Skills" }, { id: "tasks", title: "Background tasks" }, { id: "news", title: "News & email" }, { id: "computer", title: "Computer" }] },
   {
     title: "Safety",
     items: [
@@ -559,6 +559,9 @@ function SettingsForm({ initial }: { initial: Settings }) {
       const result = await send<Settings>("PATCH", SETTINGS_KEY, {
         ...form,
         daily_cap_usd: Number(form.daily_cap_usd),
+        task_budget_usd: Number(form.task_budget_usd),
+        task_timeout_seconds: Number(form.task_timeout_seconds),
+        task_max_retries: Number(form.task_max_retries),
         tts_speed: Number(form.tts_speed),
         call_minutes_per_day: Number(form.call_minutes_per_day),
         paused: undefined,
@@ -614,6 +617,20 @@ function SettingsForm({ initial }: { initial: Settings }) {
             {timezones(form.timezone).map((tz) => (
               <option key={tz}>{tz}</option>
             ))}
+          </select>
+        </Row>
+      </Section>
+
+      <Section id="tasks" title="Background tasks" description="Limits for new research, presentations and other background jobs. Running jobs keep the limits they started with.">
+        <Row label="Cost allowance per task" hint="Stops further AI work when reached. Responses are bounded to fit the remaining allowance; provider billing can differ slightly.">
+          <input type="number" min={0.01} max={10} step={0.05} value={form.task_budget_usd} onChange={(e) => set("task_budget_usd", e.target.value as unknown as number)} className={`${input} max-w-40`} aria-label="Task cost allowance in US dollars" />
+        </Row>
+        <Row label="Time limit" hint="Seconds before the task stops. Default: 600 (10 minutes).">
+          <input type="number" min={30} max={1800} step={30} value={form.task_timeout_seconds} onChange={(e) => set("task_timeout_seconds", e.target.value as unknown as number)} className={`${input} max-w-40`} aria-label="Task time limit in seconds" />
+        </Row>
+        <Row label="Retry limit" hint="Shared by busy-service retries and content revisions. External actions are never retried by the task.">
+          <select value={form.task_max_retries} onChange={(e) => set("task_max_retries", Number(e.target.value))} className={`${input} max-w-40`} aria-label="Task retry limit">
+            {[0, 1, 2].map((n) => <option key={n} value={n}>{n}</option>)}
           </select>
         </Row>
       </Section>

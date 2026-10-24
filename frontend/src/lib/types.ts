@@ -95,12 +95,26 @@ export type BackgroundTask = {
   id: number;
   conversation_id: number | null;
   title: string;
-  status: "running" | "done" | "failed";
+  status: "running" | "done" | "failed" | "cancelled";
   message_id: number | null;
   error: string;
   cost_usd: number;
   created_at: string;
   finished_at: string | null;
+  worker: string;
+  output_format: string;
+  stage: string;
+  completed_steps: number;
+  total_steps: number;
+  started_at: string | null;
+  updated_at: string;
+  elapsed_seconds: number;
+  eta_seconds: number | null;
+  cost_limit_usd: number;
+  time_limit_seconds: number;
+  max_retries: number;
+  retries_used: number;
+  file_ids: number[];
 };
 
 export type MemoryNote = {
@@ -168,6 +182,9 @@ export type Settings = {
   language: "match" | "english" | "urdu";
   timezone: string;
   daily_cap_usd: number;
+  task_budget_usd: number;
+  task_timeout_seconds: number;
+  task_max_retries: number;
   paused: boolean;
   tts_voice: string;
   voice_accent: "pakistani" | "indian" | "neutral";

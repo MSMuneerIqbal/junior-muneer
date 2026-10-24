@@ -1,7 +1,7 @@
 ---
 name: cv_review
 description: Review a supplied CV against a job, scholarship or university opportunity, or improve its clarity when no target is supplied. Give prioritized, evidence-based edits.
-for: [junior_muneer]
+for: [junior_muneer, documents_agent]
 ---
 ## Steps
 1. Read the CV the user supplied using the matching attachment, PC or Drive reading tool. Ask for the CV if missing. A target opportunity is optional: explain that a general review is less tailored.

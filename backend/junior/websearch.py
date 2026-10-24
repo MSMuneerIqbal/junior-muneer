@@ -129,6 +129,8 @@ async def gemini_search(query: str, context) -> str:
             web = getattr(chunk, "web", None)
             if web is not None and getattr(web, "uri", None):
                 sources.append(f"- {getattr(web, 'title', '') or 'source'}: {web.uri}")
+                from junior.documents.sources import remember_source
+                remember_source(context, web.uri, getattr(web, "title", ""))
     text = (getattr(response, "text", None) or "").strip()
     if not text:
         raise SearchError("Gemini search returned nothing")
@@ -144,7 +146,12 @@ def provider() -> str:
 
 async def search_for(context, query: str) -> str:
     """Search the web with the engine you chose; the answer for Junior to write from."""
+    context.check_task_limits()
     context.mark_outside()  # web pages: no memory saving for the rest of this turn
+    if context.task_id is not None:
+        if context.task_searches >= 4:
+            raise SearchError("This task reached its limit of four searches.")
+        context.task_searches += 1
     if provider() == "gemini":
         try:
             found = await gemini_search(query, context)
@@ -170,6 +177,9 @@ async def search_for(context, query: str) -> str:
                           "label": f"DeepSeek search didn't work ({e}); searched with OpenAI instead"})
         else:
             from junior.models import get_router
+            from junior.documents.sources import remember_source
+            for result in results:
+                remember_source(context, result.get("url", ""), result.get("title", ""))
 
             cost = get_router().tool_prices.get("deepseek_search", 0.0)
             context.usage.append(ModelUsage("web_search", "deepseek:search", 0, 0, 0, 1, cost))
