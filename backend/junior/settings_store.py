@@ -11,6 +11,7 @@ DEFAULTS: dict[str, Any] = {
     "language": "match",
     "timezone": "Asia/Karachi",
     "daily_cap_usd": 5.0,
+    "drive_share_default": "private",  # This owner's preference is editable; ZIP delivery stays private.
     "task_budget_usd": 0.5,
     "task_timeout_seconds": 600,
     "task_max_retries": 1,

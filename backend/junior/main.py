@@ -201,6 +201,8 @@ def create_app(
     app.include_router(google_router)
     app.include_router(files_router)
     app.include_router(notes_router)
+    from junior.library import router as library_router
+    app.include_router(library_router)
     app.include_router(inbox_router)
     app.include_router(tasks_router)
     app.include_router(reports_router)

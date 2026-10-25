@@ -20,6 +20,7 @@ router = APIRouter()
 
 
 class SettingsUpdate(BaseModel):
+    drive_share_default: Literal["private", "reader", "writer"] | None = None
     user_name: str | None = Field(default=None, min_length=1, max_length=50)
     language: Literal["match", "english", "urdu"] | None = None
     timezone: str | None = None

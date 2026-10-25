@@ -37,6 +37,13 @@ def _not_ready(scope: str) -> str | None:
 
 
 async def doc_create_for(context: TurnContext, title: str, content: str, your_words: str) -> str:
+    from junior.google.sharing import sharing_meta
+    share = sharing_meta(request=your_words)
+    if share["sharing_role"] != "private":
+        from junior.transfers.tools import queue, refusal as transfer_refusal
+        if why := _not_ready("drive.file") or transfer_refusal(context, your_words, ["google.docs.create", "google.drive.share"]):
+            return why
+        return await queue(context, "google.docs.create", "google", content, title, {"document_title": title, **share})
     from junior.google.docs import create_doc
 
     from junior.writing.polish import polish
@@ -55,6 +62,9 @@ async def doc_create_for(context: TurnContext, title: str, content: str, your_wo
 
 
 async def doc_read_for(context: TurnContext, link: str) -> str:
+    from junior.intents import reading_refusal
+    if why := reading_refusal(context):
+        return why
     from junior.google.docs import read_doc
 
     if refusal := _not_ready("documents.readonly"):
@@ -94,6 +104,14 @@ async def google_doc_read(ctx: Ctx, link: str) -> str:
 
 
 async def sheet_create_for(context: TurnContext, title: str, headers: list[str], rows: list[list[str]], your_words: str) -> str:
+    from junior.google.sharing import sharing_meta
+    share = sharing_meta(request=your_words)
+    if share["sharing_role"] != "private":
+        import json
+        from junior.transfers.tools import queue, refusal as transfer_refusal
+        if why := _not_ready("drive.file") or transfer_refusal(context, your_words, ["google.sheets.create", "google.drive.share"]):
+            return why
+        return await queue(context, "google.sheets.create", "google", json.dumps({"title": title, "headers": headers, "rows": rows}), title, share)
     from junior.google.sheets import create_sheet
 
     action = "google.sheets.create"
@@ -109,6 +127,9 @@ async def sheet_create_for(context: TurnContext, title: str, headers: list[str],
 
 
 async def sheet_read_for(context: TurnContext, link: str, tab: str = "") -> str:
+    from junior.intents import reading_refusal
+    if why := reading_refusal(context):
+        return why
     from junior.google.sheets import as_table, read_sheet
 
     if refusal := _not_ready("spreadsheets.readonly"):
@@ -266,6 +287,10 @@ async def drive_search(ctx: Ctx, words: str) -> str:
 
 
 async def drive_save_for(context: TurnContext, file_number: int, your_words: str, folder: str = "", new_name: str = "") -> str:
+    from junior.google.sharing import sharing_meta
+    if sharing_meta(request=your_words)["sharing_role"] != "private":
+        from junior.transfers.tools import place_document_for
+        return await place_document_for(context, folder, your_words, "google_drive", file_number=file_number, new_name=new_name)
     from junior.files import mark_saved, received, safe_name
     from junior.google.drive import save_file
 
@@ -305,6 +330,9 @@ async def drive_save(ctx: Ctx, file_number: int, your_words: str, folder: str = 
 
 
 async def drive_read_for(context: TurnContext, link: str, question: str = "") -> str:
+    from junior.intents import reading_refusal
+    if refusal := reading_refusal(context):
+        return refusal
     from junior.google.drive import for_reading
     from junior.reading import ReadError, extract_text, is_image, look_at_image
 

@@ -589,6 +589,26 @@ uncertain delivery waits for a manual check, and deliberate retries reuse the sa
 ZIP is available even when delivery connections are missing. Prepared transfer cards cannot have their descriptive
 text edited into a different operation: a changed request creates a new plan.
 
+## 14g. Fresh sessions, save-only originals and public links (requested 2026-10-25)
+
+Exact `/clear` and `cls` messages are local commands on both chat channels. Delete the originating conversation
+and its summary, stop pending work/unsent approvals, and issue a distinct fresh conversation ID without an AI call.
+Profile memory, saved files, notes and usage accounting survive. Quoted commands and Paste-box content never reset
+a session. A concurrent foreground answer must finish before its session can be cleared.
+
+Received originals now belong to Notes folders and appear beside generated class notes in a gallery. Internal
+approval snapshots stay hidden; prepared archives appear in Archives. Upload/index operations do not extract text
+or call AI. A user-selected preview may parse the original locally. Explicit save-only chat requests also block the
+model's reading/notes tools. `place_document` supports a Notes folder destination, `find_saved_files` lists metadata,
+and `save_text_to_library` stores exact user text as TXT/MD. Files remain findable across fresh sessions.
+
+Drive link sharing is separate from creation: `google.drive.share` defaults to Ask and compound approvals require
+both save/create and sharing permission. New file actions pin private/reader/writer before approval and show the
+access on the card. The owner's chosen default applies to future saves; existing files require a separate share
+action. Public access means anyone with the link, without search discovery. Never grant ownership. Persist the
+created file ID before sharing so an unclear sharing result can be checked and deliberately retried without another
+upload. Google policy refusals remain visible. Archive WhatsApp delivery continues to use private Drive links.
+
 ## 15. Using it on another PC
 
 1. Get the code from your private Git repo.

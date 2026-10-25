@@ -640,6 +640,26 @@ with its links arrives in the chat you asked from, WhatsApp included.
     checked. Existing-folder consent, permissions, stale paths, collisions, nested folders, pagination, exports,
     partial failure/retry and Pause between stages are covered with controlled services. Backend backed up/restarted;
     health, archive permission and runtime skill registration confirmed. P10-05 remains next planned work.
+- [x] **P10-04d** Fresh sessions + save-only file gallery + Drive sharing (requested 2026-10-25): /clear and cls
+  reset WhatsApp/dashboard sessions without a model call; save/upload without content analysis; folder/file gallery
+  for original uploads and notes, with previews/downloads; public-view/public-edit Drive links through approvals.
+    - Old history/summary is deleted and a distinct session created; pending background work/unsent approvals are
+      cancelled. Saved files/notes/profile memory and cost accounting survive. Exact commands only; pasted/quoted
+      commands cannot clear a session. A foreground reply must finish before its session is cleared.
+    - Original uploads and generated artifacts have folder/archive metadata; internal transfer snapshots are hidden.
+      Notes shows folders and file cards (TXT/MD/Word/PPTX/PDF/images), selected-file previews, upload/download,
+      rename/move/archive and Drive controls. Raw text saves preserve exact text. Save-only tools refuse AI reading.
+    - Public sharing uses the separate google.drive.share Ask rule; cards state reader/writer, compound actions
+      honor all permissions. Successful creation IDs survive unclear sharing for a deliberate retry without copies.
+      Muneer's live new-save default is reader; new installs default private. Existing private files are unchanged;
+      share them explicitly. ZIP WhatsApp links keep their private access. Google policy may refuse public sharing.
+    - Checked 2026-10-25: clean full backend **990 passed**; full browser **100 passed, 14 configured skips**;
+      final folder-navigation/gallery/notes browser checks **6 passed** on desktop/phone; TypeScript and ESLint passed.
+      Two old test setups updated for persisted approval records and the additional setting. Gallery screenshots reviewed.
+      Real isolated model requests saved/uploaded a synthetic MD without reading: 7.1s + 11.0s, **$0.0622289** total.
+      Actual Drive download matched original bytes; anyone-reader then anyone-writer permissions confirmed. Isolated
+      /clear cost $0. No real WhatsApp chat was cleared. Live DB backed up/migrated; backend restarted, settings,
+      file/folder endpoints, health and dashboard checked. P10-05 remains the next planned feature; no push/acceptance.
 - [ ] **P10-05** Slides (Google Slides API, one more Google permission) and PDF export
 - [ ] **P10-06** First skills: CV review, scholarship roadmap, research report, pitch deck, proposal
 - [ ] **P10-07** Your acceptance test + push

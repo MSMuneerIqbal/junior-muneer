@@ -17,9 +17,10 @@ def queue_workspace(context, doc, sources, output_format):
     content = markdown(doc, sources) if output_format == "google_doc" else json.dumps(
         {"title": doc.title, "headers": doc.headers, "rows": doc.rows}, ensure_ascii=False, indent=2)
     try:
+        from junior.google.sharing import sharing_meta
         item = create_item(kind="api", platform="google", item_type="document" if output_format == "google_doc" else "spreadsheet",
                            action_type=action, title=doc.title, text=content, from_outside=True,
-                           conversation_id=context.conversation_id)
+                           conversation_id=context.conversation_id, meta=sharing_meta(request=context.user_text))
     except ApprovalError as e:
         return f"Google creation was refused: {e}. Your local file is ready above."
     context.approval_ids.append(item.id)

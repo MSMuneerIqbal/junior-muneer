@@ -14,6 +14,9 @@ from junior.timeutil import zone
 
 
 def class_notes_for(context, your_words, title="", subject="", class_date="", file_numbers=None, text_quotes=None, folder_name=""):
+    from junior.intents import reading_refusal
+    if refusal := reading_refusal(context):
+        return refusal
     if refusal := plan_mode_refusal():
         return refusal
     if not gate.you_said(context, your_words):

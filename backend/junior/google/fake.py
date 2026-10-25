@@ -116,6 +116,21 @@ class FakeGoogle:
             return httpx.Response(404, json={"error": {"message": "Requested entity was not found."}})
 
         # Drive: search, file details, download, Google's own files exported, new folders and uploads
+        if host == "www.googleapis.com" and (permission_match := re.match(r"^/drive/v3/files/([^/]+)/permissions(?:/([^/]+))?$", path)):
+            fid, pid = permission_match.groups()
+            permissions = self.__dict__.setdefault("permissions", {}).setdefault(fid, [])
+            if method == "GET":
+                return httpx.Response(200, json={"permissions": permissions})
+            if method == "POST":
+                entry = {"id": self._id("permission"), **body}
+                permissions.append(entry)
+                return httpx.Response(200, json=entry)
+            if method == "PATCH":
+                entry = next((p for p in permissions if p["id"] == pid), None)
+                if entry is not None:
+                    entry.update(body)
+                    return httpx.Response(200, json=entry)
+            return httpx.Response(404)
         if host == "www.googleapis.com" and path == "/upload/drive/v3/files":
             return self._upload(request)
         if host == "www.googleapis.com" and path == "/drive/v3/files" and method == "POST":

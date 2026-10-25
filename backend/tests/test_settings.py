@@ -65,6 +65,7 @@ def test_defaults(client):
         "email_notify_whatsapp": True,
         "whatsapp_session_hours": 12,
         "whatsapp_carry_summary": True,
+        "drive_share_default": "private",
     }
 
 
@@ -89,6 +90,7 @@ def test_change_and_it_is_logged(client):
         {"timezone": "Mars/Olympus"},
         {"daily_cap_usd": -1},
         {"daily_cap_usd": 5000},
+        {"drive_share_default": "owner"},
     ],
 )
 def test_bad_values_are_refused(client, body):

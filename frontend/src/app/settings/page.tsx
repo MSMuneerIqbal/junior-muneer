@@ -1205,6 +1205,7 @@ type GoogleStatus = { configured: boolean; connected: boolean; account: string; 
 
 /** Google Docs, Sheets and Calendar: Google's own consent page, then back here. */
 function GoogleConnection() {
+  const { data: sharing, mutate: refreshSharing } = useSWR<Settings>("/api/settings", fetcher);
   const { data, mutate } = useSWR<GoogleStatus>("/api/google/status", fetcher);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -1277,6 +1278,15 @@ function GoogleConnection() {
           </div>
         )}
         {data.connected && data.drive_folder_access && <p className="text-xs text-muted">Saving into your existing Drive folders is allowed on Google.</p>}
+        {data.connected && <label className="mt-2 block text-xs text-muted">Default sharing for new documents and notes
+          <select aria-label="Default Drive sharing" value={sharing?.drive_share_default ?? "private"} onChange={async (event) => {
+            try { await send("PATCH", "/api/settings", { drive_share_default: event.target.value }); await refreshSharing(); }
+            catch (error) { setMessage({ ok: false, text: error instanceof Error ? error.message : "Couldn't change sharing" }); }
+          }} className="mt-1 block rounded-lg border border-line bg-bg px-2 py-1.5 text-sm text-ink">
+            <option value="private">Private</option><option value="reader">Anyone with the link can view</option><option value="writer">Anyone with the link can edit</option>
+          </select>
+          {sharing?.drive_share_default === "writer" && <span className="mt-1 block">Anyone who gets the link will be able to change these files.</span>}
+        </label>}
         {!data.configured && (
           <p className="text-xs leading-relaxed text-muted">
             First add your Google Cloud project&apos;s OAuth client to <code>backend/.env</code> (<code>GOOGLE_CLIENT_ID</code>,{" "}

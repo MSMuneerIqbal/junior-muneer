@@ -85,7 +85,7 @@ def test_computer_changes_are_scoped_and_junior_has_only_bounded_transfer_tools(
     registry = load_registry()
     agent = registry.get("computer_agent")
     assert agent.tools == ("computer", "transfers", "skills")
-    assert set(agent.action_types) == {"computer.write", "computer.move", "computer.delete", "computer.run", "google.drive.save", "files.archive_whatsapp"}
+    assert set(agent.action_types) == {"computer.write", "computer.move", "computer.delete", "computer.run", "google.drive.save", "google.drive.share", "files.archive_whatsapp"}
     junior = registry.get("junior_muneer")
     assert "computer_read" in junior.tools and "computer_agent" in junior.tools and "computer" not in junior.tools
     assert "transfers" in junior.tools

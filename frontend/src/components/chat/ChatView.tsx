@@ -79,6 +79,13 @@ export function ChatView() {
   const onEvent = useCallback(
     (event: ChatEvent) => {
       switch (event.type) {
+        case "session_reset":
+          setTurn((t) => t && { ...t, conversationId: event.conversation_id, userText: "", userMessageId: undefined, text: "", steps: [], notes: [], approvals: [] });
+          setNotesByMessage({});
+          mutateGlobal(isChatsKey);
+          mutateGlobal(isApprovalsKey);
+          mutateGlobal(isTasksKey);
+          break;
         case "conversation":
           window.history.replaceState(null, "", `/?c=${event.id}`);
           setTurn((t) => t && { ...t, conversationId: event.id });
@@ -195,7 +202,7 @@ export function ChatView() {
   // Only show the live turn in the chat it belongs to.
   const liveTurn = turn && turn.conversationId === conversationId ? turn : null;
   const messages = saved ?? [];
-  const showUser = liveTurn && !messages.some((m) => m.id === liveTurn.userMessageId);
+  const showUser = liveTurn && (liveTurn.userText || liveTurn.userAudioId) && !messages.some((m) => m.id === liveTurn.userMessageId);
   const showPaste = liveTurn?.paste && !messages.some((m) => m.id === liveTurn.pasteMessageId);
   const showAnswer =
     liveTurn && liveTurn.status !== "error" && !messages.some((m) => m.id === liveTurn.messageId);

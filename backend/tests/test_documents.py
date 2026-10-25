@@ -248,7 +248,10 @@ def test_google_sheet_sender_uses_approved_json_not_original_metadata(monkeypatc
         return "sheet1", "https://docs.google.com/spreadsheets/d/sheet1/edit"
     monkeypatch.setattr("junior.google.sheets.create_sheet", create_sheet)
     approved = json.dumps({"title": "Edited research", "headers": ["Result"], "rows": [["Edited value"]]})
-    out = Outgoing(1, "google.sheets.create", "google", "spreadsheet", approved, meta={"rows": [["Old value"]]})
+    from junior.approvals import create_item
+    item = create_item(kind="api", platform="google", item_type="spreadsheet", action_type="google.sheets.create",
+                       text=approved, title="Edited research", meta={"rows": [["Old value"]]})
+    out = Outgoing(item.id, "google.sheets.create", "google", "spreadsheet", approved, meta=item.meta)
     result = asyncio.run(GoogleWorkspaceSender().send(out))
     assert result.outcome == "sent" and calls == [("Edited research", ["Result"], [["Edited value"]])]
 

@@ -212,6 +212,7 @@ async def chat_socket(websocket: WebSocket) -> None:
             ):
                 if event["type"] == "done":
                     reply = event.get("text", "")
+                    conversation_id = event.get("conversation_id", conversation_id)
                 elif event["type"] == "approval":
                     cards.append(event["item"])
                 if gone:

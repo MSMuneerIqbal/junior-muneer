@@ -399,6 +399,8 @@ class ReceivedFile(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     conversation_id: Mapped[int | None] = mapped_column(ForeignKey("conversations.id", ondelete="SET NULL"), nullable=True)
     source: Mapped[str] = mapped_column(String(20))  # whatsapp · chat
+    library_folder_id: Mapped[int | None] = mapped_column(ForeignKey("notes_folders.id"), nullable=True, index=True)
+    library_archived: Mapped[bool] = mapped_column(Boolean, default=False)
     filename: Mapped[str] = mapped_column(String(200))
     mime: Mapped[str] = mapped_column(String(120))
     size: Mapped[int] = mapped_column(Integer)

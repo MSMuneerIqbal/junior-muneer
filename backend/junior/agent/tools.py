@@ -1346,6 +1346,9 @@ TOOL_FACTORIES["email"] = lambda: [send_to_me]
 
 
 async def read_file_for(context: TurnContext, file_number: int, question: str = "") -> str:
+    from junior.intents import reading_refusal
+    if refusal := reading_refusal(context):
+        return refusal
     from junior import gate
     from junior.files import received
     from junior.reading import ReadError, extract_text, is_image, look_at_image

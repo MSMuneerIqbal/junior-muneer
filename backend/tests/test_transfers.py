@@ -113,7 +113,7 @@ def test_forged_source_quote_blocked_destination_and_snapshot_tampering_fail(set
     ctx = said("Put my slides in Documents")
     original = source(home)
     assert "quote" in run(place_document_for(ctx, "Documents", "Not the user's words", pc_file=str(original)))
-    number, _ = files.save_received(b"private", "Private.txt", "text/plain", "chat")
+    number, _ = files.save_received(b"private", "Private.txt", "text/plain", "chat", index_in_library=False)
     assert "wasn't supplied" in run(place_document_for(ctx, "Documents", ctx.user_text, file_number=number))
     assert "holds secrets" in run(place_document_for(ctx, "Documents", ctx.user_text, pc_file="Desktop/.env"))
     assert "outside" in run(place_document_for(ctx, str(home / "Other"), ctx.user_text, pc_file=str(original)))

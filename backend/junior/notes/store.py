@@ -16,7 +16,7 @@ from sqlalchemy import func, or_, select
 from junior import gate
 from junior.audit import audit
 from junior.config import get_settings
-from junior.db import ClassNote, NotesFolder, session_scope
+from junior.db import ClassNote, NotesFolder, ReceivedFile, session_scope
 from junior.db.models import utcnow
 from junior.files import safe_name
 
@@ -107,7 +107,8 @@ def folders():
     with session_scope() as s:
         counts = dict(s.execute(select(ClassNote.folder_id, func.count(ClassNote.id)).where(ClassNote.archived.is_(False))
                                 .group_by(ClassNote.folder_id)).all())
-        return [{"id": f.id, "name": f.name, "note_count": counts.get(f.id, 0)}
+        files = dict(s.execute(select(ReceivedFile.library_folder_id, func.count(ReceivedFile.id)).where(ReceivedFile.library_archived.is_(False)).group_by(ReceivedFile.library_folder_id)).all())
+        return [{"id": f.id, "name": f.name, "note_count": counts.get(f.id, 0), "file_count": files.get(f.id, 0)}
                 for f in s.scalars(select(NotesFolder).order_by(NotesFolder.name))]
 
 
@@ -238,6 +239,9 @@ def find_notes_for(context, query: str = "", class_date: str = "", folder_name: 
 
 
 def read_note_for(context, note_id: int) -> str:
+    from junior.intents import reading_refusal
+    if why := reading_refusal(context):
+        return why
     with session_scope() as s:
         note = _get(s, note_id)
         return gate.fence(context, markdown(note), f"saved class notes {note.id}")

@@ -53,6 +53,7 @@ export function useApprovalItem(initial: ApprovalItem) {
     if (action === "approve") void mutate(PERMISSIONS_KEY);
     if (action === "posted") void mutate(isFreelanceKey);
     if (action === "approve" || action === "send" || action === "resolve") void mutate("/api/usage/today");
+    if (action === "approve" || action === "send") void mutate((key) => typeof key === "string" && key.startsWith("/api/library/files"));
     return updated;
   }
 

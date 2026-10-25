@@ -156,6 +156,9 @@ def find_files_for(context: TurnContext, folder: str, name: str = "*", words: st
 
 
 async def read_pc_file_for(context: TurnContext, file: str, from_line: int = 1, question: str = "") -> str:
+    from junior.intents import reading_refusal
+    if refusal := reading_refusal(context):
+        return refusal
     path = _guarded(context, file)
     if isinstance(path, str):
         return path

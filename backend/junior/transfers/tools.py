@@ -51,11 +51,14 @@ async def queue(context, action, platform, text, title, meta):
 
 
 async def place_document_for(context, destination, your_words, destination_kind="pc", file_number=0,
-                             pc_file="", drive_link="", note_id=0, new_name=""):
+                             pc_file="", drive_link="", note_id=0, new_name="", share_role=""):
     action = "computer.write" if destination_kind == "pc" else "google.drive.save"
-    if destination_kind not in ("pc", "google_drive"):
-        return "NOT done: destination_kind must be pc or google_drive."
-    if why := refusal(context, your_words, [action]):
+    if destination_kind not in ("pc", "google_drive", "notes"):
+        return "NOT done: destination_kind must be pc, google_drive or notes."
+    from junior.google.sharing import sharing_meta, sharing_label
+    share = sharing_meta(share_role, your_words) if destination_kind == "google_drive" else {}
+    actions = [] if destination_kind == "notes" else [action] + share.get("required_actions", [])
+    if why := refusal(context, your_words, actions):
         return why
     try:
         if destination_kind == "google_drive":
@@ -74,6 +77,14 @@ async def place_document_for(context, destination, your_words, destination_kind=
                 name += Path(original).suffix
             if blocked_name(name):
                 return "NOT done: choose a normal document filename, not a blocked secret filename."
+        if destination_kind == "notes":
+            from junior.files import save_received
+            from junior.library import file_in_folder
+            number = file_number
+            if not number:
+                number, _ = save_received(data, name, mime, "library", context.conversation_id, library_folder=destination or "Uploads")
+            saved = file_in_folder(number, destination, name)
+            return f"Saved the original file {saved['filename']} in Notes folder {saved['folder_name']} without reading its contents. [Open saved file](/notes?file={number})"
         if destination_kind == "pc":
             folder = check(destination, context)
             if folder.exists() and not folder.is_dir():
@@ -86,8 +97,9 @@ async def place_document_for(context, destination, your_words, destination_kind=
         else:
             if len(data) > 20 * 1024 * 1024:
                 return "NOT done: Google Drive transfers support files up to 20 MB."
-            meta = {"op": "place_document", "folder": destination}
+            meta = {"op": "place_document", "folder": destination, "source_file_id": file_number, **share}
             platform, description = "google", f"Save a new copy of {name} to Google Drive folder {destination or 'My Drive'}. Create missing folders. Keep the source."
+            description += "\n" + sharing_label(share["sharing_role"]) + "."
         meta.update(snapshot(context, name, data, mime))
         description += f"\nSize: {len(data):,} bytes. The prepared file can be downloaded for review."
         return await queue(context, action, platform, description, f"Place {name}", meta)
@@ -111,6 +123,8 @@ async def zip_folder_for(context, folder, your_words, source_kind="pc", send_wha
             if not name.lower().endswith(".zip"):
                 name += ".zip"
         meta = snapshot(context, name, data, "application/zip")
+        from junior.library import file_in_folder
+        file_in_folder(meta["snapshot_id"], "Archives")
         context.emit({"type": "step", "id": "zip-prepare", "kind": "team", "label": f"ZIP ready: {len(entries)} entries", "status": "done"})
         download = f"[Download ZIP](/api/files/{meta['snapshot_id']}/download)"
         if not send_whatsapp:
@@ -133,15 +147,39 @@ async def zip_folder_for(context, folder, your_words, source_kind="pc", send_wha
 
 @function_tool
 async def place_document(ctx: RunContextWrapper[TurnContext], destination: str, your_words: str,
-                         destination_kind: Literal["pc", "google_drive"] = "pc", file_number: int = 0,
-                         pc_file: str = "", drive_link: str = "", note_id: int = 0, new_name: str = "") -> str:
+                         destination_kind: Literal["pc", "google_drive", "notes"] = "pc", file_number: int = 0,
+                         pc_file: str = "", drive_link: str = "", note_id: int = 0, new_name: str = "",
+                         share_role: Literal["", "private", "reader", "writer"] = "") -> str:
     """Copy the ACTUAL document into a specified folder/drive. PDF/DOCX/PPTX/images/binaries retain their bytes.
     Select exactly one source: file_number from an uploaded/generated [file N] tag, pc_file path, drive_link, or note_id.
-    destination is a full local folder path (C:/..., D:/...) for pc, or an exact Google Drive folder path/link.
+    destination is a full local folder path for pc, an exact Google Drive folder path/link, or a Notes-library folder name for notes.
     Missing folders are created as part of the permitted action. Never overwrites. new_name optional; keeps source extension.
     your_words is the user's exact transfer request. Changes follow approval rules; report waiting until confirmed.
+    share_role for Google Drive: empty uses their saved setting; reader = public view, writer = public edit, private = private.
     """
-    return await place_document_for(ctx.context, destination, your_words, destination_kind, file_number, pc_file, drive_link, note_id, new_name)
+    return await place_document_for(ctx.context, destination, your_words, destination_kind, file_number, pc_file, drive_link, note_id, new_name, share_role)
+
+
+async def share_drive_file_for(context, file_link, your_words, access="reader"):
+    if why := refusal(context, your_words, ["google.drive.share"]):
+        return why
+    from junior.google.drive import file_id
+    from junior.google.sharing import sharing_label
+    try:
+        fid = file_id(file_link)
+    except GoogleError as e:
+        return str(e)
+    return await queue(context, "google.drive.share", "google", f"{sharing_label(access)}.\n{file_link}",
+                       "Share Drive file", {"op": "share_existing", "drive_file_id": fid, "sharing_role": access, "source_url": file_link})
+
+
+@function_tool
+async def share_drive_file(ctx: RunContextWrapper[TurnContext], file_link: str, your_words: str,
+                           access: Literal["reader", "writer"] = "reader") -> str:
+    """Make an existing Google Drive file public by link: reader=view, writer=edit. Exact own user request required.
+    Follows google.drive.share permission; the card states who can view/edit. Never grants ownership.
+    """
+    return await share_drive_file_for(ctx.context, file_link, your_words, access)
 
 
 @function_tool
@@ -157,4 +195,5 @@ async def zip_folder(ctx: RunContextWrapper[TurnContext], folder: str, your_word
     return await zip_folder_for(ctx.context, folder, your_words, source_kind, send_whatsapp, archive_name)
 
 
-TRANSFER_TOOLS = [place_document, zip_folder]
+from junior.library import find_saved_files, save_text_to_library
+TRANSFER_TOOLS = [place_document, zip_folder, find_saved_files, save_text_to_library, share_drive_file]

@@ -42,6 +42,21 @@ The official WhatsApp API rejects ZIP uploads (verified with the connected accou
 private Google Drive download links. Both Google and WhatsApp must be connected. No public sharing permission is added.
 Folder archives support up to 500 entries, 100 MB of source material, a 20 MB ZIP and two minutes of preparation.
 
+Send **`/clear`** or **`cls`** as the whole message on WhatsApp or the dashboard to delete that chat's history
+and summary and start a fresh session. This command costs no AI tokens. Pending work and unsent approvals for
+the old session are cancelled; your saved files, notes, profile and personal memories remain available.
+
+**Notes** is also a file gallery: create/open folders, upload originals, search, rename, move, download or archive
+TXT, Markdown, Word, PowerPoint, PDF and image files. Image thumbnails and selected-file previews are available.
+“Just save/upload this to …” preserves the original without AI reading, rewriting or summarizing it. Ask explicitly
+to read or make notes when you want analysis. Raw text can also be saved as a TXT or MD file.
+
+**Settings → Connections → Google → Default Drive link access** controls new document/note saves: private,
+anyone with the link can view, or anyone with the link can edit. Public sharing has its own approval rule and the
+card states the access. Muneer's requested default is public viewing; editing can be selected per file or requested
+in chat. Existing private files stay private until you share them. Open a file in Notes and choose **Save to Drive**
+or **Update Drive sharing**, or ask Junior to share its Drive link. ZIP delivery keeps its private-link behavior.
+
 ## Models and costs (Settings)
 
 | What | Choices |

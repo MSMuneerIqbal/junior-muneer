@@ -28,12 +28,22 @@ async def source_file(context, file_number=0, pc_file="", drive_link="", note_id
     if file_number:
         got = received(file_number)
         if got is None:
+            from junior.db import ReceivedFile
+            with session_scope() as s:
+                row = s.get(ReceivedFile, file_number)
+                if row and row.source == "drive" and row.library_folder_id is not None:
+                    from junior.google.drive import fetch
+                    link = row.drive_link
+                else:
+                    link = ""
+            if link:
+                return await fetch(link)
             raise ValueError("That source file is missing. Attach it again.")
         row, data = got
         with session_scope() as s:
             texts = s.scalars(select(Message.content).where(Message.id.in_(context.user_message_ids), Message.source == "user")).all()
         allowed = {int(n) for text in texts for n in TAG.findall(text)}
-        if file_number not in allowed and not (row.source == "generated" and row.conversation_id == context.conversation_id):
+        if file_number not in allowed and row.library_folder_id is None and not (row.source == "generated" and row.conversation_id == context.conversation_id):
             raise ValueError("That file wasn't supplied or generated in this chat. Attach it here first.")
         return row.filename, data, row.mime
     if pc_file:
@@ -59,7 +69,7 @@ async def source_file(context, file_number=0, pc_file="", drive_link="", note_id
 
 
 def snapshot(context, name, data, mime):
-    number, _ = save_received(data, name, mime, "generated", context.conversation_id)
+    number, _ = save_received(data, name, mime, "generated", context.conversation_id, index_in_library=False)
     return {"snapshot_id": number, "sha256": digest(data), "filename": safe_name(name), "bytes": len(data)}
 
 

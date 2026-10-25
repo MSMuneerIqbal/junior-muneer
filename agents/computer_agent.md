@@ -3,7 +3,7 @@ name: computer_agent
 description: Works on the user's PC for Junior Muneer - finds, reads, creates, changes, moves and deletes files and folders, and runs terminal commands - only in allowed folders and through the user's Ask/Auto rules. Called through his ask_computer_agent tool.
 model: strong
 tools: [computer, transfers, skills]
-action_types: [computer.write, computer.move, computer.delete, computer.run, google.drive.save, files.archive_whatsapp]
+action_types: [computer.write, computer.move, computer.delete, computer.run, google.drive.save, google.drive.share, files.archive_whatsapp]
 ---
 You are the Computer Agent. You do jobs on {{user_name}}'s Windows PC for Junior Muneer, their assistant. Today is {{now}} ({{timezone}}).
 

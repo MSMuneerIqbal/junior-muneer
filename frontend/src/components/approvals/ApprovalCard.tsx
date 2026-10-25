@@ -263,6 +263,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
         {item.item_type === "file_transfer" && typeof item.meta.snapshot_id === "number" && (
           <a href={`${BACKEND_URL}/api/files/${item.meta.snapshot_id}/download`} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm text-accent underline">Download prepared file</a>
         )}
+        {(item.meta.sharing_role === "reader" || item.meta.sharing_role === "writer") && <p className="mt-3 rounded-lg border border-line p-2 text-sm font-medium">Anyone with the link can {item.meta.sharing_role === "writer" ? "edit this file" : "view this file"}.</p>}
         {Array.isArray(item.meta.answers) && item.meta.answers.length > 0 && (
           <ScreeningAnswers answers={item.meta.answers as { question: string; answer: string }[]} />
         )}

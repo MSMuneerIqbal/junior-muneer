@@ -31,10 +31,21 @@ def copy_to_pc(out):
 
 async def save_to_drive(out):
     from junior.google.drive import save_exact
+    from junior.google.sharing import apply_prepared_sharing, sharing_label
+    from junior.files import mark_saved
     row, data = pinned(out.meta)
-    saved = await save_exact(out.meta["filename"], data, row.mime, out.meta["folder"])
+    saved = {"id": out.meta["uploaded_drive_id"], "webViewLink": out.meta["uploaded_drive_link"]} if out.meta.get("uploaded_drive_id") else await save_exact(out.meta["filename"], data, row.mime, out.meta["folder"])
     link = saved.get("webViewLink") or f"https://drive.google.com/file/d/{saved['id']}/view"
-    return SendResult("sent", f"Saved {out.meta['filename']} in the requested Google Drive folder.", remote_id=saved["id"], url=link)
+    remember(out.item_id, uploaded_drive_id=saved["id"], uploaded_drive_link=link)
+    if not out.meta.get("source_file_id"):
+        from junior.library import file_in_folder
+        file_in_folder(row.id, "Documents")
+    mark_saved(out.meta.get("source_file_id") or row.id, link)
+    try:
+        await apply_prepared_sharing(out, saved["id"])
+    except Exception as e:
+        return SendResult("unclear", f"File saved at {link}, but sharing was not confirmed ({e}). Check its access before retrying.", remote_id=saved["id"], url=link)
+    return SendResult("sent", f"Saved {out.meta['filename']} in the requested Google Drive folder. {sharing_label(out.meta.get('sharing_role', 'private'))}.", remote_id=saved["id"], url=link)
 
 
 def remember(item_id, **values):

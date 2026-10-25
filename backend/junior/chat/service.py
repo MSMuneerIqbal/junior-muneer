@@ -79,6 +79,7 @@ class ChatService:
         self.registry = registry
         # Called per message, so a missing API key is reported in the chat, not at startup.
         self.model_provider = model_provider
+        self.active_chats: dict[int, int] = {}
 
     # ---- storage ------------------------------------------------------------
 
@@ -177,7 +178,35 @@ class ChatService:
 
     # ---- the turn -------------------------------------------------------------
 
-    async def reply(
+    async def reply(self, conversation_id, text, audio_id=None, audio_seconds=None, paste=None):
+        from junior.chat.reset import COMMANDS, reset_session
+        if text.strip().casefold() in COMMANDS and paste is None:
+            if conversation_id in self.active_chats:
+                yield {"type": "error", "message": "A reply is still running in this chat. Send /clear when it finishes."}
+                return
+            new = reset_session(conversation_id)
+            yield {"type": "session_reset", "previous_id": conversation_id, "conversation_id": new["id"]}
+            yield {"type": "conversation", **new}
+            result = TurnResult(text="Fresh session started. Previous chat history and summary were cleared. Saved files, notes and profile memory are still available.", usage=[], steps=[])
+            mid = self._finish(new["id"], result)
+            yield {"type": "done", "conversation_id": new["id"], "message_id": mid, "text": result.text, "steps": [], "cost_usd": 0.}
+            return
+        active_id = conversation_id
+        registered = False
+        try:
+            async for event in self._reply(conversation_id, text, audio_id, audio_seconds, paste):
+                if event["type"] == "user_message":
+                    active_id = event["conversation_id"]
+                    self.active_chats[active_id] = self.active_chats.get(active_id, 0) + 1
+                    registered = True
+                yield event
+        finally:
+            if registered:
+                self.active_chats[active_id] -= 1
+                if not self.active_chats[active_id]:
+                    self.active_chats.pop(active_id)
+
+    async def _reply(
         self,
         conversation_id: int | None,
         text: str,

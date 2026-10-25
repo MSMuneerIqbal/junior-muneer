@@ -126,6 +126,7 @@ export type MemoryNote = {
 
 /** Events from the chat WebSocket. */
 export type ChatEvent =
+  | { type: "session_reset"; previous_id: number | null; conversation_id: number }
   | { type: "conversation"; id: number; title: string }
   | { type: "user_message"; id: number; conversation_id: number }
   | { type: "delta"; text: string }
@@ -178,6 +179,7 @@ export type Activity = {
 };
 
 export type Settings = {
+  drive_share_default: "private" | "reader" | "writer";
   user_name: string;
   language: "match" | "english" | "urdu";
   timezone: string;
