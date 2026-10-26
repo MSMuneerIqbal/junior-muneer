@@ -511,6 +511,32 @@ class WhatsAppInbound(Base):
     finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
 
 
+class ComputerJob(Base):
+    """One approved, locally supervised command. Never resume a saved PID after restart."""
+
+    __tablename__ = "computer_jobs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    approval_id: Mapped[int | None] = mapped_column(
+        ForeignKey("approvals.id", ondelete="SET NULL"), nullable=True, unique=True
+    )
+    conversation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("conversations.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    command: Mapped[str] = mapped_column(Text)
+    folder: Mapped[str] = mapped_column(Text)
+    seconds: Mapped[int] = mapped_column(Integer)
+    state: Mapped[str] = mapped_column(String(20), index=True)
+    output: Mapped[str] = mapped_column(Text, default="")
+    output_chars: Mapped[int] = mapped_column(Integer, default=0)
+    pid: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    exit_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    started_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+
+
 class Setting(Base):
     __tablename__ = "settings"
 

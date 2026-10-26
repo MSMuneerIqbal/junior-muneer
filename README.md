@@ -7,11 +7,17 @@ the terminal on your PC, the news, voice messages and live calls, on the dashboa
 - **Two modes.** Start a message with **"Junior …"** and he works like a professional junior (focused, no emojis).
   Anything else, and he's your friend: relaxed, jokes, emojis welcome.
 - **You decide what goes out.** Every outgoing action follows Ask / Auto / Deny rules; emails and replies to other
-  people wait for your Approve. No browser bots: data comes from official APIs, email or your paste.
+  people wait for your Approve. Data comes through APIs, feeds, email or your paste. Controlled desktop/browser
+  actions are being added in [Phase 11](PLAN.md#14h-system-actions-browser-and-learning-authorized-2026-10-26).
 - **Human writing.** Emails, docs and messages go through the **Polisher** (easy English, no AI signs, facts
   checked in code); social posts and proposals through the writing team.
 
 The design is in [PLAN.md](PLAN.md); progress and set-up steps per feature are in [TASK.md](TASK.md).
+
+**PC jobs:** ask Junior to run a PowerShell command in the background in an allowed folder. Approve its card,
+then open **Settings → Computer → PC jobs** to see the status, view output or press Stop. The default limit is
+10 minutes (up to one hour when requested), with at most three jobs at once. Output checks here use no AI tokens.
+Jobs stop on Pause, Computer off, Plan mode or backend shutdown; stopping keeps any partial changes.
 
 ## What he can do
 

@@ -6,6 +6,7 @@ import useSWR, { useSWRConfig } from "swr";
 import { GitHubConnect } from "@/components/GitHubConnect";
 import { SettingsIcon } from "@/components/icons";
 import SkillsSettings from "@/components/SkillsSettings";
+import ComputerJobs from "@/components/ComputerJobs";
 import { BACKEND_URL, fetcher, send } from "@/lib/api";
 import { PERMISSIONS_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
 import type { Settings } from "@/lib/types";
@@ -1400,6 +1401,9 @@ function ComputerSection({ enabled, onEnabled }: { enabled: boolean; onEnabled: 
         <ul className="list-disc space-y-1 pl-5 text-[13px] text-muted">
           {data?.blocked.map((b) => <li key={b}>{b}</li>)}
         </ul>
+      </Row>
+      <Row wide label="Background commands" hint="Approved commands with output and Stop controls.">
+        <ComputerJobs />
       </Row>
     </Section>
   );

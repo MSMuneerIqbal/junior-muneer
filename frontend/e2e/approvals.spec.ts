@@ -17,6 +17,8 @@ test("approving in the chat updates the Approvals page, and the other way round"
   // Chat → Approvals page
   const first = await draftInChat(page, `First post ${tag}`);
   await expect(first.getByRole("link", { name: /Open LinkedIn/ })).toHaveAttribute("href", /linkedin\.com/);
+  // This test edits the saved reply: the transient streaming card is replaced when that reply is persisted.
+  await expect(page.getByRole("button", { name: "Read aloud" })).toBeVisible();
   await first.getByRole("button", { name: "Edit" }).click();
   await first.getByRole("textbox", { name: "Edit draft" }).fill(`First post ${tag}, edited`);
   await first.getByRole("button", { name: "Save" }).click();

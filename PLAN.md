@@ -1,10 +1,11 @@
-# Junior Muneer: Project Plan (v9: safe workflow, no browser bots, more providers)
+# Junior Muneer: Project Plan (v10: controlled PC/browser actions and reusable skills)
 
 > Status (2026-10-20): Phases 0, 1, 2, 2b, 4, 5 and 7 built; Phase 9 (your computer) built locally, the PC Helper
 > waits for the VPS; Phase 10 (Documents Agent + skills) in progress; Phase 8 (WhatsApp works; server waits for the
 > VPS); 3 and 6 paused. See TASK.md.
 >
-> **What changed in v7:** no browser automation anywhere. Data comes from official APIs, email alerts, RSS or text you paste in.
+> **Historical v7 workflow:** no browser automation. Controlled user browser tasks were authorized in v10 (section 14h).
+> Existing integrations use official APIs, email alerts, RSS or text you paste in.
 > Anything without an official API is copy and paste: you post or submit it yourself in your normal browser.
 > Also: the terminal is always Ask, memory is saved only from your own words, and safety tests are written with each task (see section 18).
 
@@ -44,7 +45,7 @@ everywhere else, you copy the approved text and post or submit it yourself. He r
 ├───────────────────────────────────────────────────────────────────────────┤
 │ 1. DATA IN        -->  Official APIs (Gmail, Meta, LinkedIn, GitHub),     │
 │                        email alerts, RSS feeds, or text you paste in.     │
-│                        No browser bots, no scraping.                      │
+│               API/paste workflows; browser tasks: section 14h.             │
 │                                                                           │
 │ 2. AI PROCESSING  -->  Junior Muneer and his subagents analyse, score,    │
 │                        and draft (proposals, replies, posts, emails).     │
@@ -63,7 +64,7 @@ Upwork and Fiverr are your income, and a ban is not worth the time saved. Copy a
 ## 3. Ground rules
 
 1. **Permission rules decide every outgoing action:** Ask, Auto or Deny, like Claude's permission modes (section 8).
-2. **No browser automation.** No agent controls a browser, logs in to a site or scrapes pages. Data comes only through official APIs, email, RSS or your paste.
+2. **Controlled browser automation (authorized 2026-10-26).** Official APIs remain preferred. Explicit user tasks may use bounded, auditable browser actions through the same permissions and approval system (section 14h). Existing platform copy/paste workflows stay in place until specifically integrated; browser pages are outside data. No unrestricted browsing worker or automatic account access.
 3. **Outside text is data, not instructions.** Job posts, client messages, emails, comments, pasted text and web search results can contain hidden instructions ("prompt injection"). Agents never follow them.
 4. **Agents that read outside text cannot send anything.** Only the **API senders** (Gmail, Meta, LinkedIn) and the **Dev Executor** act. They are plain code, not AI: they send exactly the stored approved text, so the content can't change between approval and sending.
 5. **Actions caused by outside content always go to Ask.** If an action comes from an email, comment, message or pasted text, it goes to your approval queue even when its type is set to Auto. Auto only applies to actions you set up yourself (your requests, your schedules). On these cards the "always allow" button is hidden, because it would have no effect.
@@ -416,7 +417,7 @@ the Developer Agent reads through the GitHub MCP → drafts → **Ask** → the 
 ## 12. Safety, limits, cost and privacy
 
 - The permission rules (section 8) and a Safety Guard check before every action
-- **No browser automation:** no agent logs in to, clicks on or scrapes any site. Your site logins stay only in your own browser
+- **Browser actions:** opt-in, scoped sessions and sites; inspect before acting, approve changes, log outcomes and stop on ambiguous results. Login/MFA and security screens may require the user. See section 14h.
 - Daily caps (for example API posts per platform, live-call minutes)
 - **Budget:** no fixed monthly budget, because you'll watch usage yourself. A **safety cap of $5/day** (editable) stops runaway loops caused by bugs. Also set a monthly limit in your OpenAI account settings.
 - API keys and tokens stay in the backend `.env` (never in Git). The browser page never sees them. Live calls use OpenAI's "unified" WebRTC set-up: the backend passes the browser's call offer to OpenAI, so the browser gets no key at all (not even a short-lived one), and the backend stays attached to the call to run tools, save the transcript and track cost
@@ -632,6 +633,52 @@ action. Public access means anyone with the link, without search discovery. Neve
 created file ID before sharing so an unclear sharing result can be checked and deliberately retried without another
 upload. Google policy refusals remain visible. Archive WhatsApp delivery continues to use private Drive links.
 
+## 14h. System actions, browser and learning (authorized 2026-10-26)
+
+Muneer reviewed SYSTEM_ACTIONS_BROWSER_AND_WHATSAPP_SPEC.md and requested a plan followed by tested,
+step-by-step implementation. **Skip new WhatsApp integrations and changes for now**; discuss those later.
+Use the app's existing API configuration; do not import credentials, model IDs, paths or commands from the example.
+This section supersedes v7's blanket browser prohibition only for the controlled workflows below.
+
+Build one acceptance-sized task at a time, with safety tests and regression checks before moving on:
+
+1. **P11-01 — Managed local PC jobs.** Approved PowerShell commands can run in the background, retain bounded
+   output/status, and be stopped from Settings → Computer. Retain locked Ask for starting commands, path rechecks,
+   clean subprocess environment and no automatic retries. Limit duration and concurrency; kill only owned process
+   trees. Stop jobs on graceful shutdown; after a crash mark uncertain jobs interrupted and never kill a stored PID
+   or rerun automatically. Dashboard status polling costs no model tokens.
+   Built and checked 2026-10-26; detailed verification is in TASK.md. Desktop/browser steps below remain planned.
+2. **P11-02 — Desktop controls.** Opt-in local Windows adapter for app/window discovery, focus, screenshots,
+   clicks, typing and hotkeys. Show the target and proposed operation before approval; recheck window identity and
+   foreground state at execution. Stop on changed targets; cap action batches and screenshot size/retention. Keep
+   password entry/payment/account-setting restrictions. No promise of secure-screen/UAC/locked-PC control.
+3. **P11-03 — Browser tools.** Dedicated local browser profile, site scope, accessible page snapshots, navigation,
+   bounded extraction/downloads and explicit proposed form/click actions. Separate read and change permissions;
+   web content cannot grant permissions. Protect local/private network addresses and secret/profile files. Prevent
+   silent resubmission after ambiguous results. Use local fixture sites for repeatable end-to-end tests.
+4. **P11-04 — Authorized browser sessions and remote adapter.** Add explicit browser-session connection only
+   after isolated browsing works; display connection/site status, disconnect and stop controls. PC Helper transport
+   shares the same approved-job boundary when VPS deployment is configured (P9-09 remains separate). Cloud browser
+   providers are optional later setup, with their own costs; no guaranteed CAPTCHA solving or stealth bypass.
+5. **P11-05 — Reusable learning.** `/learn`, `/skills`, `/reload-skills` and `/memory` integrate with existing
+   runtime skill/memory storage and Settings. Draft, validate and review learned workflows; support bounded script,
+   reference and template resources with versions. Skills never grant additional tool permissions. Only the user's
+   words ground personal memories; credentials stay outside memory. Test task matching and prompt-injection cases.
+6. **P11-06 — Controlled updates.** `/update --check` previews configured upstream changes. Approved update
+   worker validates a clean worktree, backs up state, installs pinned dependencies, migrates, runs checks and
+   restarts through a supervisor with rollback. Never silently discard local work or claim active calls survive.
+7. **P11-07 — Tested code-change proposals.** User-requested code edits happen in an isolated checkout with
+   bounded commands, a readable diff and checks. Apply only after approval; protect secrets and permission/gate
+   internals from automatic weakening. This adds workflows, not model-weight training.
+8. **P11-08 — Cost and workflow acceptance.** Reuse existing budget/time/retry limits and provider settings;
+   add task-model/screenshot limits where missing, usage estimates and explicit failure states. Verify real local
+   operations on synthetic fixtures and model quality on isolated data. Validate any optional local STT/TTS or new
+   provider against actual installed capabilities before enabling. No new subscriptions or provider switch by default.
+
+Across all steps: existing Ask/Auto/Deny, Pause/Plan, source provenance, at-most-once dispatch and audit remain.
+No generic `approvals.mode: off`; owner access remains restricted. Windows terminal filtering is not a sandbox:
+approval of the exact command remains essential. No new WhatsApp bridge, QR pairing or WhatsApp Web automation.
+
 ## 15. Using it on another PC
 
 1. Get the code from your private Git repo.
@@ -661,7 +708,7 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 | 15 | Images | You upload your own; the agents focus on text. No AI-made images |
 | 16 | Code storage | Private GitHub repo: https://github.com/MSMuneerIqbal/junior-muneer |
 | 17 | GitHub agent | A Developer Agent through GitHub's official MCP server + a fine-grained token; terminal later, always Ask |
-| 18 | Browser automation | **None.** Official APIs, email, RSS and paste in; API or copy and paste out (v7) |
+| 18 | Browser automation | Controlled, opt-in user tasks authorized 2026-10-26; section 14h replaces the blanket v7 prohibition |
 | 19 | Memory source | Memories are saved only from your own messages (v7) |
 
 ## 17. Known risks
@@ -677,6 +724,10 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 - **Terminal access** is powerful. It stays limited to one folder and an allowed-commands list, every command needs your OK, and dangerous commands are always denied.
 
 ## 18. Change log
+
+- **v10.0 (2026-10-26):** authorized staged PC/browser/learning/update work (section 14h), preserving approvals
+  and existing API configuration. All new WhatsApp integration work deferred by Muneer. Each step is tracked in
+  Phase 11 of TASK.md and is not considered built until its checks pass.
 
 - **v9.5 (2026-10-24):** class-notes skill/agent, dated Notes library with named folders, source reading for PPTX
   and scanned/illustrated PDFs, visual class material and persistent Markdown storage.

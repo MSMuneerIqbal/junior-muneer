@@ -210,6 +210,12 @@ class FakeModel(Model):
         ):
             # The Computer Agent: "list FOLDER" or "write FILE: TEXT".
             task = text.split("\n", 2)[1].strip()
+            if task.lower().startswith("background "):
+                # e2e: pc background 600 Desktop: Write-Output ...
+                match = re.match(r"background (\d+) ([^:]+): (.+)", task, re.IGNORECASE)
+                if match:
+                    return [function_call("pc_run_background", {"seconds": int(match[1]), "folder": match[2].strip(),
+                                           "command": match[3]}, call_id="fake-pc-background")], False
             if task.lower().startswith("write ") and ":" in task:
                 file, content = task[len("write "):].split(":", 1)
                 return [function_call("pc_write", {"file": file.strip(), "content": content.strip() + "\n"}, call_id="fake-pc-write")], False

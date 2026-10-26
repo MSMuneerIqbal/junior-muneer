@@ -1,6 +1,6 @@
 # Junior Muneer: Task List
 
-Built from [PLAN.md](PLAN.md) v7 (safe workflow, no browser bots). This is the working checklist: we build in this order, one task at a time.
+Built from [PLAN.md](PLAN.md) (current system-action scope: section 14h, v10). This is the working checklist: we build in this order, one task at a time.
 
 ## How we use this file
 
@@ -708,3 +708,45 @@ with its links arrives in the chat you asked from, WhatsApp included.
 - [ ] **P10-05** Slides (Google Slides API, one more Google permission) and PDF export
 - [ ] **P10-06** First skills: CV review, scholarship roadmap, research report, pitch deck, proposal
 - [ ] **P10-07** Your acceptance test + push
+
+## Phase 11: Controlled PC/browser actions, learning and updates
+
+> Authorized 2026-10-26 after reviewing the system-actions spec. PLAN.md section 14h is the implementation
+> design. Use existing API configuration. **All new WhatsApp integration work is deferred.** Work one step at a
+> time; checked tasks require passing safety/regression tests and honest live-fixture verification.
+
+- [x] **P11-01** Managed local PC jobs: approved background PowerShell commands, bounded output and duration,
+  persistent status, stop owned process trees, Settings → Computer job list/output/stop, restart recovery.
+  Done when a real synthetic job starts only after approval, remains visible after the request returns, finishes
+  or is stopped, and unsafe/edited/unapproved/duplicate/over-limit operations are refused. No AI polling cost.
+  - **Done 2026-10-26.** Computer Agent tools: pc_run_background, pc_job_status, pc_stop_job. Commands remain
+    locked Ask; stop proposals use locked computer.job.stop. Starting a job marks its card Started, never Finished.
+    Settings → Computer shows active jobs first, history, bounded output and direct Stop, including while paused/off.
+    Default 600s, max 3600s, at most three jobs; last 16,000 output characters, known-secret redaction, no retries.
+    Pause/off/Plan/shutdown stop owned jobs. Windows unnamed kill-on-close Job Objects own each process tree before
+    the command's stdin handshake is released; crash recovery marks interrupted rows without killing saved PIDs.
+    This is lifetime control, not a terminal sandbox; exact-command approval remains essential.
+  - **Checks:** full backend **1,034 passed** across three isolated pytest batches; final **68 computer checks
+    passed**, including an additional edited-stop-target case plus terminal/write regression checks. Earlier stale
+    agent-scope expectation was updated for the locked stop action. Migration/model agreement passed. TypeScript,
+    ESLint and whitespace checks passed. Full browser run **109 passed / 14 configured skips / 1 existing timing
+    failure**; approval test now waits for the persisted reply before editing. Final **8 desktop/phone checks passed**
+    for approvals, managed jobs and screenshots; layouts inspected and temporary verification files removed.
+  - **Real check:** one actual-model prompt on throwaway data using existing configured providers prepared the exact
+    command and waited for approval; approval started it and real Windows output was captured, completed with code 0.
+    28.8s, **$0.017213908**. No live chats/approvals were used and no new WhatsApp integration or sending was tested.
+    Live DB backed up before migration; app restarted. Next is P11-02; no phase acceptance or push claimed.
+- [ ] **P11-02** Opt-in Windows desktop adapter: windows, focus, screenshots, approved clicks/typing/hotkeys,
+  foreground/target rechecks, action caps and security-screen failure states; synthetic-app verification.
+- [ ] **P11-03** Isolated browser tools: scoped sites, snapshots, navigation/extraction/downloads and approved
+  form actions; protect private networks/secrets, preserve outside provenance; local-site end-to-end checks.
+- [ ] **P11-04** Explicit existing-browser connection and adapter readiness: visible connection/disconnect,
+  scoped sessions; remote PC Helper remains P9-09 pending VPS setup. Cloud browsing is optional later setup.
+- [ ] **P11-05** `/learn`, `/skills`, `/reload-skills`, `/memory`: reviewed, versioned reusable resources,
+  existing Settings CRUD, task matching, user-only personal memory and no permission escalation.
+- [ ] **P11-06** `/update --check` and controlled updates: clean-worktree checks, explicit approval,
+  backup/tests/migration/supervised restart/rollback; preserve local changes and interrupted-work reporting.
+- [ ] **P11-07** User-requested code-change proposals in isolated checkout: readable diff, bounded tests,
+  explicit apply approval, protected secrets/gate/permissions and rollback.
+- [ ] **P11-08** Cost/workflow acceptance: task budgets/time/retries/model/screenshot caps, usage, synthetic
+  local checks and isolated real-model checks. Optional local speech/new providers require validation first.

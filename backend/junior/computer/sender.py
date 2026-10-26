@@ -16,7 +16,7 @@ from junior.settings_store import get_setting
 
 log = logging.getLogger(__name__)
 
-ACTIONS = ("computer.write", "computer.move", "computer.delete", "computer.run")
+ACTIONS = ("computer.write", "computer.move", "computer.delete", "computer.run", "computer.job.stop")
 
 
 def to_recycle_bin(path: Path) -> None:
@@ -42,12 +42,29 @@ class ComputerSender:
     label = "Your PC"
     action_types = ACTIONS
 
+    def __init__(self, jobs=None):
+        self.jobs = jobs
+
     def is_connected(self) -> bool:
         return bool(get_setting("computer_enabled"))
 
     async def send(self, out: Outgoing) -> SendResult:
         op = out.meta.get("op", "")
         try:
+            if op in ("start_job", "stop_job"):
+                if self.jobs is None:
+                    return SendResult("failed", "PC job supervision isn't available; nothing ran.")
+                if op == "start_job":
+                    job_id = await self.jobs.start(out)
+                    return SendResult("sent", f"Started PC job {job_id}. View output or Stop in Settings → Computer. "
+                                      "Started does not mean the command finished.", remote_id=job_id)
+                if out.action_type != "computer.job.stop":
+                    return SendResult("failed", "That isn't an approved job-stop action.")
+                job_id = out.meta.get("job_id", "")
+                if out.text != f"Stop PC job {job_id}":
+                    return SendResult("failed", "The text no longer matches this stop target. Ask for a new stop card.")
+                row = await self.jobs.stop(job_id)
+                return SendResult("sent", f"PC job {row['id']}: {row['state']}. {row['note']}")
             path = recheck(out.meta.get("path", ""))
             if op == "copy_document":
                 from junior.transfers.sender import copy_to_pc
@@ -62,7 +79,7 @@ class ComputerSender:
                 return self._delete(path)
             if op == "run":
                 return await self._run(path, out.text, float(out.meta.get("seconds") or 120))
-        except (PathRefused, ValueError) as e:
+        except (PathRefused, ValueError, LookupError) as e:
             return SendResult("failed", str(e))
         except OSError as e:  # nothing (or only the Recycle Bin copy) happened: safe to try again by hand
             return SendResult("failed", f"Windows refused it: {e.strerror or e}")

@@ -8,7 +8,7 @@ On/off is the `computer_enabled` setting (PATCH /api/settings).
 
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from junior.audit import audit
@@ -60,3 +60,37 @@ def remove_folder(body: FolderBody) -> dict:
     set_setting("computer_folders", [str(f) for f in kept])
     audit("setting", "computer_folder_removed", detail={"path": body.path})
     return status()
+
+
+@router.get("/api/computer/jobs")
+def computer_jobs() -> dict:
+    from junior.computer.jobs import DEFAULT_SECONDS, MAX_RUNNING, MAX_SECONDS, list_jobs
+
+    return {"jobs": [{**job, "output": ""} for job in list_jobs()],
+            "limits": {"max_running": MAX_RUNNING, "default_seconds": DEFAULT_SECONDS,
+                                            "max_seconds": MAX_SECONDS}}
+
+
+@router.get("/api/computer/jobs/{job_id}")
+def computer_job(job_id: str) -> dict:
+    from junior.computer.jobs import get_job
+
+    try:
+        return get_job(job_id)
+    except LookupError as e:
+        raise HTTPException(404, str(e)) from None
+
+
+@router.post("/api/computer/jobs/{job_id}/stop")
+async def stop_computer_job(job_id: str, request: Request) -> dict:
+    """The owner's direct Stop button is cancellation, allowed even while paused/off/in Plan mode."""
+    from junior.computer.jobs import JobError
+
+    try:
+        row = await request.app.state.pc_jobs.stop(job_id)
+    except LookupError as e:
+        raise HTTPException(404, str(e)) from None
+    except JobError as e:
+        raise HTTPException(409, str(e)) from None
+    audit("action", "computer.job.stop_requested", detail={"job_id": job_id, "source": "dashboard"})
+    return row

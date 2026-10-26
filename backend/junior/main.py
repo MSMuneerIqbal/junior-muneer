@@ -66,7 +66,7 @@ from junior.voice import router as voice_router
 log = logging.getLogger(__name__)
 
 
-def default_senders(settings) -> SenderRegistry:
+def default_senders(settings, pc_jobs=None) -> SenderRegistry:
     """The connected API senders. FAKE_AI: a fake Facebook Page, so posting can be tried safely."""
     registry = SenderRegistry()
     if settings.meta_page_id and settings.meta_page_token:
@@ -82,7 +82,7 @@ def default_senders(settings) -> SenderRegistry:
     registry.add(GoogleWorkspaceSender())
     from junior.computer.sender import ComputerSender
 
-    registry.add(ComputerSender())  # approved file changes and commands on this PC (Phase 9)
+    registry.add(ComputerSender(pc_jobs))  # approved file changes and commands on this PC (Phase 9/11)
     from junior.transfers.sender import ArchiveWhatsAppSender
     registry.add(ArchiveWhatsAppSender())
     if settings.fake_ai and not registry.for_action("facebook.page.post"):
@@ -121,7 +121,11 @@ def create_app(
 
         app.state.skills = load_skills()  # a broken skill file stops startup with a clear error
         app.state.news_sources = load_sources()
-        app.state.senders = senders() if senders is not None else default_senders(settings)
+        from junior.computer.jobs import JobManager, recover_interrupted as recover_pc_jobs
+
+        recover_pc_jobs()
+        app.state.pc_jobs = JobManager()
+        app.state.senders = senders() if senders is not None else default_senders(settings, app.state.pc_jobs)
         recover_interrupted_sends()
         recover_background()
         set_current(app.state.senders)
@@ -155,11 +159,14 @@ def create_app(
             else None
         )
         log.info("Junior Muneer backend %s ready", __version__)
-        yield
-        if scheduler:
-            scheduler.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await scheduler
+        try:
+            yield
+        finally:
+            await app.state.pc_jobs.close()
+            if scheduler:
+                scheduler.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await scheduler
 
     app = FastAPI(title="Junior Muneer", version=__version__, lifespan=lifespan)
     app.add_middleware(LocalOnly)  # only the WhatsApp webhook answers to outside addresses

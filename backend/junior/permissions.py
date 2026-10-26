@@ -115,6 +115,8 @@ CATALOG: dict[str, ActionType] = {
            note="Always to the Recycle Bin, so you can restore it. Deleting for good is never allowed."),
         _t("computer.run", "Run a terminal command on your PC", "Your computer", "ask", True,
            "A command can do anything your account can, so you check every one. Dangerous ones are refused anyway."),
+        _t("computer.job.stop", "Stop a PC command job", "Your computer", "ask", True,
+           "Chat requests wait for your OK. You can also press Stop beside an owned job in Settings → Computer."),
         _t("files.archive_whatsapp", "Upload a prepared ZIP privately to Drive and send its link to your WhatsApp", "Files", "ask",
            note="Shows the folder, archive size and destination. Drive-save and WhatsApp-to-self rules also apply."),
         _t("system.delete", "Delete anything", "Never", "deny", True),
