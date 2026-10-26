@@ -208,7 +208,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
           </span>
         ) : null}
         <span className={`${item.planned_at && (item.status === "waiting" || item.status === "approved") ? "" : "ml-auto"} rounded-full px-2 py-0.5 text-[11px] font-medium ${status.style}`} data-testid="approval-status">
-          {item.status === "posted" && item.platform === "skills" ? "Saved" : item.status === "posted" && onPc(item)
+          {item.status === "posted" && item.item_type === "update" ? "Queued" : item.status === "posted" && item.platform === "skills" ? "Saved" : item.status === "posted" && onPc(item)
             ? item.meta.op === "start_job" ? "Started" : "Done"
             : item.status === "posted" && isSent(item) ? "Sent" : status.label}
         </span>
@@ -457,7 +457,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
                 <button type="button" className={primary} disabled={busy} onClick={() => run("approve")}>
                   {busy && item.can_send ? "Working…" : item.can_send ? (item.item_type === "file_transfer"
                     ? item.platform === "computer" ? "Approve & copy" : item.platform === "google" ? "Approve & save" : "Approve & send"
-                    : onPc(item) ? "Approve & run" : item.platform === "skills" ? "Approve & save" : "Approve & post") : "Approve"}
+                    : item.item_type === "update" ? "Approve & update" : onPc(item) ? "Approve & run" : item.platform === "skills" ? "Approve & save" : "Approve & post") : "Approve"}
                 </button>
                 {item.can_always_allow && (
                   <button
@@ -474,7 +474,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
             )}
             {waiting && (
               <>
-                <button type="button" className={button} disabled={busy || item.item_type === "file_transfer" || (!!desktop && desktop.kind !== "type") || (!!browser && browser.kind !== "fill")}
+                <button type="button" className={button} disabled={busy || item.platform === "maintenance" || item.item_type === "file_transfer" || (!!desktop && desktop.kind !== "type") || (!!browser && browser.kind !== "fill")}
                   onClick={() => setEditing(desktop?.kind === "type" ? desktop.text : browser?.kind === "fill" ? browser.text : item.text)}>
                   Edit
                 </button>

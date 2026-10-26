@@ -213,3 +213,29 @@ Chats go to the AI you chose (OpenAI, DeepSeek or Gemini), live calls to OpenAI 
 or Google. Everything else stays in `data\` on your PC. API keys live only in `backend\.env`, which is never committed.
 On your PC, Junior can only reach your allowed folders; keys, passwords, `.env` files, `.ssh`, AppData and system
 folders are always blocked, and terminal commands run without your keys.
+## Reviewed local updates
+
+Use `/update --check` in chat, or Settings → Advanced → **Check for updates**. Junior fetches only the
+configured Git upstream and shows the exact revisions and changed-file summary. `/update --apply` prepares
+an approval card; it does not install immediately. Reviews expire after 15 minutes. No model calls are used.
+
+The Windows launcher in `start.bat` now supervises both servers. Stop existing servers normally before using
+this launcher; it never adopts unrelated processes. Approved updates require a clean original Git checkout
+(including untracked files). Junior will not stash, discard or commit local edits. This development checkout
+currently has local handover files, so updating it will be refused until you decide how to save those files.
+
+An update exports the pinned tracked source into `data/updates/releases/<revision>`, creates a separate venv,
+installs `backend/requirements.lock` without dependency re-resolution and runs `pip check`, migrations against
+a database copy, backend tests, locked dashboard installation, type/lint checks and a production build. Installs
+and tests execute reviewed upstream code with your account's authority. They are isolated source copies, not a
+security sandbox. The overall limit is 60 minutes, with no automatic retries; Pause/Plan/Stop cancels checks.
+
+Before activation, the supervisor stops only its owned process trees, saves a SQLite backup and atomically
+switches the active-release pointer. Requests are held during the switch. Failed health checks restore the old
+database and release. Interrupted switches recover on the next supervised start; interrupted preparations do
+not automatically rerun. Calls and jobs do not survive restart. Junior remains paused after success or rollback;
+review Settings → Advanced and interrupted tasks before resuming. A result is also saved in the originating chat.
+Original `.env`, uploads, notes and editable skills stay in their original locations. Keep the original checkout
+and its environment; the launcher and rollback source use them. Three staged releases are retained; further
+updates require local review/archiving, rather than silently deleting rollback copies. Windows-only local updater;
+VPS/Docker deployment continues through the normal deployment process. No new WhatsApp integration is added.

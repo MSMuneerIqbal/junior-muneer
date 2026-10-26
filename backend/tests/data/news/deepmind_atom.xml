@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Google DeepMind Blog</title>
+  <link rel="self" href="https://deepmind.google/blog/rss.xml"/>
+  <entry>
+    <title type="html">Gemini 4 Ultra &amp;amp; what it can do</title>
+    <link rel="alternate" href="https://deepmind.google/blog/gemini-4-ultra/"/>
+    <link rel="enclosure" href="https://deepmind.google/media/hero.png"/>
+    <id>tag:deepmind.google,2026:gemini-4-ultra</id>
+    <published>2026-10-13T09:00:00Z</published>
+    <updated>2026-10-14T09:00:00Z</updated>
+    <summary type="html">&lt;p&gt;Gemini 4 Ultra leads on &lt;b&gt;reasoning&lt;/b&gt;.&lt;/p&gt;</summary>
+  </entry>
+</feed>

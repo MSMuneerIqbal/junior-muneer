@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" xmlns:ht="https://trends.google.com/trending/rss" version="2.0">
+  <channel>
+    <title>Daily Search Trends</title>
+    <item>
+      <title>babar azam</title>
+      <ht:approx_traffic>50K+</ht:approx_traffic>
+      <link>https://trends.google.com/trending/rss?geo=PK</link>
+      <pubDate>Thu, 15 Oct 2026 04:00:00 -0700</pubDate>
+      <ht:news_item>
+        <ht:news_item_title>Babar Azam named captain for the T20 series</ht:news_item_title>
+        <ht:news_item_url>https://www.dawn.com/news/2037000/babar-azam-named-captain</ht:news_item_url>
+        <ht:news_item_source>Dawn</ht:news_item_source>
+      </ht:news_item>
+    </item>
+    <item>
+      <title>petrol price</title>
+      <ht:approx_traffic>20K+</ht:approx_traffic>
+      <link>https://trends.google.com/trending/rss?geo=PK</link>
+      <pubDate>Wed, 14 Oct 2026 22:00:00 -0700</pubDate>
+    </item>
+  </channel>
+</rss>

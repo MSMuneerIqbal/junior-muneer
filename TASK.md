@@ -816,8 +816,27 @@ with its links arrives in the chat you asked from, WhatsApp included.
     inspection passed; temporary visual spec removed. No schema migration needed.
     Real-model natural-language learning check on throwaway storage: waited for approval, then saved only there;
     10.3s, $0.004914804. No owner skill, memory, approval or chat writes; no real WhatsApp sending tested.
-- [ ] **P11-06** `/update --check` and controlled updates: clean-worktree checks, explicit approval,
+- [x] **P11-06** `/update --check` and controlled updates: clean-worktree checks, explicit approval,
   backup/tests/migration/supervised restart/rollback; preserve local changes and interrupted-work reporting.
+  - Done 2026-10-27: zero-model check/apply-review/status commands and Settings → Advanced. Checks fetch the
+    configured Git upstream into a unique temporary ref and pin exact SHA/diff summaries; reviews expire in 15m.
+    Locked-Ask cards cannot be edited into other updates. Dirty/untracked source, changed revisions, expired
+    reviews and non-supervised launches refuse application. Pause/Plan/Stop cancel preparation, without retries.
+  - Windows supervisor owns both servers through gated Job Objects. Tracked-source exports reject links,
+    private/device/traversal paths and oversized trees. Separate venv + complete requirements.lock, pip check,
+    npm ci (ignore scripts), backend tests, dashboard types/lint/build and copied-DB migration rehearsal precede
+    activation. Original checkout, .env, uploads and skills remain in place. 60-minute total limit; 8 GB free
+    required; max three staged releases before owner archiving. See README for launch/recovery and limitations.
+  - Atomic release pointer + SQLite backup; failed health restores schema/data/release. Interrupted switches
+    recover, preparations never replay, only owned live process trees stop. Writes/WS held during switch, paused
+    afterward, terminal result saved once to its existing original chat. Calls/jobs are reported interrupted.
+  - Checks: full backend 1,179 passed (464/349/366), final updates/local-command checks passed; full UI 120 passed,
+    14 existing skips. TypeScript/ESLint, compilation, whitespace and desktop/phone visuals passed. Native disposable
+    Git/SQLite release check installed pinned dependencies, rehearsed/applied migration, handed over real owned
+    Python/Node servers on random ports and preserved the original source/data; final run passed with cleanup.
+    Initial run found an open SQLite handle; explicit connection closing fixed it. No AI calls/cost, no owner
+    update or chat/approval/skill writes. An earlier synthetic temp folder remains after cleanup approval was blocked.
+  - Added existing small synthetic news fixtures to Git exceptions so fresh tracked-source tests have their inputs.
 - [ ] **P11-07** User-requested code-change proposals in isolated checkout: readable diff, bounded tests,
   explicit apply approval, protected secrets/gate/permissions and rollback.
 - [ ] **P11-08** Cost/workflow acceptance: task budgets/time/retries/model/screenshot caps, usage, synthetic

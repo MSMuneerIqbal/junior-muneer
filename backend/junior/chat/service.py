@@ -248,7 +248,8 @@ class ChatService:
         )
         from junior.chat.commands import handle as local_command
         context.user_message_ids = [user_message_id]
-        if local_result := local_command(context, text, saved_paste):
+        # Git fetch can take up to 30 seconds; keep the event loop responsive to Pause/Stop.
+        if local_result := await asyncio.to_thread(local_command, context, text, saved_paste):
             for event in context.pending_events:
                 yield event
             message_id = self._finish(conversation_id, local_result)

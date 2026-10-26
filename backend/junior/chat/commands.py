@@ -8,7 +8,7 @@ from junior.db import Memory, session_scope
 from junior import skills
 from junior.privacy import credential_present
 
-COMMANDS = {"/learn", "/skills", "/reload-skills", "/memory"}
+COMMANDS = {"/learn", "/skills", "/reload-skills", "/memory", "/update"}
 
 
 def handle(context, text, paste=None):
@@ -24,7 +24,30 @@ def handle(context, text, paste=None):
     else:
         argument = argument.strip()
         try:
-            if command == "/learn":
+            if command == "/update":
+                from junior.maintenance.updates import check, propose, review_text, status
+                from junior.maintenance.source import MaintenanceError
+                try:
+                    if argument == "--check":
+                        review = check()
+                        reply = review_text(review)
+                        reply += "\n\n" + ("Local edits block application. " if review["dirty"] else "")
+                        reply += "Use /update --apply to prepare an approval card for this exact revision."
+                    elif argument == "--apply":
+                        from junior.maintenance.updates import folder, read_json
+                        review = read_json(folder() / "review.json", {})
+                        item = propose(review.get("id"), context.conversation_id)
+                        context.approval_ids.append(item.id)
+                        context.emit({"type": "approval", "item": item.model_dump(mode="json")})
+                        reply = "Update card prepared. Nothing installs until you approve it."
+                    elif argument == "--status":
+                        state = status()
+                        reply = str((state.get("progress") or {}).get("step") or "No update has run.")
+                    else:
+                        reply = "Use /update --check, /update --apply (review card), or /update --status. No model calls."
+                except MaintenanceError as error:
+                    reply = str(error)
+            elif command == "/learn":
                 parts = [part.strip() for part in argument.split("|", 2)]
                 if len(parts) != 3:
                     reply = "Use /learn name | when to use it | workflow steps (at least 40 characters). I'll prepare a skill card for your review; it is saved only after approval."

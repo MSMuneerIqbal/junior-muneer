@@ -64,6 +64,7 @@ PLATFORM_LABELS = {
     "github": "GitHub",
     "computer": "Your PC",
     "skills": "Skills",
+    "maintenance": "Junior maintenance",
     "whatsapp": "Your WhatsApp",
     "other": "Other",
 }
@@ -308,6 +309,8 @@ def edit_item(item_id: int, text: str) -> ApprovalOut:
     def fn(item: ApprovalItem) -> None:
         nonlocal text
         _need(item, "waiting")
+        if item.platform == "maintenance":
+            raise ApprovalError("This card pins an exact reviewed change. Prepare a new proposal to change it.")
         if item.item_type == "file_transfer":
             raise ApprovalError("This card pins exact file bytes and a destination. Ask Junior to prepare a new transfer to change it.")
         if item.platform != "computer":

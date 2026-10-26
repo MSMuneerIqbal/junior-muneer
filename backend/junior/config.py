@@ -1,6 +1,7 @@
 """Settings, loaded from backend/.env and the environment."""
 
 from functools import lru_cache
+import os
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -11,7 +12,7 @@ REPO_DIR = BACKEND_DIR.parent
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=BACKEND_DIR / ".env", env_file_encoding="utf-8", extra="ignore"
+        env_file=os.environ.get("JUNIOR_ENV_FILE") or BACKEND_DIR / ".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     openai_api_key: str = ""

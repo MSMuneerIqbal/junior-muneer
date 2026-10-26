@@ -88,6 +88,8 @@ def default_senders(settings, pc_jobs=None, browser=None) -> SenderRegistry:
     registry.add(ComputerSender(pc_jobs, browser))  # approved local actions (Phase 9/11)
     from junior.skill_learning import SkillSender
     registry.add(SkillSender())
+    from junior.maintenance.updates import UpdateSender
+    registry.add(UpdateSender())
     from junior.transfers.sender import ArchiveWhatsAppSender
     registry.add(ArchiveWhatsAppSender())
     if settings.fake_ai and not registry.for_action("facebook.page.post"):
@@ -167,9 +169,21 @@ def create_app(
             else None
         )
         log.info("Junior Muneer backend %s ready", __version__)
+        async def update_reports():
+            from junior.maintenance.updates import report
+            while True:
+                try:
+                    report()
+                except Exception:
+                    log.warning("Could not reconcile update result; check Settings → Advanced.")
+                await asyncio.sleep(2)
+        maintenance_reports = asyncio.create_task(update_reports())
         try:
             yield
         finally:
+            maintenance_reports.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await maintenance_reports
             await app.state.browser.close()
             await app.state.pc_jobs.close()
             if scheduler:
@@ -200,7 +214,12 @@ def create_app(
 
     @app.get("/health")
     def health() -> dict:
-        return {"status": "ok", "version": __version__}
+        import os
+        return {"status": "ok", "version": __version__, "revision": os.environ.get("JUNIOR_REVISION", "")}
+
+    from junior.maintenance.updates import router as updates_router, MaintenanceGuard
+    app.include_router(updates_router)
+    app.add_middleware(MaintenanceGuard)
 
     app.include_router(chat_router)
     app.include_router(memories_router)

@@ -688,6 +688,14 @@ Build one acceptance-sized task at a time, with safety tests and regression chec
 6. **P11-06 — Controlled updates.** `/update --check` previews configured upstream changes. Approved update
    worker validates a clean worktree, backs up state, installs pinned dependencies, migrates, runs checks and
    restarts through a supervisor with rollback. Never silently discard local work or claim active calls survive.
+   Implementation uses a Windows supervisor owning both server process trees, immutable source exports and
+   separate dependency environments. The original checkout, credentials, uploads and editable skills are retained.
+   A complete Python version lock and npm lockfile are required; checks/migration rehearsal precede activation.
+   An atomic release pointer plus SQLite backup support health-check rollback and interrupted-switch recovery.
+   A dirty checkout blocks application (including this development checkout's local handover files). Reviews
+   expire in 15 minutes; overall work is limited to 60 minutes without retries. Pause/Plan/Stop cancel preparation;
+   writes are held during the switch, and Junior remains paused afterward for review. Local Windows only;
+   no VPS setup or extra provider/WhatsApp integration is implied. See README for supervised launch and recovery.
 7. **P11-07 — Tested code-change proposals.** User-requested code edits happen in an isolated checkout with
    bounded commands, a readable diff and checks. Apply only after approval; protect secrets and permission/gate
    internals from automatic weakening. This adds workflows, not model-weight training.

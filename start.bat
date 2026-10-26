@@ -29,16 +29,12 @@ if not exist "%ROOT%backend\.env" (
   echo.
 )
 
-rem ---- start ----------------------------------------------------------------
+rem ---- start (one supervisor owns both servers and their process trees) --------
 curl -s -o nul http://127.0.0.1:8000/health && (
-  echo The backend is already running.
+  echo Junior is already running. Stop it first to change launch modes.
 ) || (
-  start "Junior Muneer - backend" /min cmd /k "cd /d "%ROOT%backend" && .venv\Scripts\python -m uvicorn junior.main:app --host 127.0.0.1 --port 8000"
-)
-curl -s -o nul http://localhost:3000 && (
-  echo The dashboard is already running.
-) || (
-  start "Junior Muneer - dashboard" /min cmd /k "cd /d "%ROOT%frontend" && npm run dev"
+  if not exist "%ROOT%data\updates" mkdir "%ROOT%data\updates"
+  powershell -NoProfile -Command "Start-Process -FilePath '%ROOT%backend\.venv\Scripts\python.exe' -ArgumentList '-m','junior.maintenance.supervisor' -WorkingDirectory '%ROOT%backend' -WindowStyle Hidden -RedirectStandardOutput '%ROOT%data\updates\launcher.log' -RedirectStandardError '%ROOT%data\updates\launcher-error.log'"
 )
 rem WhatsApp's fixed address (ngrok), when NGROK_DOMAIN is set in backend\.env.
 findstr /r /c:"^NGROK_DOMAIN=." "%ROOT%backend\.env" >nul 2>nul && (

@@ -11,6 +11,10 @@ __pycache__/
 .env.*
 !.env.example
 data/
+!backend/tests/data/
+!backend/tests/data/news/
+!backend/tests/data/news/*.xml
+!backend/tests/data/news/*.html
 backups/
 *.db
 *.log
