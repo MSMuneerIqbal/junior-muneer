@@ -48,6 +48,10 @@ the old session are cancelled; your saved files, notes, profile and personal mem
 
 **Notes** is also a file gallery: create/open folders, upload originals, search, rename, move, download or archive
 TXT, Markdown, Word, PowerPoint, PDF and image files. Image thumbnails and selected-file previews are available.
+Use a folder's **⋯** menu (on its card or beside its name) to rename it or delete it. Rename uses **Save changes**.
+Deleting a folder asks for confirmation and keeps its files and notes, including archived items, in **Unfiled**.
+The **Back** button and browser Back/Forward restore the previous folder, filters and scroll position; folder/search/
+date/archive filters also survive a reload. These controls manage folders inside Junior's Notes library.
 “Just save/upload this to …” preserves the original without AI reading, rewriting or summarizing it. Ask explicitly
 to read or make notes when you want analysis. Raw text can also be saved as a TXT or MD file.
 

@@ -660,6 +660,22 @@ with its links arrives in the chat you asked from, WhatsApp included.
       Actual Drive download matched original bytes; anyone-reader then anyone-writer permissions confirmed. Isolated
       /clear cost $0. No real WhatsApp chat was cleared. Live DB backed up/migrated; backend restarted, settings,
       file/folder endpoints, health and dashboard checked. P10-05 remains the next planned feature; no push/acceptance.
+- [x] **P10-04e** Manual Notes folder menus + previous view (requested 2026-10-26): three-dot Rename/Delete,
+  Save changes, confirmation with contents retained in Unfiled; preserve gallery filters/folder/scroll on Back,
+  browser Back/Forward and reload.
+    - Folder card/open-folder menus support keyboard navigation/Escape and native rename/delete dialogs. Confirmed
+      deletion removes the folder and rehomes all active/archived notes/files in Unfiled; nonempty Unfiled uses
+      Unfiled (2). Original bytes and external PC/Drive files are retained. Duplicate names/invalid paths/stale
+      revisions are refused. Markdown mirrors follow changes; no recursive deletion. No AI/API-provider cost.
+    - Gallery folder/search/date/archive/selection/pagination use URL state; Back restores the prior view and scroll,
+      browser Back/Forward restores filters, reload preserves filters, and direct links fall back to the item's folder.
+    - Checked 2026-10-26: full backend **995 passed**; TypeScript/ESLint and whitespace checks passed. Full browser
+      **101 passed/14 skipped**, with one existing approval test timing out during a cold fake-AI draft. Its wait now
+      allows 30s and the test 60s; final **10 desktop/phone checks passed** for approvals, folders, notes and gallery.
+      Screenshots reviewed. Cases include rename/update, cancel/confirm delete, exact original bytes, archived
+      content, stale changes, mirror failures, Back/Forward, reload, filters, scroll and keyboard menu access.
+      Live DB backed up; backend restarted; health, folder revisions and dashboard checked. No real folder was deleted
+      during testing; controlled data only. No push or phase acceptance claimed.
 - [ ] **P10-05** Slides (Google Slides API, one more Google permission) and PDF export
 - [ ] **P10-06** First skills: CV review, scholarship roadmap, research report, pitch deck, proposal
 - [ ] **P10-07** Your acceptance test + push

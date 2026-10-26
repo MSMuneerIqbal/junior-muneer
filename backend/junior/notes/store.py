@@ -76,10 +76,15 @@ def out(note: ClassNote, *, full: bool = True) -> dict:
     return data
 
 
-def _folder(s, name: str) -> NotesFolder:
+def _folder_name(name: str) -> str:
     name = " ".join(name.split())
     if not name or len(name) > 80 or re.search(r'[\\/:*?"<>|\x00-\x1f]', name) or name in (".", ".."):
         raise HTTPException(422, "Use a folder name of 1–80 characters inside Notes, without a filesystem path or special path characters.")
+    return name
+
+
+def _folder(s, name: str) -> NotesFolder:
+    name = _folder_name(name)
     key = name.casefold()
     folder = s.scalar(select(NotesFolder).where(NotesFolder.name_key == key))
     if folder is None:
@@ -105,11 +110,90 @@ def create_folder(body: FolderCreate):
 @router.get("/api/note-folders")
 def folders():
     with session_scope() as s:
-        counts = dict(s.execute(select(ClassNote.folder_id, func.count(ClassNote.id)).where(ClassNote.archived.is_(False))
-                                .group_by(ClassNote.folder_id)).all())
-        files = dict(s.execute(select(ReceivedFile.library_folder_id, func.count(ReceivedFile.id)).where(ReceivedFile.library_archived.is_(False)).group_by(ReceivedFile.library_folder_id)).all())
-        return [{"id": f.id, "name": f.name, "note_count": counts.get(f.id, 0), "file_count": files.get(f.id, 0)}
-                for f in s.scalars(select(NotesFolder).order_by(NotesFolder.name))]
+        return [_folder_view(s, f) for f in s.scalars(select(NotesFolder).order_by(NotesFolder.name))]
+
+
+def _folder_view(s, folder):
+    notes = list(s.execute(select(ClassNote.id, ClassNote.updated_at, ClassNote.archived).where(ClassNote.folder_id == folder.id).order_by(ClassNote.id)))
+    files = list(s.execute(select(ReceivedFile.id, ReceivedFile.filename, ReceivedFile.library_archived, ReceivedFile.drive_link)
+                          .where(ReceivedFile.library_folder_id == folder.id).order_by(ReceivedFile.id)))
+    revision = hashlib.sha256(repr((folder.id, folder.name, notes, files)).encode()).hexdigest()
+    return {"id": folder.id, "name": folder.name, "note_count": sum(not n.archived for n in notes),
+            "file_count": sum(not f.library_archived for f in files), "total_notes": len(notes), "total_files": len(files), "revision": revision}
+
+
+class FolderRevision(BaseModel):
+    revision: str = Field(min_length=64, max_length=64)
+
+
+class FolderEdit(FolderRevision):
+    name: str = Field(min_length=1, max_length=80)
+
+
+def _editable_folder(s, folder_id, revision):
+    folder = s.get(NotesFolder, folder_id)
+    if folder is None:
+        raise HTTPException(404, "This folder was not found.")
+    if _folder_view(s, folder)["revision"] != revision:
+        raise HTTPException(409, "This folder or its contents changed. Reopen its menu and try again.")
+    return folder
+
+
+def _clean_old_mirrors(paths):
+    # Only exact application-owned Markdown paths; never recursively remove a user's directory.
+    for path in paths:
+        try:
+            if not path.is_symlink():
+                path.unlink(missing_ok=True)
+                path.parent.rmdir()  # only succeeds when the old directory is empty
+        except OSError:
+            pass  # SQLite and the newly written mirror are authoritative; never undo a successful edit.
+
+
+@router.put("/api/note-folders/{folder_id}")
+def rename_folder(folder_id: int, body: FolderEdit):
+    old_paths = []
+    with LOCK:
+        with session_scope() as s:
+            folder = _editable_folder(s, folder_id, body.revision)
+            name = _folder_name(body.name)
+            duplicate = s.scalar(select(NotesFolder.id).where(NotesFolder.name_key == name.casefold(), NotesFolder.id != folder_id))
+            if duplicate is not None:
+                raise HTTPException(409, "A folder with that name already exists. Choose another name.")
+            notes = list(s.scalars(select(ClassNote).where(ClassNote.folder_id == folder_id)))
+            old_paths = [_storage_path(n, folder.name) for n in notes]
+            folder.name, folder.name_key = name, name.casefold()
+            new_paths = [_mirror(n, name) for n in notes]
+            result = _folder_view(s, folder)
+        _clean_old_mirrors([p for p in old_paths if p not in new_paths])
+    audit("action", "notes_folder_renamed", detail={"folder_id": folder_id})
+    return result
+
+
+@router.delete("/api/note-folders/{folder_id}")
+def delete_folder(folder_id: int, body: FolderRevision):
+    old_paths = []
+    with LOCK:
+        with session_scope() as s:
+            folder = _editable_folder(s, folder_id, body.revision)
+            notes = list(s.scalars(select(ClassNote).where(ClassNote.folder_id == folder_id)))
+            files = list(s.scalars(select(ReceivedFile).where(ReceivedFile.library_folder_id == folder_id)))
+            destination = _folder(s, "Unfiled (2)" if folder.name_key == "unfiled" else "Unfiled") if notes or files else None
+            for note in notes:
+                old_paths.append(_storage_path(note, folder.name))
+                note.folder = destination
+                note.folder_id = destination.id
+                note.updated_at = utcnow()
+                _mirror(note, destination.name)
+            for file in files:
+                file.library_folder_id = destination.id
+            s.flush()
+            s.delete(folder)
+            result = {"deleted_id": folder_id, "moved_notes": len(notes), "moved_files": len(files),
+                      "destination_id": destination.id if destination else None, "destination_name": destination.name if destination else None}
+        _clean_old_mirrors(old_paths)
+    audit("action", "notes_folder_deleted", detail={"folder_id": folder_id, "moved_notes": len(notes), "moved_files": len(files)})
+    return result
 
 
 def save_note(*, title, subject, class_date, summary, body, source_text, sources, warnings, context, folder_name="Class notes"):

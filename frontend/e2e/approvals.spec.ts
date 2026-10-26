@@ -5,11 +5,12 @@ async function draftInChat(page: Page, text: string) {
   await box.fill(`draft ${text}`);
   await box.press("Enter");
   const card = page.getByRole("article", { name: new RegExp(text.slice(0, 20)) });
-  await expect(card.getByTestId("approval-status")).toHaveText("Waiting for you");
+  await expect(card.getByTestId("approval-status")).toHaveText("Waiting for you", { timeout: 30000 });
   return card;
 }
 
 test("approving in the chat updates the Approvals page, and the other way round", async ({ page }, info) => {
+  test.setTimeout(60000); // the first fake-AI draft also loads the writing agents on a cold backend
   const tag = `${info.project.name}-${Date.now()}`;
   await page.goto("/");
 

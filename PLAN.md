@@ -602,6 +602,14 @@ or call AI. A user-selected preview may parse the original locally. Explicit sav
 model's reading/notes tools. `place_document` supports a Notes folder destination, `find_saved_files` lists metadata,
 and `save_text_to_library` stores exact user text as TXT/MD. Files remain findable across fresh sessions.
 
+Manual folder management (2026-10-26): card and open-folder three-dot menus expose rename/update and delete.
+Delete confirms before removing the folder and rehomes active/archived notes and files to Unfiled; it does not
+delete originals or Google/PC copies. Folder revision checks detect changed names/contents. Renaming and rehoming
+rewrite Markdown mirrors before removing old exact mirror paths. No recursive filesystem deletion is used.
+Gallery folder/search/date/archive/pagination and selection live in URL parameters. Native browser history and an
+explicit Back control preserve the previous view; per-view scroll is restored when its data is ready. Direct links
+fall back to the selected item's folder when there is no previous gallery view.
+
 Drive link sharing is separate from creation: `google.drive.share` defaults to Ask and compound approvals require
 both save/create and sharing permission. New file actions pin private/reader/writer before approval and show the
 access on the card. The owner's chosen default applies to future saves; existing files require a separate share

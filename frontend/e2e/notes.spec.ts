@@ -30,7 +30,7 @@ test("class notes are saved to a named folder and can be read, edited, downloade
   await detail.getByRole("button", { name: "Restore notes" }).click();
   await expect(detail.getByRole("button", { name: "Archive notes" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Back to notes", exact: false }).click();
+  await page.getByRole("button", { name: "Back to notes", exact: false }).click();
   await page.getByRole("textbox", { name: "Search notes" }).fill(folder);
   await expect(page.getByRole("link", { name: `Lecture one ${folder}`, exact: false })).toBeVisible();
   await page.getByLabel("New Notes folder name", { exact: true }).fill(`${folder} exams`);

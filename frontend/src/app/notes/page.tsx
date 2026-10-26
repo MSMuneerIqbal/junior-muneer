@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useDeferredValue, useState } from "react";
+import { Suspense, useDeferredValue, useLayoutEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import useSWR, { useSWRConfig } from "swr";
 import { BACKEND_URL, fetcher, send } from "@/lib/api";
 import { Markdown } from "@/components/chat/Markdown";
 import { ApprovalCard } from "@/components/approvals/ApprovalCard";
 import type { ApprovalItem } from "@/lib/types";
+import { FolderActions, type NotesFolder } from "@/components/notes/FolderActions";
 
-type Folder = { id: number; name: string; note_count: number; file_count: number };
+type Folder = NotesFolder;
 type SavedFile = { id: number; filename: string; mime: string; size: number; folder_id: number; folder_name: string;
   archived: boolean; drive_link: string; created_at: string; revision: string; local: boolean };
 type Note = {
@@ -143,20 +144,48 @@ function FileDetail({ file, folders, approval, onPrepared }: { file: SavedFile; 
 function NotesLibrary() {
   const params = useSearchParams();
   const { mutate } = useSWRConfig();
+  const main = useRef<HTMLElement>(null);
+  const scrolls = useRef(new Map<string, number>());
+  const restore = useRef<{ key: string; top: number } | null>(null);
+  const viewKey = params.toString();
+  function hrefFor(updates: Record<string, string | number | null>, search = params.toString()) {
+    const next = new URLSearchParams(search);
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === null || value === "") next.delete(key);
+      else next.set(key, String(value));
+    }
+    return `/notes${next.size ? `?${next}` : ""}`;
+  }
+  function navigate(updates: Record<string, string | number | null>, replace = false) {
+    scrolls.current.set(viewKey, main.current?.scrollTop ?? 0);
+    const href = hrefFor(updates, window.location.search);
+    if (href === window.location.pathname + window.location.search) return;
+    if (replace) window.history.replaceState({ notesPrevious: window.history.state?.notesPrevious }, "", href);
+    else window.history.pushState({ notesPrevious: window.location.pathname + window.location.search }, "", href);
+  }
+  function openDetail(event: React.MouseEvent, update: Record<string, number | null>) {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    event.preventDefault(); navigate(update);
+  }
   const selected = Number(params.get("id")) || 0;
   const selectedFile = Number(params.get("file")) || 0;
   const hasSelection = selected > 0 || selectedFile > 0;
-  const [query, setQuery] = useState("");
+  const query = params.get("q") || "";
+  const setQuery = (value: string) => navigate({ q: value }, true);
   const deferred = useDeferredValue(query);
-  const [day, setDay] = useState("");
-  const [folder, setFolder] = useState("");
-  const [archived, setArchived] = useState(false);
+  const day = params.get("date") || "";
+  const setDay = (value: string) => navigate({ date: value });
+  const folder = params.get("folder") || "";
+  const setFolder = (value: string) => navigate({ folder: value, id: null, file: null });
+  const archived = params.get("archived") === "true";
+  const setArchived = (value: boolean) => navigate({ archived: value ? "true" : null });
   const [folderName, setFolderName] = useState("");
   const [folderError, setFolderError] = useState("");
   const [folderBusy, setFolderBusy] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState("");
-  const [limit, setLimit] = useState(200);
+  const limit = Math.max(200, Math.min(1000, Number(params.get("limit")) || 200));
+  const setLimit = (value: number) => navigate({ limit: value }, true);
   const [driveApprovals, setDriveApprovals] = useState<Record<number, ApprovalItem>>({});
   const listKey = `/api/notes?q=${encodeURIComponent(deferred)}&class_date=${day}&archived=${archived}${folder ? `&folder_id=${folder}` : ""}`;
   const { data: notes, error } = useSWR<Omit<Note, "body">[]>(listKey, fetcher, { refreshInterval: 10000 });
@@ -164,6 +193,32 @@ function NotesLibrary() {
   const { data: note, error: detailError } = useSWR<Note>(selected ? `/api/notes/${selected}` : null, fetcher);
   const { data: savedFiles, error: filesError } = useSWR<SavedFile[]>(`/api/library/files?q=${encodeURIComponent(deferred)}&class_date=${day}&archived=${archived}&limit=${limit}${folder ? `&folder_id=${folder}` : ""}`, fetcher, { refreshInterval: 10000 });
   const { data: savedFile, error: fileError } = useSWR<SavedFile>(selectedFile ? `/api/library/files/${selectedFile}` : null, fetcher);
+  const currentFolder = folders?.find((f) => String(f.id) === folder);
+  const ready = hasSelection ? !!(selected ? note || detailError : savedFile || fileError) : !!(notes && savedFiles);
+  useLayoutEffect(() => {
+    restore.current = { key: viewKey, top: scrolls.current.get(viewKey) ?? 0 };
+  }, [viewKey]);
+  useLayoutEffect(() => {
+    if (ready && restore.current?.key === viewKey && main.current) {
+      main.current.scrollTop = restore.current.top;
+      restore.current = null;
+    }
+  }, [viewKey, ready]);
+  function back() {
+    const previous = window.history.state?.notesPrevious;
+    if (typeof previous === "string" && /^\/notes(?:\?|$)/.test(previous)) {
+      scrolls.current.set(viewKey, main.current?.scrollTop ?? 0);
+      window.history.back();
+    } else if (hasSelection) {
+      navigate({ id: null, file: null, folder: folder || savedFile?.folder_id || note?.folder_id || null }, true);
+    } else if (folder || query || day || archived) navigate({ folder: null, q: null, date: null, archived: null }, true);
+    else window.history.back();
+  }
+  function folderDeleted(number: number) {
+    if (folder === String(number) || note?.folder_id === number || savedFile?.folder_id === number) {
+      navigate({ folder: null, id: null, file: null }, true);
+    }
+  }
   async function upload(files: FileList | null) {
     if (!files?.length) return;
     setUploadBusy(true); setUploadError("");
@@ -185,7 +240,8 @@ function NotesLibrary() {
     } catch (e) { setFolderError(e instanceof Error ? e.message : "Couldn't create folder"); }
     finally { setFolderBusy(false); }
   }
-  return <main className="h-full overflow-y-auto p-4 sm:p-6">
+  return <section aria-label="Notes browser" ref={main} onScroll={() => { if (!restore.current) scrolls.current.set(viewKey, main.current?.scrollTop ?? 0); }} className="h-full overflow-y-auto p-4 sm:p-6">
+    <button type="button" aria-label="Back to previous view" onClick={back} className="mb-4 rounded-lg border border-line px-3 py-2 text-sm hover:bg-panel-2">← Back</button>
     <header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-semibold">Notes</h1><p className="mt-2 max-w-2xl text-sm text-muted">Your folders, original files and class notes. Upload and save files here without AI reading.</p></div><label className="cursor-pointer rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-fg">{uploadBusy ? "Uploading…" : "Upload files"}<input aria-label="Upload library files" type="file" multiple disabled={uploadBusy} className="sr-only" onChange={(event) => { void upload(event.target.files); event.target.value = ""; }} /></label></header>
     {uploadError && <p role="alert" className="mt-3 text-sm text-danger">{uploadError}</p>}
     <div className={`mt-6 grid gap-6 ${hasSelection ? "lg:grid-cols-[minmax(14rem,19rem)_minmax(0,1fr)]" : ""}`}>
@@ -194,9 +250,9 @@ function NotesLibrary() {
         <div className="mt-3 grid grid-cols-2 gap-2"><select aria-label="Notes folder filter" className={field} value={folder} onChange={(e) => setFolder(e.target.value)}><option value="">All folders</option>{folders?.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.note_count + f.file_count})</option>)}</select><input aria-label="Filter class date" type="date" className={field} value={day} onChange={(e) => setDay(e.target.value)} /></div>
         <form onSubmit={createFolder} className="mt-3 flex gap-2"><input aria-label="New Notes folder name" placeholder="New folder name" maxLength={80} required className={`${field} min-w-0`} value={folderName} onChange={(e) => setFolderName(e.target.value)} /><button disabled={folderBusy || !folderName.trim()} className="shrink-0 rounded-lg border border-line px-3 text-xs">Create folder</button></form>
         {folderError && <p role="alert" className="mt-2 text-xs text-danger">{folderError}</p>}
-        {folder ? <div className="mt-5 flex flex-wrap items-center gap-2 text-sm"><button onClick={() => setFolder("")} className="text-accent hover:underline">All folders</button><span className="text-muted">/</span><span dir="auto" className="font-medium">{folders?.find((f) => String(f.id) === folder)?.name}</span></div> : <section aria-label="Saved folders" className="mt-6"><h2 className="text-sm font-semibold">Folders</h2><div className={`mt-3 grid gap-3 ${hasSelection ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3 xl:grid-cols-4"}`}>
+        {folder ? <div className="mt-5 flex flex-wrap items-center gap-2 text-sm"><button onClick={() => setFolder("")} className="text-accent hover:underline">All folders</button><span className="text-muted">/</span><span dir="auto" className="min-w-0 flex-1 break-words font-medium">{currentFolder?.name || "Folder unavailable"}</span>{currentFolder && <FolderActions folder={currentFolder} onDeleted={() => folderDeleted(currentFolder.id)} />}</div> : <section aria-label="Saved folders" className="mt-6"><h2 className="text-sm font-semibold">Folders</h2><div className={`mt-3 grid gap-3 ${hasSelection ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3 xl:grid-cols-4"}`}>
           <button onClick={() => setFolder("")} className={`rounded-xl border p-4 text-left ${!folder ? "border-accent bg-accent-soft" : "border-line bg-panel"}`}><span className="block text-xl text-accent">▤</span><span className="mt-2 block text-sm font-medium">All files and notes</span></button>
-          {folders?.map((f) => <button key={f.id} aria-label={`Open folder ${f.name}`} onClick={() => setFolder(String(f.id))} className={`min-w-0 rounded-xl border p-4 text-left ${folder === String(f.id) ? "border-accent bg-accent-soft" : "border-line bg-panel hover:bg-panel-2"}`}><svg viewBox="0 0 24 24" className="h-7 w-7 text-accent" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 7V5a1 1 0 0 1 1-1h6l2 3h8a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z" /></svg><span dir="auto" className="mt-2 block break-words text-sm font-medium">{f.name}</span><span className="mt-1 block text-xs text-muted">{f.file_count} files · {f.note_count} notes</span></button>)}
+          {folders?.map((f) => <div key={f.id} className="relative min-w-0 rounded-xl border border-line bg-panel hover:bg-panel-2"><div className="absolute right-1 top-1"><FolderActions folder={f} onDeleted={() => folderDeleted(f.id)} /></div><button aria-label={`Open folder ${f.name}`} onClick={() => setFolder(String(f.id))} className="h-full w-full min-w-0 p-4 text-left"><svg viewBox="0 0 24 24" className="h-7 w-7 text-accent" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 7V5a1 1 0 0 1 1-1h6l2 3h8a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z" /></svg><span dir="auto" className="mt-2 block break-words text-sm font-medium">{f.name}</span><span className="mt-1 block text-xs text-muted">{f.file_count} files · {f.note_count} notes</span></button></div>)}
         </div></section>}
         <label className="mt-3 flex items-center gap-2 text-sm text-muted"><input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} />Show archived notes</label>
         {error && <p role="alert" className="mt-4 text-sm text-danger">{error.message}</p>}
@@ -205,13 +261,13 @@ function NotesLibrary() {
         {notes?.length === 0 && savedFiles?.length === 0 && <p className="mt-5 text-sm text-muted">Nothing here yet. Upload a file or <Link href="/" className="text-accent underline">ask Junior to make class notes.</Link></p>}
         <h2 className="mt-6 text-sm font-semibold">Files and notes</h2>
         <ul aria-label="File gallery" className={`mt-3 grid gap-3 ${hasSelection ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-3 xl:grid-cols-4"}`}>
-          {notes?.map((n) => <li key={`note-${n.id}`}><Link href={`/notes?id=${n.id}`} className={`block h-full rounded-xl border p-3 ${selected === n.id ? "border-accent bg-accent-soft" : "border-line bg-panel hover:bg-panel-2"}`}><div className="flex aspect-[4/3] items-center justify-center rounded-lg bg-accent-soft text-sm font-semibold text-accent">MD · Class notes</div><p dir="auto" className="mt-3 break-words text-sm font-medium">{n.title}</p><p className="mt-1 text-xs text-muted">{n.class_date} · {n.folder_name}</p>{n.subject && <p className="mt-1 text-xs text-muted">{n.subject}</p>}</Link></li>)}
-          {savedFiles?.map((f) => <li key={`file-${f.id}`}><Link href={`/notes?file=${f.id}`} aria-label={`Open file ${f.filename}`} className={`block h-full rounded-xl border p-3 ${selectedFile === f.id ? "border-accent bg-accent-soft" : "border-line bg-panel hover:bg-panel-2"}`}><FileCover file={f} /><p dir="auto" className="mt-3 break-words text-sm font-medium">{f.filename}</p><p className="mt-1 text-xs text-muted">{fileType(f)} · {f.folder_name}</p><p className="mt-1 text-xs text-muted">{f.created_at.slice(0, 10)}{f.local ? ` · ${Math.max(1, Math.round(f.size / 1024))} KB` : " · Drive"}</p></Link></li>)}
+          {notes?.map((n) => <li key={`note-${n.id}`}><Link href={hrefFor({ id: n.id, file: null })} onClick={(event) => openDetail(event, { id: n.id, file: null })} className={`block h-full rounded-xl border p-3 ${selected === n.id ? "border-accent bg-accent-soft" : "border-line bg-panel hover:bg-panel-2"}`}><div className="flex aspect-[4/3] items-center justify-center rounded-lg bg-accent-soft text-sm font-semibold text-accent">MD · Class notes</div><p dir="auto" className="mt-3 break-words text-sm font-medium">{n.title}</p><p className="mt-1 text-xs text-muted">{n.class_date} · {n.folder_name}</p>{n.subject && <p className="mt-1 text-xs text-muted">{n.subject}</p>}</Link></li>)}
+          {savedFiles?.map((f) => <li key={`file-${f.id}`}><Link href={hrefFor({ file: f.id, id: null })} onClick={(event) => openDetail(event, { file: f.id, id: null })} aria-label={`Open file ${f.filename}`} className={`block h-full rounded-xl border p-3 ${selectedFile === f.id ? "border-accent bg-accent-soft" : "border-line bg-panel hover:bg-panel-2"}`}><FileCover file={f} /><p dir="auto" className="mt-3 break-words text-sm font-medium">{f.filename}</p><p className="mt-1 text-xs text-muted">{fileType(f)} · {f.folder_name}</p><p className="mt-1 text-xs text-muted">{f.created_at.slice(0, 10)}{f.local ? ` · ${Math.max(1, Math.round(f.size / 1024))} KB` : " · Drive"}</p></Link></li>)}
         </ul>
         {savedFiles && savedFiles.length >= limit && limit < 1000 && <button className="mt-4 rounded-lg border border-line px-3 py-2 text-sm" onClick={() => setLimit(limit + 200)}>Load more files</button>}
       </section>
       {hasSelection && <section aria-label="Note detail" className="min-w-0 lg:border-l lg:border-line lg:pl-6">
-        <Link href="/notes" className="mb-5 inline-block text-sm text-muted hover:underline">← Back to notes</Link>
+        <button type="button" onClick={back} className="mb-5 inline-block text-sm text-muted hover:underline">← Back to notes</button>
         {detailError && <p role="alert" className="text-sm text-danger">{detailError.message}</p>}
         {selected > 0 && !note && !detailError && <p className="text-sm text-muted">Loading saved note…</p>}
         {note && selected > 0 && <NoteDetail key={note.revision} note={note} folders={folders ?? []} />}
@@ -220,7 +276,7 @@ function NotesLibrary() {
         {savedFile && selectedFile > 0 && <FileDetail key={savedFile.revision} file={savedFile} folders={folders ?? []} approval={driveApprovals[savedFile.id]} onPrepared={(item) => setDriveApprovals((current) => ({ ...current, [savedFile.id]: item }))} />}
       </section>}
     </div>
-  </main>;
+  </section>;
 }
 
 export default function NotesPage() {
