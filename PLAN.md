@@ -669,6 +669,12 @@ Build one acceptance-sized task at a time, with safety tests and regression chec
    after isolated browsing works; display connection/site status, disconnect and stop controls. PC Helper transport
    shares the same approved-job boundary when VPS deployment is configured (P9-09 remains separate). Cloud browser
    providers are optional later setup, with their own costs; no guaranteed CAPTCHA solving or stealth bypass.
+   Connect only through the owner's Settings action to a loopback Chrome/Edge CDP debugging port. Validate its
+   browser websocket endpoint and required launch/network flags, with no credentials or remote websocket URLs.
+   Create a new owned context with the scoped public-IP proxy; never import personal tabs/cookies or change the
+   default context. CDP disconnect closes only Junior's context/transport, preserving the running browser. Required
+   compatible debugging launch setup is documented; incompatible browsers fail closed. Verify against a disposable
+   real debugging browser, including preservation of its pre-existing page, plus simulated dashboard checks.
 5. **P11-05 — Reusable learning.** `/learn`, `/skills`, `/reload-skills` and `/memory` integrate with existing
    runtime skill/memory storage and Settings. Draft, validate and review learned workflows; support bounded script,
    reference and template resources with versions. Skills never grant additional tool permissions. Only the user's

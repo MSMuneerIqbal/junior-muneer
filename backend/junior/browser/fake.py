@@ -3,7 +3,7 @@
 import time
 from uuid import uuid4
 
-from junior.browser.runtime import BrowserManager, Snapshot
+from junior.browser.runtime import BrowserManager, Snapshot, enabled
 from junior.settings_store import get_setting
 
 
@@ -13,13 +13,32 @@ class FakePage:
         return False
 
 
+class FakePeer:
+    def is_connected(self):
+        return True
+
+
 class FakeBrowserManager(BrowserManager):
     def __init__(self):
         super().__init__()
         self.text = ""
 
-    async def execute(self, spec, conversation_id=None):
+    async def connect(self, port):
+        enabled()
+        if not get_setting("browser_sites"):
+            from junior.browser.network import BrowserRefused
+            raise BrowserRefused("Choose website origins before connecting a browser.")
         async with self.lock:
+            await self.close()
+            self.adapter, self.peer_port = "cdp", port
+            self.started, self.sites = time.monotonic(), get_setting("browser_sites")
+            self.browser = FakePeer()
+
+    async def execute(self, spec, conversation_id=None, *, expected_generation=None):
+        async with self.lock:
+            if expected_generation is not None and expected_generation != self.generation:
+                from junior.browser.network import BrowserRefused
+                raise BrowserRefused("The browser session changed. Request a fresh approval.")
             self.validate(spec)
             if spec.kind == "navigate":
                 self.page = FakePage()

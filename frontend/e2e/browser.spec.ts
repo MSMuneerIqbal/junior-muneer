@@ -4,6 +4,19 @@ test.afterEach(async ({ request }) => {
   await request.put("http://127.0.0.1:8100/api/computer/browser", { data: { enabled: false, sites: [] } });
 });
 
+test("explicit local debugging connection shows attachment and disconnects", async ({ page, request }) => {
+  await request.put("http://127.0.0.1:8100/api/computer/browser", { data: { enabled: true, sites: ["https://example.com"] } });
+  await page.goto("/settings#computer");
+  const browser = page.getByRole("region", { name: "Browser controls", exact: true });
+  await browser.getByText("Connect a running Chrome or Edge browser", { exact: true }).click();
+  await browser.getByRole("spinbutton", { name: "Local debugging port" }).fill("9222");
+  await browser.getByRole("button", { name: "Connect debugging browser", exact: true }).click();
+  await expect(browser.getByRole("status")).toHaveText("Debugging browser attached · 127.0.0.1:9222");
+  await expect(browser.getByText(/Ask Junior to open an allowed website/)).toBeVisible();
+  await browser.getByRole("button", { name: "Disconnect browser", exact: true }).click();
+  await expect(browser.getByRole("status")).toHaveText("Browser disconnected");
+});
+
 test("browser scope, reviewed navigation, page preview and disconnect", async ({ page }, info) => {
   test.setTimeout(75_000);
   await page.goto("/settings#computer");

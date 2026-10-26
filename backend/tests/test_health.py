@@ -25,3 +25,25 @@ def test_closed_connection_noise_is_filtered():
     real = logger.makeRecord("asyncio", logging.ERROR, __file__, 1, "x", (), (ValueError, ValueError(), None))
     assert not logger.filter(noise)
     assert logger.filter(real)
+
+
+def test_untrusted_website_cannot_post_local_actions():
+    with TestClient(create_app()) as c:
+        for headers in ({"Origin": "https://outside.example"}, {"Origin": "null"},
+                        {"Sec-Fetch-Site": "cross-site"}):
+            result = c.post("/api/computer/browser/connect", headers=headers, json={"port": 9222})
+            assert result.status_code == 403
+        # The real dashboard can be cross-site relative to 127.0.0.1; configured Origin is what grants access.
+        assert c.post("/api/computer/browser/connect", headers={"Origin": "http://localhost:3000", "Sec-Fetch-Site": "cross-site"}, json={"port": 9222}).status_code == 409
+        # Cross-site safe navigations (OAuth callbacks) are allowed through to their own state checks.
+        assert c.get("/health", headers={"Sec-Fetch-Site": "cross-site"}).status_code == 200
+
+
+def test_untrusted_website_cannot_open_local_chat_websocket():
+    import pytest
+    from starlette.websockets import WebSocketDisconnect
+    with TestClient(create_app()) as c:
+        with pytest.raises(WebSocketDisconnect) as error:
+            with c.websocket_connect("/ws/chat", headers={"Origin": "https://outside.example"}):
+                pass
+        assert error.value.code == 1008

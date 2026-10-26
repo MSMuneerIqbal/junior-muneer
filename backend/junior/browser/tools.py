@@ -39,7 +39,8 @@ async def propose(context, spec):
         body = spec.model_dump()
         return await queue_action(context, "computer.browser.input", "browser action", json.dumps(body, ensure_ascii=False, indent=2),
                                   f"Browser: {spec.kind.title()} {details['target_label']}"[:200],
-                                  {"op": "browser", "browser_spec": body, "conversation_id": context.conversation_id, **details})
+                                  {"op": "browser", "browser_spec": body, "conversation_id": context.conversation_id,
+                                   "browser_generation": manager().generation, **details})
     except BrowserRefused as e:
         return f"NOT done: {e}"
 
@@ -52,7 +53,9 @@ async def send(out, browser):
             raise BrowserRefused("The browser target no longer matches the reviewed card. Request a new card.")
         if browser is None:
             raise BrowserRefused("Browser supervision is unavailable.")
-        return SendResult("sent", await browser.execute(spec, out.meta.get("conversation_id")))
+        if out.meta.get("browser_generation") != browser.generation:
+            raise BrowserRefused("The browser session changed or disconnected since this card. Request a fresh approval.")
+        return SendResult("sent", await browser.execute(spec, out.meta.get("conversation_id"), expected_generation=out.meta.get("browser_generation")))
     except (ValueError, OSError) as e:
         return SendResult("failed", validation_message(e))
     except RuntimeError as e:
@@ -142,3 +145,18 @@ async def preview(request: Request):
         return await request.app.state.browser.snapshot()
     except (ValueError, OSError) as e:
         raise HTTPException(409, validation_message(e)) from None
+
+
+class BrowserConnection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    port: int = Field(default=9222, ge=1024, le=65535)
+
+
+@router.post("/api/computer/browser/connect")
+async def connect(body: BrowserConnection, request: Request):
+    try:
+        await request.app.state.browser.connect(body.port)
+    except (ValueError, OSError) as e:
+        raise HTTPException(409, validation_message(e)) from None
+    audit("setting", "browser_connected", detail={"adapter": "cdp", "port": body.port})
+    return config(request.app.state.browser)

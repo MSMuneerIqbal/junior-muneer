@@ -10,6 +10,7 @@ from uuid import uuid4
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from junior.browser.network import BrowserRefused, ScopedProxy, checked_url
+from junior.browser.cdp import NETWORK_ARGS
 from junior.computer.jobs import redact
 from junior.pause import is_paused
 from junior.permissions import get_mode
@@ -90,35 +91,65 @@ class BrowserManager:
         self.action = None
         self.downloads = []
         self.requests = 0
+        self.adapter = "isolated"
+        self.peer_port = 0
+        self.generation = uuid4().hex
 
     def network_active(self):
         try:
             enabled()
-            return self.sites == get_setting("browser_sites") and time.monotonic() - self.started < 900
+            return (self.sites == get_setting("browser_sites") and time.monotonic() - self.started < 900
+                    and (self.browser is None or self.browser.is_connected()))
         except BrowserRefused:
             return False
 
     def status(self):
-        return {"connected": self.page is not None and not self.page.is_closed(), "adapter": "isolated",
+        return {"connected": self.page is not None and not self.page.is_closed(), "adapter": self.adapter,
+                "transport_connected": bool(self.browser and self.browser.is_connected()), "peer_port": self.peer_port,
                 "url": redact(self.page.url) if self.page else "", "downloads": self.downloads[-10:],
-                "expires_seconds": max(0, int(900 - (time.monotonic() - self.started))) if self.page else 0}
+                "expires_seconds": max(0, int(900 - (time.monotonic() - self.started))) if self.page or self.browser else 0}
+
+    async def connect(self, port: int):
+        from playwright.async_api import async_playwright
+        from junior.browser.cdp import endpoint, validate_launch
+        async with self.lock:
+            enabled()
+            if not get_setting("browser_sites"):
+                raise BrowserRefused("Choose website origins before connecting a browser.")
+            await self.close()
+            self.adapter, self.peer_port = "cdp", port
+            self.sites, self.started = get_setting("browser_sites"), time.monotonic()
+            try:
+                peer = await endpoint(port)
+                self.pw = await async_playwright().start()
+                self.browser = await self.pw.chromium.connect_over_cdp(peer, no_defaults=True, timeout=5000)
+                session = await self.browser.new_browser_cdp_session()
+                try:
+                    validate_launch((await session.send("Browser.getBrowserCommandLine"))["arguments"])
+                finally:
+                    await session.detach()
+                self.monitor = asyncio.create_task(self._watch())
+            except BaseException as error:
+                await self.close()
+                if isinstance(error, (asyncio.CancelledError, BrowserRefused)):
+                    raise
+                raise BrowserRefused("Couldn't attach to that compatible debugging browser. Its existing tabs were not changed.") from error
 
     async def _launch(self):
         from playwright.async_api import async_playwright
         self.sites = get_setting("browser_sites")
         if not self.sites:
             raise BrowserRefused("Choose at least one exact website origin in Settings → Computer → Browser.")
-        self.started = time.monotonic()
+        if self.adapter != "cdp":
+            self.started = time.monotonic()
         self.proxy = ScopedProxy(self.sites, self.network_active)
         try:
             proxy = await self.proxy.start()
-            self.pw = await async_playwright().start()
-            self.browser = await self.pw.chromium.launch(headless=True, proxy=proxy, args=[
-                "--disable-quic", "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
-                "--disable-features=WebTransport,WebUSB,WebBluetooth,Serial,DirectSockets",
-                "--disable-background-networking", "--disable-extensions"])
+            if not self.browser:
+                self.pw = await async_playwright().start()
+                self.browser = await self.pw.chromium.launch(headless=True, proxy=proxy, args=NETWORK_ARGS)
             self.context = await self.browser.new_context(accept_downloads=True, service_workers="block",
-                                                         permissions=[], viewport={"width": 1280, "height": 800})
+                                                         permissions=[], viewport={"width": 1280, "height": 800}, proxy=proxy)
             await self.context.route("**/*", self._route)
             await self.context.route_web_socket("**/*", lambda ws: ws.close())
             self.page = await self.context.new_page()
@@ -128,7 +159,8 @@ class BrowserManager:
             self.page.on("dialog", lambda dialog: dialog.dismiss())
             self.page.on("download", lambda download: download.cancel() if self.action != "download" else None)
             self.context.on("page", lambda page: page.close() if page != self.page else None)
-            self.monitor = asyncio.create_task(self._watch())
+            if self.monitor is None:
+                self.monitor = asyncio.create_task(self._watch())
         except BaseException:
             await self.close()
             raise
@@ -165,6 +197,7 @@ class BrowserManager:
             await self._close_owned()
 
     async def _close_owned(self):
+        attached = self.adapter == "cdp"
         monitor, self.monitor = self.monitor, None
         if monitor and monitor != asyncio.current_task():
             monitor.cancel()
@@ -175,11 +208,15 @@ class BrowserManager:
             obj = getattr(self, name)
             setattr(self, name, None)
             if obj:
+                if name == "browser" and attached:
+                    continue  # the peer is owned by the user; stop our transport after closing only our context
                 try:
                     await asyncio.wait_for(obj.stop() if name == "pw" else obj.close(), 5)
                 except Exception:
                     pass
         self.requests = 0
+        self.adapter, self.peer_port = "isolated", 0
+        self.generation = uuid4().hex
 
     async def disconnect(self):
         # Serialize owner/config disconnect with startup/input; no late context can be created after disconnect.
@@ -257,9 +294,11 @@ class BrowserManager:
         return {"target_label": data["name"] or data["tag"], "page_url": snap.url,
                 "form": data["form"], "target_href": data["href"]}
 
-    async def execute(self, spec, conversation_id=None):
+    async def execute(self, spec, conversation_id=None, *, expected_generation=None):
         from playwright.async_api import Error as PlaywrightError
         async with self.lock:
+            if expected_generation is not None and expected_generation != self.generation:
+                raise BrowserRefused("The browser session changed while this card waited. Request a fresh approval.")
             self.validate(spec)
             attempted = False
             try:

@@ -5,6 +5,7 @@ import useSWR from "swr";
 import { BACKEND_URL, fetcher, send } from "@/lib/api";
 
 type Browser = { enabled: boolean; sites: string[]; connected: boolean; simulation: boolean; url: string;
+  adapter: string; transport_connected: boolean; peer_port: number;
   expires_seconds: number; downloads: { file_id: number; name: string; url: string }[] };
 type Snapshot = { title: string; url: string; text: string; controls: { index: number; tag: string; name: string }[] };
 
@@ -14,6 +15,7 @@ export default function BrowserSettings() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState<Snapshot | null>(null);
+  const [port, setPort] = useState("9222");
 
   async function update(enabled: boolean) {
     if (!data) return;
@@ -38,6 +40,15 @@ export default function BrowserSettings() {
     finally { setBusy(false); }
   }
 
+  async function connect() {
+    setBusy(true); setError("");
+    try {
+      await mutate(await send<Browser>("POST", "/api/computer/browser/connect", { port: Number(port) }), false);
+      setPreview(null);
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn't connect that debugging browser."); }
+    finally { setBusy(false); }
+  }
+
   return <section aria-label="Browser controls" className="flex min-w-0 flex-col gap-3">
     <h3 className="text-sm font-semibold">Browser controls</h3>
     <p className="text-xs text-muted">An isolated browser with a temporary profile. Choose exact websites below, then ask Junior to open a page. Every navigation, click, text entry and download waits for your approval.</p>
@@ -55,11 +66,26 @@ export default function BrowserSettings() {
       <p className="text-xs text-muted">Include required subdomains separately. Saving scope closes the current session. Personal browser cookies are not loaded.</p>
       <button type="button" disabled={busy || sites === null} onClick={() => void update(data.enabled)}
         className="self-start rounded-md border border-line px-3 py-1.5 text-xs disabled:opacity-50">Save websites</button>
-      <p role="status" className="break-words text-xs">{data.connected ? `Connected · ${data.url} · ${Math.ceil(data.expires_seconds / 60)} min remaining` : "Browser disconnected"}</p>
-      {data.connected && <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={busy} onClick={() => void act("snapshot")} className="rounded-md border border-line px-3 py-1.5 text-xs">Preview page</button>
+      <p role="status" className="break-words text-xs">{data.connected ? `Connected · ${data.url} · ${Math.ceil(data.expires_seconds / 60)} min remaining`
+        : data.transport_connected ? `Debugging browser attached · 127.0.0.1:${data.peer_port}` : "Browser disconnected"}</p>
+      {data.adapter === "cdp" && data.transport_connected && <p className="text-xs text-muted">Attached to running browser on 127.0.0.1:{data.peer_port}. {data.connected ? "Junior is using its own temporary session." : "Ask Junior to open an allowed website; navigation still needs approval."}</p>}
+      {(data.connected || data.transport_connected) && <div className="flex flex-wrap gap-2">
+        {data.connected && <button type="button" disabled={busy} onClick={() => void act("snapshot")} className="rounded-md border border-line px-3 py-1.5 text-xs">Preview page</button>}
         <button type="button" disabled={busy} onClick={() => void act("disconnect")} className="rounded-md border border-line px-3 py-1.5 text-xs">Disconnect browser</button>
       </div>}
+      <details className="rounded-lg border border-line p-3 text-xs">
+        <summary className="cursor-pointer font-medium">Connect a running Chrome or Edge browser</summary>
+        <p className="mt-2 text-muted">Requires a dedicated debugging profile with Junior&apos;s network protections (see README → Browser connection setup). Junior creates a temporary context in that browser. Existing personal pages and cookies stay separate. Disconnect closes Junior&apos;s context and leaves your browser open.</p>
+        <p className="mt-2 text-muted">The debugging port must stay on this computer. Remote/cloud browser connections and the VPS PC Helper require separate setup.</p>
+        <div className="mt-3 flex flex-wrap items-end gap-2">
+          <label className="flex flex-col gap-1">Local debugging port
+            <input type="number" min={1024} max={65535} value={port} onChange={(e) => setPort(e.target.value)}
+              className="w-28 rounded-md border border-line bg-bg px-2 py-1.5 text-sm" />
+          </label>
+          <button type="button" disabled={busy || !data.enabled || !data.sites.length || !/^\d{4,5}$/.test(port)} onClick={() => void connect()}
+            className="rounded-md border border-line px-3 py-1.5 disabled:opacity-50">Connect debugging browser</button>
+        </div>
+      </details>
       {preview && <div className="min-w-0 rounded-lg border border-line p-3 text-xs">
         <p className="font-medium">{preview.title}</p>
         <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap break-words font-sans">{preview.text}</pre>

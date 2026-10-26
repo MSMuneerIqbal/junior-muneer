@@ -780,8 +780,24 @@ with its links arrives in the chat you asked from, WhatsApp included.
     compilation and whitespace passed. Docker build was not run locally.
     Real-model throwaway-data check: exact navigation card and no browser process/request before approval;
     30s, $0.015601484. No owner chat/approval data, browser cookies or new WhatsApp integration/sending used.
-- [ ] **P11-04** Explicit existing-browser connection and adapter readiness: visible connection/disconnect,
+- [x] **P11-04** Explicit existing-browser connection and adapter readiness: visible connection/disconnect,
   scoped sessions; remote PC Helper remains P9-09 pending VPS setup. Cloud browsing is optional later setup.
+  - Done 2026-10-26: owner-only local debugging-port connection, validated same-port browser websocket + network launch
+    flags, no default-context changes; create a new proxied context and preserve the peer on disconnect. Settings
+    shows attachment/port and disconnect even before navigation; session changes invalidate old cards. README has
+    a dedicated Chrome/Edge profile launch command. No remote/cloud accounts or new WhatsApp integration.
+    Only the new context is proxied/controlled; existing page contents/cookies are not imported. Authentication and
+    account tasks use existing service APIs or an ordinary manual browser. Compatible startup flags are required;
+    this does not silently attach a daily browser profile. Native debugging fixture verified scoped HTTP navigation,
+    snapshot, cookie isolation and preservation of its pre-existing page after disconnect. Session identity is
+    rechecked under the input lock, including a reconnect while a card waits. No real owner browser/profile used.
+  - Fixed the local API's browser-origin boundary: untrusted Origin or cross-site unsafe requests and WebSockets
+    are rejected alongside Host validation; configured dashboard origins work, safe OAuth navigations still reach
+    their state checks, and the existing signed webhook boundary is unchanged.
+  - Checks: full backend 1,131 passed (469/289/373 isolated batches), then 63 browser/connection/health checks after
+    origin protection. Full UI 114 passed/14 existing skips/two phone timing failures; those unchanged chat/writing
+    cases passed on a fresh server. Final rebuilt desktop/phone browser/chat/writing/visual run: 16 passed. Screenshots
+    inspected; temporary spec removed. TypeScript/ESLint, compilation and whitespace passed. No additional model cost.
 - [ ] **P11-05** `/learn`, `/skills`, `/reload-skills`, `/memory`: reviewed, versioned reusable resources,
   existing Settings CRUD, task matching, user-only personal memory and no permission escalation.
 - [ ] **P11-06** `/update --check` and controlled updates: clean-worktree checks, explicit approval,

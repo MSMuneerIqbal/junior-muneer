@@ -37,6 +37,28 @@ Install the matching browser once after Python dependencies: from `backend/`, ru
 `.venv\Scripts\python -m playwright install chromium` (Linux: `python -m playwright install --with-deps chromium`).
 The Docker image includes it. Browser DOM snapshots and Settings polling use no model calls.
 
+### Browser connection setup
+
+For a compatible running Chrome/Edge instance, open **Settings → Computer → Browser controls → Connect a running
+Chrome or Edge browser**. This is an explicit local debugging connection. Junior opens its own temporary context,
+with the same website scopes and approvals. Its Disconnect closes that context and leaves the browser running.
+Existing page contents and cookies are not imported. Debugging sessions expire after 15 minutes and old approval
+cards cannot act after a reconnect. New WhatsApp, remote PC Helper and cloud-browser setup are separate work.
+
+Start a dedicated debugging profile yourself in PowerShell (adjust the executable path for your installed Chrome
+or Edge). These flags are checked on connection; incompatible/debugging-disabled browsers are refused:
+
+```powershell
+$juniorBrowserExe = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+& $juniorBrowserExe --remote-debugging-port=9222 --remote-debugging-address=127.0.0.1 --user-data-dir="$env:LOCALAPPDATA\JuniorMuneerBrowser" --enable-automation --disable-quic --force-webrtc-ip-handling-policy=disable_non_proxied_udp --disable-features=WebTransport,WebUSB,WebBluetooth,Serial,DirectSockets --disable-background-networking --disable-extensions
+```
+
+Keep the debugging port local. Enable browser controls, save allowed website origins, then connect port **9222**
+in Settings. Ask Junior to open the desired page and approve its navigation. Use connected service APIs or an
+ordinary manual browser for signed-in account tasks: managed input excludes authentication/password/payment
+fields, and personal-profile cookies are not reused. A disconnected debugging peer requires a fresh explicit
+connection. Unattended authentication is not supported.
+
 ## What he can do
 
 | Area | What |
