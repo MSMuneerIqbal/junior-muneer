@@ -760,8 +760,26 @@ with its links arrives in the chat you asked from, WhatsApp included.
     **Real model:** isolated synthetic desktop, exact typing card waited for approval, then executed; 22s,
     **$0.017237116**. Current backend restarted and desktop endpoint healthy, desktop remains off on Muneer's profile.
     No new WhatsApp work or sending. Next P11-03; no push.
-- [ ] **P11-03** Isolated browser tools: scoped sites, snapshots, navigation/extraction/downloads and approved
+- [x] **P11-03** Isolated browser tools: scoped sites, snapshots, navigation/extraction/downloads and approved
   form actions; protect private networks/secrets, preserve outside provenance; local-site end-to-end checks.
+  - Built 2026-10-26: Python Playwright with temporary Chromium context, exact-origin settings,
+    locked-Ask actions, single-use DOM element snapshots, bounded downloads into the managed Downloads gallery.
+    Authenticated loopback forward proxy resolves/validates all DNS answers and connects to a numeric public IP;
+    redirects/subresources stay in scope. Service workers, websockets, QUIC and non-proxied WebRTC are disabled.
+    Max one session, 15 minutes, six snapshots/message, 60 controls, 12k text chars, 2k typed chars, 300 requests,
+    20 MB/connection/download and 100 MB/session. Scope changes/Pause/Plan/Computer off close the session.
+    Local real-Chromium form/download/stale-target/private-network checks and public HTTPS smoke check passed.
+    Full backend run: 1,103 cases (1,101 passed, two failures corrected and verified in the final 43-case
+    settings/desktop run). The defaults expectation now includes browser settings; the desktop deadline test
+    deterministically expires during its focus query instead of relying on PC load. Final browser/agent: 43 passed,
+    plus sensitive autocomplete/OTP/card-field refusals and a final native large-page extraction/60-control cap.
+    Full UI run: 109 passed, 14 existing skips, three failures corrected (optimistic toggle state on both screen
+    sizes; existing two-chat Skills scenario needed a realistic per-test timeout). Final rebuilt desktop/phone
+    run: all 12 passed, including navigation, editable exact form text, preview/disconnect, approvals, desktop,
+    Skills and temporary visual checks. Screenshots inspected; temporary visual spec removed. TypeScript/ESLint,
+    compilation and whitespace passed. Docker build was not run locally.
+    Real-model throwaway-data check: exact navigation card and no browser process/request before approval;
+    30s, $0.015601484. No owner chat/approval data, browser cookies or new WhatsApp integration/sending used.
 - [ ] **P11-04** Explicit existing-browser connection and adapter readiness: visible connection/disconnect,
   scoped sessions; remote PC Helper remains P9-09 pending VPS setup. Cloud browsing is optional later setup.
 - [ ] **P11-05** `/learn`, `/skills`, `/reload-skills`, `/memory`: reviewed, versioned reusable resources,

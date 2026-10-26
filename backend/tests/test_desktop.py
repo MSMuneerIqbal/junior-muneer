@@ -277,14 +277,17 @@ def test_validation_errors_do_not_echo_a_rejected_secret(screen):
 
 
 def test_slow_focus_query_cannot_inject_after_timeout(screen, monkeypatch):
+    from types import SimpleNamespace
     c, native = screen
     item = card(c, capture(c))
     original = native.focused
+    clock = [10.0]
     def slow(hwnd):
-        time.sleep(.4)
+        # Expire during the UIA query, independent of Windows scheduling or DB/worker startup time.
+        clock[0] += 10
         return original(hwnd)
     monkeypatch.setattr(native, "focused", slow)
+    monkeypatch.setattr(desktop, "time", SimpleNamespace(monotonic=lambda: clock[0], time=time.time))
     monkeypatch.setattr(desktop, "OBSERVE_SECONDS", .03)
     result = approve(c, item)
-    time.sleep(.5)
     assert result["status"] == "check_manually" and native.inputs == []

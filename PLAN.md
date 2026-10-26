@@ -658,6 +658,13 @@ Build one acceptance-sized task at a time, with safety tests and regression chec
    bounded extraction/downloads and explicit proposed form/click actions. Separate read and change permissions;
    web content cannot grant permissions. Protect local/private network addresses and secret/profile files. Prevent
    silent resubmission after ambiguous results. Use local fixture sites for repeatable end-to-end tests.
+   Implementation: Python Playwright and matching Chromium, off by default. Exact allowed origins are checked for
+   navigation and subresources. An authenticated local proxy resolves all addresses, rejects nonpublic answers and
+   connects to the validated numeric IP, preventing DNS rebinding. Disable service workers, websocket/QUIC channels
+   and non-proxied WebRTC. No personal profiles/cookies. Snapshots hold exact DOM element handles with navigation
+   epoch, attributes, form destination and stale/single-use checks. Every navigation/click/fill/download is locked
+   Ask; sensitive fields/pages are refused. One temporary 15-minute session; six snapshots/message and bounded
+   requests/transfers/text. Downloads become managed gallery files without opening or executing them.
 4. **P11-04 — Authorized browser sessions and remote adapter.** Add explicit browser-session connection only
    after isolated browsing works; display connection/site status, disconnect and stop controls. PC Helper transport
    shares the same approved-job boundary when VPS deployment is configured (P9-09 remains separate). Cloud browser

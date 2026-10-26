@@ -30,6 +30,16 @@ function desktopAction(item: ApprovalItem): { kind: string; text: string; key: s
   return null;
 }
 
+function browserAction(item: ApprovalItem): { kind: string; text: string; url: string } | null {
+  if (item.meta.op !== "browser") return null;
+  try {
+    const body = JSON.parse(item.text);
+    if (body && ["navigate", "click", "fill", "download"].includes(body.kind)
+      && typeof body.text === "string" && typeof body.url === "string") return body;
+  } catch {}
+  return null;
+}
+
 /** A change to a file on your PC: removed lines red, added lines green. */
 function Diff({ diff }: { diff: string }) {
   return (
@@ -146,12 +156,13 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
   const waiting = item.status === "waiting";
   const status = STATUS[item.status];
   const desktop = desktopAction(item);
+  const browser = browserAction(item);
 
   async function run(action: Parameters<typeof act>[0], body?: Parameters<typeof act>[1]) {
     setBusy(true);
     setError(null);
     try {
-      if (action === "edit" && desktop?.kind === "type" && body && typeof body === "object" && "text" in body) {
+      if (action === "edit" && (desktop?.kind === "type" || browser?.kind === "fill") && body && typeof body === "object" && "text" in body) {
         body = { ...body, text: JSON.stringify({ ...JSON.parse(item.text), text: body.text }, null, 2) };
       }
       await act(action, body);
@@ -235,6 +246,15 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
                   : desktop.kind === "key" ? `Press ${desktop.key.toUpperCase()} in ${item.meta.target_label || "the editor"}.`
                   : `Click ${item.meta.target_label || "the selected control"}.`}</p>
                 {desktop.kind === "type" && <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-line p-2 font-sans text-sm">{desktop.text}</pre>}
+              </div>
+            ) : browser ? (
+              <div className="space-y-2 text-sm">
+                <p className="break-words">{browser.kind === "navigate" ? `Open ${browser.url}`
+                  : `${browser.kind === "fill" ? "Enter text into" : browser.kind === "download" ? "Download from" : "Click"} ${item.meta.target_label || "the selected control"}`}</p>
+                {typeof item.meta.page_url === "string" && <p className="break-words text-xs text-muted">Page: {item.meta.page_url}</p>}
+                {typeof item.meta.target_href === "string" && item.meta.target_href && <p className="break-words text-xs text-muted">Link: {item.meta.target_href}</p>}
+                {browser.kind === "fill" && <pre className="max-h-60 overflow-auto whitespace-pre-wrap break-words rounded-md border border-line p-2 font-sans">{browser.text}</pre>}
+                {!!item.meta.form && typeof item.meta.form === "object" && <p className="break-words text-xs text-muted">Form destination: {String((item.meta.form as Record<string, unknown>).action || "current page")}</p>}
               </div>
             ) : item.item_type === "file" ? (
               <details open={!item.meta.diff} className="mt-1.5">
@@ -454,8 +474,8 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
             )}
             {waiting && (
               <>
-                <button type="button" className={button} disabled={busy || item.item_type === "file_transfer" || (!!desktop && desktop.kind !== "type")}
-                  onClick={() => setEditing(desktop?.kind === "type" ? desktop.text : item.text)}>
+                <button type="button" className={button} disabled={busy || item.item_type === "file_transfer" || (!!desktop && desktop.kind !== "type") || (!!browser && browser.kind !== "fill")}
+                  onClick={() => setEditing(desktop?.kind === "type" ? desktop.text : browser?.kind === "fill" ? browser.text : item.text)}>
                   Edit
                 </button>
                 {item.item_type === "post" && (

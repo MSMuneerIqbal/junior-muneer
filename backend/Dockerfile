@@ -8,6 +8,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app/backend
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+# Browser control remains opt-in. Install its matching Chromium and Linux libraries at image build time.
+RUN python -m playwright install --with-deps chromium
 
 # The app reads agents, playbooks and news sources from the project folder (one level up).
 COPY agents /app/agents

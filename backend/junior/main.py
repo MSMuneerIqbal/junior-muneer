@@ -67,7 +67,7 @@ from junior.voice import router as voice_router
 log = logging.getLogger(__name__)
 
 
-def default_senders(settings, pc_jobs=None) -> SenderRegistry:
+def default_senders(settings, pc_jobs=None, browser=None) -> SenderRegistry:
     """The connected API senders. FAKE_AI: a fake Facebook Page, so posting can be tried safely."""
     registry = SenderRegistry()
     if settings.meta_page_id and settings.meta_page_token:
@@ -83,7 +83,7 @@ def default_senders(settings, pc_jobs=None) -> SenderRegistry:
     registry.add(GoogleWorkspaceSender())
     from junior.computer.sender import ComputerSender
 
-    registry.add(ComputerSender(pc_jobs))  # approved file changes and commands on this PC (Phase 9/11)
+    registry.add(ComputerSender(pc_jobs, browser))  # approved local actions (Phase 9/11)
     from junior.transfers.sender import ArchiveWhatsAppSender
     registry.add(ArchiveWhatsAppSender())
     if settings.fake_ai and not registry.for_action("facebook.page.post"):
@@ -126,7 +126,10 @@ def create_app(
 
         recover_pc_jobs()
         app.state.pc_jobs = JobManager()
-        app.state.senders = senders() if senders is not None else default_senders(settings, app.state.pc_jobs)
+        from junior.browser.runtime import BrowserManager
+        from junior.browser.fake import FakeBrowserManager
+        app.state.browser = FakeBrowserManager() if settings.fake_ai else BrowserManager()
+        app.state.senders = senders() if senders is not None else default_senders(settings, app.state.pc_jobs, app.state.browser)
         recover_interrupted_sends()
         recover_background()
         set_current(app.state.senders)
@@ -163,6 +166,7 @@ def create_app(
         try:
             yield
         finally:
+            await app.state.browser.close()
             await app.state.pc_jobs.close()
             if scheduler:
                 scheduler.cancel()
@@ -218,6 +222,8 @@ def create_app(
     app.include_router(whatsapp_router)
     app.include_router(computer_router)
     app.include_router(desktop_router)
+    from junior.browser.tools import router as browser_router
+    app.include_router(browser_router)
     app.include_router(images_router)
     return app
 

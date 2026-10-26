@@ -16,7 +16,7 @@ from junior.settings_store import get_setting
 
 log = logging.getLogger(__name__)
 
-ACTIONS = ("computer.write", "computer.move", "computer.delete", "computer.run", "computer.job.stop", "computer.desktop.input")
+ACTIONS = ("computer.write", "computer.move", "computer.delete", "computer.run", "computer.job.stop", "computer.desktop.input", "computer.browser.input")
 
 
 def to_recycle_bin(path: Path) -> None:
@@ -42,8 +42,9 @@ class ComputerSender:
     label = "Your PC"
     action_types = ACTIONS
 
-    def __init__(self, jobs=None):
+    def __init__(self, jobs=None, browser=None):
         self.jobs = jobs
+        self.browser = browser
 
     def is_connected(self) -> bool:
         return bool(get_setting("computer_enabled"))
@@ -51,6 +52,9 @@ class ComputerSender:
     async def send(self, out: Outgoing) -> SendResult:
         op = out.meta.get("op", "")
         try:
+            if op == "browser":
+                from junior.browser.tools import send
+                return await send(out, self.browser)
             if op == "desktop":
                 from junior.computer.desktop import send
                 return await send(out)

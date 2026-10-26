@@ -47,6 +47,8 @@ STEP_LABELS = {
     "pc_move": "Preparing a move",
     "pc_delete": "Preparing a delete (to the Recycle Bin)",
     "pc_run": "Preparing a command",
+    "browser_snapshot": "Reading the browser page",
+    "browser_action": "Preparing a browser action for approval",
     "ask_computer_agent": "Asking the Computer Agent",
     "save_memory": "Saving a memory",
     "forget_memory": "Forgetting a memory",

@@ -1404,8 +1404,9 @@ TOOL_FACTORIES["computer_read"] = _computer_read_tools
 def _computer_tools() -> list[Tool]:
     from junior.computer.tools import READ_TOOLS, RUN_TOOLS, WRITE_TOOLS
     from junior.computer.desktop import TOOLS as DESKTOP_TOOLS
+    from junior.browser.tools import TOOLS as BROWSER_TOOLS
 
-    return [*READ_TOOLS, *WRITE_TOOLS, *RUN_TOOLS, *DESKTOP_TOOLS]
+    return [*READ_TOOLS, *WRITE_TOOLS, *RUN_TOOLS, *DESKTOP_TOOLS, *BROWSER_TOOLS]
 
 
 TOOL_FACTORIES["computer"] = _computer_tools
@@ -1447,7 +1448,8 @@ async def ask_computer_agent_for(context: TurnContext, task: str, call_id: str |
 @function_tool
 async def ask_computer_agent(ctx: Ctx, task: str) -> str:
     """Ask the Computer Agent to do a job on the user's PC: find, read, create, change, move or delete files and
-    folders, or run terminal commands (git, python, npm...). Changes become cards they approve. Use it for anything
+    folders, run terminal commands (git, python, npm...), observe opted-in app windows, or use an opted-in isolated
+    browser (navigate, page text, reviewed clicks/forms/downloads). Changes become cards they approve. Use it for anything
     beyond a quick look (for a quick look use pc_list / pc_find / pc_read yourself).
 
     Args:

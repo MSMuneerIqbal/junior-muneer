@@ -8,6 +8,7 @@ import { SettingsIcon } from "@/components/icons";
 import SkillsSettings from "@/components/SkillsSettings";
 import ComputerJobs from "@/components/ComputerJobs";
 import DesktopSettings from "@/components/DesktopSettings";
+import BrowserSettings from "@/components/BrowserSettings";
 import { BACKEND_URL, fetcher, send } from "@/lib/api";
 import { PERMISSIONS_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
 import type { Settings } from "@/lib/types";
@@ -1408,6 +1409,8 @@ function ComputerSection({ enabled, onEnabled }: { enabled: boolean; onEnabled: 
       </Row>
       <Row wide label="App windows" hint="Observe and control selected local apps, one reviewed action at a time.">
         <DesktopSettings />
+        <div className="border-t border-line" />
+        <BrowserSettings />
       </Row>
     </Section>
   );

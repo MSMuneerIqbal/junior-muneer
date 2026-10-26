@@ -39,6 +39,7 @@ class TurnContext:
     approval_ids: list[int] = field(default_factory=list)
     computer_actions: int = 0  # computer cards made this turn (Phase 9)
     desktop_snapshots: int = 0
+    browser_snapshots: int = 0
     last_pc_file: Any = None  # the PC file just checked for attaching (its real path)
     skills_loaded: set[str] = field(default_factory=set)  # agent:name, once per agent per turn
     # Jobs that got a proposal card in this turn (one card per job).

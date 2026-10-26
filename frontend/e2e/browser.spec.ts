@@ -1,0 +1,51 @@
+import { expect, test } from "@playwright/test";
+
+test.afterEach(async ({ request }) => {
+  await request.put("http://127.0.0.1:8100/api/computer/browser", { data: { enabled: false, sites: [] } });
+});
+
+test("browser scope, reviewed navigation, page preview and disconnect", async ({ page }, info) => {
+  test.setTimeout(75_000);
+  await page.goto("/settings#computer");
+  const browser = page.getByRole("region", { name: "Browser controls", exact: true });
+  const toggle = browser.getByRole("checkbox", { name: "Enable browser controls" });
+  await expect(toggle).not.toBeChecked();
+  await browser.getByRole("textbox", { name: "Allowed website origins (one per line)" }).fill("http://127.0.0.1");
+  await browser.getByRole("button", { name: "Save websites" }).click();
+  await expect(browser.getByRole("alert")).toBeVisible();
+  await browser.getByRole("textbox").fill("https://example.com");
+  await browser.getByRole("button", { name: "Save websites" }).click();
+  await expect(browser.getByRole("alert")).toHaveCount(0);
+  await toggle.check();
+  await expect(browser.getByRole("status")).toHaveText("Browser disconnected");
+  const url = `https://example.com/research-${info.project.name}-${Date.now()}`;
+  await page.goto("/");
+  const box = page.getByRole("textbox", { name: "Message" });
+  await box.fill(`pc browse ${url}`);
+  await box.press("Enter");
+  const card = page.getByRole("article").filter({ hasText: url });
+  await expect(card.getByTestId("approval-status")).toHaveText("Waiting for you", { timeout: 30_000 });
+  await expect(card.getByRole("button", { name: "Edit", exact: true })).toBeDisabled();
+  await card.getByRole("button", { name: "Approve & run" }).click();
+  await expect(card.getByTestId("approval-status")).toHaveText("Done");
+  await expect(page.getByRole("button", { name: "Read aloud" })).toHaveCount(1);
+  const marker = `browser-note-${info.project.name}-${Date.now()}`;
+  await box.fill(`pc browser fill ${marker}`);
+  await box.press("Enter");
+  const fill = page.getByRole("article").filter({ hasText: marker });
+  await expect(fill.getByTestId("approval-status")).toHaveText("Waiting for you", { timeout: 30_000 });
+  await expect(page.getByRole("button", { name: "Read aloud" })).toHaveCount(2);
+  await fill.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(fill.getByRole("textbox", { name: "Edit draft" })).toHaveValue(marker);
+  await fill.getByRole("textbox", { name: "Edit draft" }).fill(`${marker} edited`);
+  await fill.getByRole("button", { name: "Save", exact: true }).click();
+  await fill.getByRole("button", { name: "Approve & run" }).click();
+  await expect(fill.getByTestId("approval-status")).toHaveText("Done");
+  await page.goto("/settings#computer");
+  await expect(browser.getByRole("status")).toContainText(url);
+  await browser.getByRole("button", { name: "Preview page" }).click();
+  await expect(browser.getByText("Simulated research page", { exact: true })).toBeVisible();
+  await expect(browser.getByText(`${marker} edited`, { exact: true })).toBeVisible();
+  await browser.getByRole("button", { name: "Disconnect browser", exact: true }).click();
+  await expect(browser.getByRole("status")).toHaveText("Browser disconnected");
+});

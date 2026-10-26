@@ -50,6 +50,8 @@ def test_defaults(client):
         "computer_enabled": True,
         "desktop_enabled": False,
         "desktop_apps": ["notepad.exe"],
+        "browser_enabled": False,
+        "browser_sites": [],
         "voice_engine": "openai",
         "voice_hear_model": "",
         "voice_speak_model": "",

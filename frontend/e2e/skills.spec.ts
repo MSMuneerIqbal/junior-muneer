@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("Skills in Settings: create, use in chat, edit, preserve unsaved work and delete", async ({ page }, info) => {
+  test.setTimeout(75_000); // two streamed chats plus create/edit/delete and reloads on a cold Windows build
   const name = `test_${info.project.name}_${Date.now()}`;
   const label = name.replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
   await page.goto("/settings");

@@ -118,10 +118,10 @@ async def upload(file: UploadFile, folder_id: int | None = Form(default=None)) -
 
 @router.get("/api/files/{file_id}/download")
 def download_generated(file_id: int):
-    """Serve only application-generated artifacts; never accept a filesystem path from the model or URL."""
+    """Serve managed generated/downloaded artifacts; never accept a filesystem path from the model or URL."""
     with session_scope() as s:
         row = s.get(ReceivedFile, file_id)
-        if row is None or row.source != "generated":
+        if row is None or row.source not in {"generated", "browser"}:
             raise HTTPException(404, "Generated file not found.")
         root = files_dir().resolve()
         path = root / row.stored_as

@@ -31,6 +31,8 @@ DEFAULTS: dict[str, Any] = {
     "computer_enabled": True,  # Phase 9: the computer tools (Settings -> Computer)
     "desktop_enabled": False,  # opt-in, local productivity-app windows only
     "desktop_apps": ["notepad.exe"],
+    "browser_enabled": False,  # temporary isolated browser; opt in and choose exact origins first
+    "browser_sites": [],
     "computer_folders": None,  # None = Desktop, Documents and Downloads; else your list of full paths
     "voice_engine": "openai",  # voice messages: "openai" or "gemini" (Settings -> Voice)
     "voice_hear_model": "",  # "" = the engine's default (agents/models.toml)

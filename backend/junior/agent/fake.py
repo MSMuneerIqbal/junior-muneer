@@ -224,11 +224,26 @@ class FakeModel(Model):
                         return [function_call("pc_desktop_snapshot", {"handle": data[0]["handle"], "question": ""}, call_id="fake-desktop-snapshot")], False
                     return [function_call("pc_desktop_action", {"snapshot_id": data["id"], "kind": "type", "element": 0,
                                           "text": task[len("desktop type "):], "key": ""}, call_id="fake-desktop-action")], False
+        if text.startswith("## Task from") and "browser_snapshot" in tool_names:
+            task = text.split("\n", 2)[1].strip()
+            if task.lower().startswith("browser fill "):
+                outputs = [i for i in input if isinstance(i, dict) and i.get("type") == "function_call_output"]
+                if not outputs:
+                    return [function_call("browser_snapshot", {}, call_id="fake-browser-snapshot")], False
+                if outputs[-1].get("call_id") == "fake-browser-snapshot":
+                    try:
+                        data = json.loads(outputs[-1].get("output", "").partition("\n")[2].split("\n========== END", 1)[0].strip())
+                    except (ValueError, TypeError):
+                        return [assistant_message("Browser observation unavailable.")], False
+                    return [function_call("browser_action", {"kind": "fill", "snapshot_id": data["id"], "element": 0,
+                                           "text": task[len("browser fill "):]}, call_id="fake-browser-fill")], False
         if text.startswith("## Task from") and "pc_list" in tool_names and not (
             isinstance(last, dict) and last.get("type") == "function_call_output"
         ):
             # The Computer Agent: "list FOLDER" or "write FILE: TEXT".
             task = text.split("\n", 2)[1].strip()
+            if task.lower().startswith("browse "):
+                return [function_call("browser_action", {"kind": "navigate", "url": task[len("browse "):].strip()}, call_id="fake-browser-navigate")], False
             if task.lower().startswith("background "):
                 # e2e: pc background 600 Desktop: Write-Output ...
                 match = re.match(r"background (\d+) ([^:]+): (.+)", task, re.IGNORECASE)
