@@ -113,15 +113,15 @@ function SendState({
   if (item.status === "check_manually") {
     return (
       <div role="alert" className="mx-4 mb-3 rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn">
-        <p className="font-medium">We couldn&apos;t tell if it was posted.</p>
+        <p className="font-medium">{item.platform === "maintenance" ? "This operation needs manual inspection." : "We couldn't tell if it was posted."}</p>
         {error && <p className="mt-0.5">{error}</p>}
-        <p className="mt-1">Check {item.platform_label}, then tell us:</p>
+        <p className="mt-1">{item.platform === "maintenance" ? "Inspect the proposal and files in Settings → Advanced, then record the result:" : `Check ${item.platform_label}, then tell us:`}</p>
         <div className="mt-1.5 flex flex-wrap gap-2">
           <button type="button" disabled={busy} onClick={() => onResolve(true)} className="rounded-md bg-warn px-2.5 py-1 font-medium text-white">
-            It&apos;s posted
+            {item.platform === "maintenance" ? "Completed" : "It's posted"}
           </button>
           <button type="button" disabled={busy} onClick={() => onResolve(false)} className="rounded-md border border-warn/50 px-2.5 py-1 font-medium">
-            It didn&apos;t post
+            {item.platform === "maintenance" ? "Not completed" : "It didn't post"}
           </button>
         </div>
       </div>
@@ -131,7 +131,7 @@ function SendState({
   if (blocked.length || error) {
     return (
       <p role="note" className="mx-4 mb-3 rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">
-        {onPc(item) ? "Not done" : item.platform === "skills" ? "Not saved" : "Not posted"}: {blocked[0] ?? error}
+        {onPc(item) || item.platform === "maintenance" ? "Not done" : item.platform === "skills" ? "Not saved" : "Not posted"}: {blocked[0] ?? error}
       </p>
     );
   }
@@ -208,7 +208,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
           </span>
         ) : null}
         <span className={`${item.planned_at && (item.status === "waiting" || item.status === "approved") ? "" : "ml-auto"} rounded-full px-2 py-0.5 text-[11px] font-medium ${status.style}`} data-testid="approval-status">
-          {item.status === "posted" && item.item_type === "update" ? "Queued" : item.status === "posted" && item.platform === "skills" ? "Saved" : item.status === "posted" && onPc(item)
+          {item.status === "posted" && item.item_type.startsWith("code_") ? item.item_type === "code_test" ? "Tested" : item.item_type === "code_apply" ? "Applied" : "Restored" : item.status === "posted" && item.item_type === "update" ? "Queued" : item.status === "posted" && item.platform === "skills" ? "Saved" : item.status === "posted" && onPc(item)
             ? item.meta.op === "start_job" ? "Started" : "Done"
             : item.status === "posted" && isSent(item) ? "Sent" : status.label}
         </span>
@@ -285,6 +285,9 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
           <p dir="auto" className={`whitespace-pre-wrap text-sm leading-relaxed ${urduClass(item.text)}`}>
             {item.text}
           </p>
+        )}
+        {item.status === "posted" && item.platform === "maintenance" && typeof item.meta.result === "string" && (
+          <p role="status" className="mt-2 whitespace-pre-wrap text-sm text-ok">{item.meta.result}</p>
         )}
         {item.images.length > 0 && (
           <ul aria-label="Images" className="mt-3 flex flex-wrap gap-2">
@@ -457,7 +460,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
                 <button type="button" className={primary} disabled={busy} onClick={() => run("approve")}>
                   {busy && item.can_send ? "Working…" : item.can_send ? (item.item_type === "file_transfer"
                     ? item.platform === "computer" ? "Approve & copy" : item.platform === "google" ? "Approve & save" : "Approve & send"
-                    : item.item_type === "update" ? "Approve & update" : onPc(item) ? "Approve & run" : item.platform === "skills" ? "Approve & save" : "Approve & post") : "Approve"}
+                    : item.item_type.startsWith("code_") ? `Approve & ${item.meta.op}` : item.item_type === "update" ? "Approve & update" : onPc(item) ? "Approve & run" : item.platform === "skills" ? "Approve & save" : "Approve & post") : "Approve"}
                 </button>
                 {item.can_always_allow && (
                   <button

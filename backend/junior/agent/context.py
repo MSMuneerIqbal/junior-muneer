@@ -41,6 +41,7 @@ class TurnContext:
     desktop_snapshots: int = 0
     browser_snapshots: int = 0
     skill_drafts: int = 0
+    code_session: dict | None = None
     last_pc_file: Any = None  # the PC file just checked for attaching (its real path)
     skills_loaded: set[str] = field(default_factory=set)  # agent:name, once per agent per turn
     # Jobs that got a proposal card in this turn (one card per job).

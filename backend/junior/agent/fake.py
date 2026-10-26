@@ -135,6 +135,10 @@ class FakeModel(Model):
         if text.startswith("## Request from") and "score_job" in tool_names:
             return self._fake_freelance(input, text), False
         last = input[-1] if isinstance(input, list) and input else None
+        if "ask_code_agent" in tool_names and text.lower().startswith("propose code "):
+            if isinstance(last, dict) and last.get("type") == "function_call_output":
+                return [assistant_message(str(last.get("output", "")))], False
+            return [function_call("ask_code_agent", {"request": text, "your_words": text}, call_id="fake-code-proposal")], False
         if "place_document" in tool_names and text.lower().startswith("place document "):
             if isinstance(last, dict) and last.get("type") == "function_call_output":
                 return [assistant_message(last.get("output", ""))], False
@@ -321,6 +325,9 @@ class FakeModel(Model):
 
     async def get_response(self, system_instructions, input, model_settings, tools, output_schema, handoffs, tracing, **kwargs) -> ModelResponse:  # noqa: E501
         if output_schema is not None and not output_schema.is_plain_text():
+            if "CodeChange" in output_schema.name() and not any(isinstance(item, dict) and item.get("type") == "function_call_output" for item in input):
+                output = [function_call("code_read", {"path": "backend/junior/demo.py"}, call_id="fake-code-read")]
+                return ModelResponse(output=output, usage=_usage(str(input), str(output)), response_id="fake")
             answer = _team_answer(output_schema.name(), _last_user_text(input))
             if "ResearchDocument" in output_schema.name():
                 await asyncio.sleep(2)
@@ -394,6 +401,8 @@ def _fake_order(their: str) -> dict:
 
 def _team_answer(schema: str, prompt: str) -> dict:
     """Fake Writer, Checker and Humanizer answers (structured, like the real ones)."""
+    if "CodeChange" in schema:
+        return {"summary": "Fix the synthetic square function", "files": [{"path": "backend/junior/demo.py", "content": "def square(n):\n    return n * n\n"}]}
     request = next((line[len("Request: "):] for line in prompt.splitlines() if line.startswith("Request: ")), "")
     if "ClassNotesDraft" in schema:
         ids = re.search(r"Actual source file IDs: (\[[^\n]*\])", prompt)

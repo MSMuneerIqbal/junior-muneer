@@ -837,7 +837,27 @@ with its links arrives in the chat you asked from, WhatsApp included.
     Initial run found an open SQLite handle; explicit connection closing fixed it. No AI calls/cost, no owner
     update or chat/approval/skill writes. An earlier synthetic temp folder remains after cleanup approval was blocked.
   - Added existing small synthetic news fixtures to Git exceptions so fresh tracked-source tests have their inputs.
-- [ ] **P11-07** User-requested code-change proposals in isolated checkout: readable diff, bounded tests,
+- [x] **P11-07** User-requested code-change proposals in isolated checkout: readable diff, bounded tests,
   explicit apply approval, protected secrets/gate/permissions and rollback.
+  - Done 2026-10-27: Code Proposal Agent uses only bounded fenced tracked-source tools; exact own-user request,
+    Plan/Pause/source checks, four complete reads (24 KB/file), four replacement files/64k text, 120s/$0.25 helper
+    preparation. No code executes during drafting. Protected credentials, permissions/gate, approvals, agents,
+    runtime, dependency/config and migration paths require manual developer review. Filesystem aliases/links refused.
+  - Complete diff on locked-Ask TEST card; native tests have account authority (explicitly disclosed). Full staged
+    pytest or frozen npm + build/types/lint; ten-minute/output cap, no retries, owned tree killed on Pause/Plan/Stop.
+    Entire source manifest verified before/after checks, including unexpected files and unreviewed test changes.
+    Only passed checks enable a separate APPLY review. Exact root/revision/current-byte checks preserve local edits;
+    partial writes undo only unchanged owned writes, uncertain outcomes require inspection and cannot replay.
+    Separate ROLLBACK restores exact original bytes, including line endings; later edits block it. No commit/push/
+    automatic restart. Advanced UI shows status, full diff and review controls; interrupted work never replays.
+  - Reuses current provider/prices. One isolated real-model helper check proposed the correct synthetic fix and
+    waited for TEST approval: 95.0s, estimated $0.004418, no native tests/application or owner writes. Fake AI and
+    E2E use their own tiny Git checkout; the developer/owner source is never changed by those tests.
+  - Checks: full backend 1,207 passed (384/449/374); final code/update 45 passed, final code 22 passed, including
+    ScriptedModel source fencing and uncertain-write tests. Full UI 120 passed/14 skips/two new-flow failures
+    exposed a hidden result label; fixed the card display. Final rebuilt approvals/code/update/posting: 14 passed
+    on desktop/phone, with readable visuals. TypeScript/ESLint, compilation and whitespace passed. No migration.
+    Build now precedes standalone typecheck in fresh updater copies so Next can generate its required types.
+    After deployment ahead of the original checkout, code proposals require locally syncing that checkout first.
 - [ ] **P11-08** Cost/workflow acceptance: task budgets/time/retries/model/screenshot caps, usage, synthetic
   local checks and isolated real-model checks. Optional local speech/new providers require validation first.

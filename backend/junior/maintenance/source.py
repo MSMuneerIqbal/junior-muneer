@@ -111,7 +111,7 @@ def read_json(path, default=None):
     path = Path(path)
     if not path.exists():
         return default
-    if path.is_symlink() or path.stat().st_size > 128_000:
+    if path.is_symlink() or path.stat().st_size > 1_000_000:
         raise MaintenanceError("Invalid maintenance record.")
     try:
         return json.loads(path.read_text(encoding="utf-8"))

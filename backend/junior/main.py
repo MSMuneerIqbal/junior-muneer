@@ -90,6 +90,8 @@ def default_senders(settings, pc_jobs=None, browser=None) -> SenderRegistry:
     registry.add(SkillSender())
     from junior.maintenance.updates import UpdateSender
     registry.add(UpdateSender())
+    from junior.maintenance.code import CodeSender
+    registry.add(CodeSender())
     from junior.transfers.sender import ArchiveWhatsAppSender
     registry.add(ArchiveWhatsAppSender())
     if settings.fake_ai and not registry.for_action("facebook.page.post"):
@@ -138,6 +140,8 @@ def create_app(
         app.state.senders = senders() if senders is not None else default_senders(settings, app.state.pc_jobs, app.state.browser)
         recover_interrupted_sends()
         recover_background()
+        from junior.maintenance.code import recover as recover_code
+        recover_code()
         set_current(app.state.senders)
         app.state.chat = ChatService(app.state.registry, model_provider)
         app.state.openai_voice = voice
@@ -181,6 +185,8 @@ def create_app(
         try:
             yield
         finally:
+            from junior.maintenance.code import STOP
+            STOP.set()
             maintenance_reports.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await maintenance_reports
@@ -219,6 +225,8 @@ def create_app(
 
     from junior.maintenance.updates import router as updates_router, MaintenanceGuard
     app.include_router(updates_router)
+    from junior.maintenance.code import router as code_router
+    app.include_router(code_router)
     app.add_middleware(MaintenanceGuard)
 
     app.include_router(chat_router)

@@ -218,8 +218,9 @@ class Supervisor:
         self.run([python, "-c", "from junior.db import init_db; init_db()"], backend, env, "Rehearsing database migrations", 120)
         self.run([python, "-m", "pytest", "-q"], backend, env, "Running backend safety and regression tests", 1200)
         for args, label in [(["ci", "--ignore-scripts", "--no-audit", "--no-fund"], "Installing dashboard lockfile"),
+                            (["run", "build"], "Building dashboard"),
                             (["run", "typecheck"], "Checking dashboard types"), (["run", "lint"], "Checking dashboard lint"),
-                            (["run", "build"], "Building dashboard")]:
+                            ]:
             self.run(npm_command(*args), candidate / "frontend", env, label)
         clean(self.root)  # concurrent local changes block activation too
         if git(self.root, "rev-parse", "HEAD") != request["root_head"]:

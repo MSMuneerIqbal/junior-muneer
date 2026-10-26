@@ -1071,6 +1071,20 @@ def ask_documents_agent(ctx: Ctx, request: str, your_words: str,
 TOOL_FACTORIES["documents"] = lambda: [ask_documents_agent]
 
 
+def _code_tools():
+    from junior.maintenance.code_tools import ask_code_agent, code_review
+    return [ask_code_agent, code_review]
+
+
+def _code_source_tools():
+    from junior.maintenance.code_tools import code_files, code_read
+    return [code_files, code_read]
+
+
+TOOL_FACTORIES["code"] = _code_tools
+TOOL_FACTORIES["code_sources"] = _code_source_tools
+
+
 def _notes_tools():
     from junior.notes.tools import NOTES_TOOLS
     return list(NOTES_TOOLS)

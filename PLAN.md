@@ -699,6 +699,17 @@ Build one acceptance-sized task at a time, with safety tests and regression chec
 7. **P11-07 — Tested code-change proposals.** User-requested code edits happen in an isolated checkout with
    bounded commands, a readable diff and checks. Apply only after approval; protect secrets and permission/gate
    internals from automatic weakening. This adds workflows, not model-weight training.
+   The Code Proposal Agent reads at most four complete tracked files (24 KB each), stages at most four files/
+   64k text and prepares a locked-Ask TEST card containing the complete diff. Native tests have account authority;
+   clean environments and source copies are not a security sandbox. Python uses full isolated pytest; frontend
+   uses npm's frozen lockfile, build, types and lint. Test execution is capped at ten minutes without retries.
+   The entire exported source manifest is pinned before/after checks; modified targets also bind exact current
+   bytes and Git revision. Only passed checks permit a separate APPLY card. Application never commits, pushes or
+   restarts, preserves conflicting local work and retains exact bytes for a separate ROLLBACK review. Interrupted
+   tests are visible; interrupted writes require manual inspection and never replay. Credential/policy/agent/
+   approval/runtime/dependency/migration files are protected. Settings → Advanced shows results and full diffs.
+   Helper preparation is limited to 120 seconds and $0.25 within the existing turn/day budget. Ten proposal copies
+   are retained before local archiving is needed. No new coding provider or WhatsApp integration is required.
 8. **P11-08 — Cost and workflow acceptance.** Reuse existing budget/time/retry limits and provider settings;
    add task-model/screenshot limits where missing, usage estimates and explicit failure states. Verify real local
    operations on synthetic fixtures and model quality on isolated data. Validate any optional local STT/TTS or new

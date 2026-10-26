@@ -7,6 +7,7 @@ import { GitHubConnect } from "@/components/GitHubConnect";
 import { SettingsIcon } from "@/components/icons";
 import SkillsSettings from "@/components/SkillsSettings";
 import UpdatesSettings from "@/components/UpdatesSettings";
+import CodeSettings from "@/components/CodeSettings";
 import ComputerJobs from "@/components/ComputerJobs";
 import DesktopSettings from "@/components/DesktopSettings";
 import BrowserSettings from "@/components/BrowserSettings";
@@ -1530,6 +1531,7 @@ function AdvancedSection() {
   return (
     <Section id="advanced" title="Advanced" description="What each agent uses right now.">
       <UpdatesSettings />
+      <CodeSettings />
       <div className="px-6 py-4">
         <button
           type="button"

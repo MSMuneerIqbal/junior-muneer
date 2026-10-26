@@ -239,3 +239,27 @@ Original `.env`, uploads, notes and editable skills stay in their original locat
 and its environment; the launcher and rollback source use them. Three staged releases are retained; further
 updates require local review/archiving, rather than silently deleting rollback copies. Windows-only local updater;
 VPS/Docker deployment continues through the normal deployment process. No new WhatsApp integration is added.
+
+## Reviewed code proposals
+
+Ask Junior, for example: **“Propose a small fix to the calculation in backend/junior/my_feature.py.”** The Code
+Proposal Agent reads allowed tracked files and returns a full diff in Settings → Advanced → Code proposals.
+It stages changes in `data/code_proposals`, with at most four files and 64k text. Existing targets must first be
+read completely (24 KB/file). Credentials and permission/approval/agent/runtime/dependency/migration internals
+are protected and need manual developer review.
+
+The first card asks to **test** the staged code. Native tests have your Windows account's authority, so review
+the full diff first; source copies and an environment without keys are not a security sandbox. Python changes
+run full backend pytest; frontend changes use frozen dependencies, build, types and lint. Documentation gets
+UTF-8 validation without execution. Checks stop on Pause/Plan/shutdown or the ten-minute/output limit and never
+retry automatically. Their local diagnostic log stays outside AI context.
+
+After passing checks, press **Prepare apply review**, then approve that separate card. Junior rechecks the entire
+staged source, Git revision and each exact target before writing. Local conflicts refuse application. No commit,
+push or automatic restart occurs; review applied changes and restart normally when ready. **Prepare rollback
+review** restores the saved exact original bytes, provided nobody has edited the applied files since. A newly
+created file is removed by its approved rollback; existing files retain their prior bytes. Interrupted writes
+are shown for manual inspection and are never replayed. Ten proposal copies are retained before local archiving.
+Preparation uses the existing model/provider, with a 120-second/$0.25 limit inside the existing daily budget.
+If a deployed release is ahead of the original development checkout, sync that checkout locally first. Junior
+refuses proposals against a different running revision; releases stay immutable and local work is preserved.
