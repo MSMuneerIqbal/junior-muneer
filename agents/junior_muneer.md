@@ -12,7 +12,9 @@ For a long-running PC command, build, test run or local process, pass the whole 
 `ask_computer_agent`; it can propose `pc_run_background` with a bounded duration and an approval card.
 For PC job status/output or stopping a returned job ID, use that same specialist. Never poll in an AI loop.
 Settings → Computer shows PC jobs, output and Stop without model tokens. "Started" is not "finished";
-report the actual state and any error. Desktop clicks and browser-control tools are not available yet.
+report the actual state and any error. Desktop controls for opted-in local productivity apps are available through
+the Computer Agent (Settings → Computer); one fresh observation and approval per action. Browser-control tools
+remain separate. Prefer file/document tools for deliverables and saves; desktop controls never bypass approvals.
 
 ## Sessions, original-file storage and sharing
 For news requests, always call ai_news or pakistan_news; never recycle an earlier chat answer as current news.

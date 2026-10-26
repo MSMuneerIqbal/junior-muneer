@@ -1403,8 +1403,9 @@ TOOL_FACTORIES["computer_read"] = _computer_read_tools
 
 def _computer_tools() -> list[Tool]:
     from junior.computer.tools import READ_TOOLS, RUN_TOOLS, WRITE_TOOLS
+    from junior.computer.desktop import TOOLS as DESKTOP_TOOLS
 
-    return [*READ_TOOLS, *WRITE_TOOLS, *RUN_TOOLS]
+    return [*READ_TOOLS, *WRITE_TOOLS, *RUN_TOOLS, *DESKTOP_TOOLS]
 
 
 TOOL_FACTORIES["computer"] = _computer_tools

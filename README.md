@@ -19,6 +19,11 @@ then open **Settings → Computer → PC jobs** to see the status, view output o
 10 minutes (up to one hour when requested), with at most three jobs at once. Output checks here use no AI tokens.
 Jobs stop on Pause, Computer off, Plan mode or backend shutdown; stopping keeps any partial changes.
 
+**Desktop apps:** in **Settings → Computer → Desktop controls**, opt in and select supported apps. Open an app,
+then ask Junior to inspect its window or type into an observed editor. A window preview and the exact action wait
+for approval; typed text can be edited on the card. Desktop controls require an unlocked Windows PC. File creation
+and saving still use the existing file/document tools; browser control is a separate planned step.
+
 ## What he can do
 
 | Area | What |

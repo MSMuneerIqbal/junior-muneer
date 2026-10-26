@@ -652,6 +652,8 @@ Build one acceptance-sized task at a time, with safety tests and regression chec
    clicks, typing and hotkeys. Show the target and proposed operation before approval; recheck window identity and
    foreground state at execution. Stop on changed targets; cap action batches and screenshot size/retention. Keep
    password entry/payment/account-setting restrictions. No promise of secure-screen/UAC/locked-PC control.
+   Built 2026-10-26 for the selected productivity apps using UIA and PrintWindow. Targeted text entry can restore
+   the approved edit control after dashboard focus changes, then rechecks it. Detailed limits/checks are in TASK.md.
 3. **P11-03 — Browser tools.** Dedicated local browser profile, site scope, accessible page snapshots, navigation,
    bounded extraction/downloads and explicit proposed form/click actions. Separate read and change permissions;
    web content cannot grant permissions. Protect local/private network addresses and secret/profile files. Prevent

@@ -16,7 +16,7 @@ from junior.settings_store import get_setting
 
 log = logging.getLogger(__name__)
 
-ACTIONS = ("computer.write", "computer.move", "computer.delete", "computer.run", "computer.job.stop")
+ACTIONS = ("computer.write", "computer.move", "computer.delete", "computer.run", "computer.job.stop", "computer.desktop.input")
 
 
 def to_recycle_bin(path: Path) -> None:
@@ -51,6 +51,9 @@ class ComputerSender:
     async def send(self, out: Outgoing) -> SendResult:
         op = out.meta.get("op", "")
         try:
+            if op == "desktop":
+                from junior.computer.desktop import send
+                return await send(out)
             if op in ("start_job", "stop_job"):
                 if self.jobs is None:
                     return SendResult("failed", "PC job supervision isn't available; nothing ran.")

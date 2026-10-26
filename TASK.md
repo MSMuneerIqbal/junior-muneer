@@ -736,8 +736,30 @@ with its links arrives in the chat you asked from, WhatsApp included.
     command and waited for approval; approval started it and real Windows output was captured, completed with code 0.
     28.8s, **$0.017213908**. No live chats/approvals were used and no new WhatsApp integration or sending was tested.
     Live DB backed up before migration; app restarted. Next is P11-02; no phase acceptance or push claimed.
-- [ ] **P11-02** Opt-in Windows desktop adapter: windows, focus, screenshots, approved clicks/typing/hotkeys,
+- [x] **P11-02** Opt-in Windows desktop adapter: windows, focus, screenshots, approved clicks/typing/hotkeys,
   foreground/target rechecks, action caps and security-screen failure states; synthetic-app verification.
+  - **Done 2026-10-26.** Settings → Computer has desktop opt-in (off by default), eight supported productivity-app
+    process choices, allowed-window discovery and previews. Computer Agent: pc_windows, pc_desktop_snapshot and
+    pc_desktop_action. Input is locked Ask with one attempt per ten-minute snapshot; review shows the target,
+    window-only image and editable typed text. It checks process creation identity/title/rectangle, UIA control
+    identity and foreground/focus again. Approval may restore the exact target after dashboard focus changes.
+    No browsers/terminals, file dialogs, passwords or protected submissions/settings. Text uses Unicode SendInput;
+    UIA selects the reviewed document/edit control. PrintWindow captures only that window; no screen crop fallback.
+  - Four captures per AI turn, 1,000 typed characters, 80 controls, eight-second worker deadline, 100 cached images
+    at most; previews expire after a day and are pruned on use. Deadline checks run after blocking UIA queries,
+    preventing late keystrokes; ambiguous input is check_manually and never retried. Outside content is marked
+    before vision. Known secrets rejected by validation are not echoed back. Fake AI uses a simulated desktop.
+  - **Checks:** full backend **1,067 passed** in three isolated batches; final desktop suite **32 passed** after
+    additional vision/validation/slow-focus safeguards. Full browser **112 passed / 14 existing skips**; final
+    **10 desktop/phone checks passed**, including readable desktop-card editing, approvals, PC jobs and screenshots.
+    TypeScript/ESLint and whitespace passed; screenshots inspected and temporary visual spec removed.
+  - **Native check:** scripts/check_desktop_native.py opened only its disposable native editor/approval simulator,
+    verified real PrintWindow capture and exact Unicode text through UIA ValuePattern, including focus restoration
+    after simulated dashboard activation; child ownership/automatic cleanup and isolated DB. No model cost or user
+    files/apps changed. This is not a claim that every listed third-party app exposes all controls identically.
+    **Real model:** isolated synthetic desktop, exact typing card waited for approval, then executed; 22s,
+    **$0.017237116**. Current backend restarted and desktop endpoint healthy, desktop remains off on Muneer's profile.
+    No new WhatsApp work or sending. Next P11-03; no push.
 - [ ] **P11-03** Isolated browser tools: scoped sites, snapshots, navigation/extraction/downloads and approved
   form actions; protect private networks/secrets, preserve outside provenance; local-site end-to-end checks.
 - [ ] **P11-04** Explicit existing-browser connection and adapter readiness: visible connection/disconnect,

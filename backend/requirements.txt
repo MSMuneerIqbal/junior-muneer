@@ -18,6 +18,10 @@ pypdfium2==5.14.0  # renders scanned lecture PDF pages for the vision reader
 openpyxl==3.1.5  # reads Excel files
 google-genai==2.31.0  # live calls with Gemini Live
 send2trash==2.1.0  # deletes and replaced files go to the Recycle Bin (Phase 9)
+Pillow==13.0.0  # bounded window-only desktop captures (also used by document/image features)
+pywin32==312; sys_platform == "win32"
+uiautomation==2.0.29; sys_platform == "win32"
+comtypes==1.4.17; sys_platform == "win32"
 lameenc==1.9.0  # Gemini's spoken answers -> MP3 (WhatsApp takes MP3, not raw audio)
 
 # Tests

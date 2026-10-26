@@ -20,6 +20,16 @@ const isSent = (item: ApprovalItem) => SENT_KINDS.has(item.item_type) || item.pl
 // Files, folders and commands on your PC are "done".
 const onPc = (item: ApprovalItem) => item.platform === "computer";
 
+function desktopAction(item: ApprovalItem): { kind: string; text: string; key: string } | null {
+  if (item.meta.op !== "desktop") return null;
+  try {
+    const body = JSON.parse(item.text);
+    if (body && ["focus", "click", "type", "key"].includes(body.kind)
+      && typeof body.text === "string" && typeof body.key === "string") return body;
+  } catch {}
+  return null;
+}
+
 /** A change to a file on your PC: removed lines red, added lines green. */
 function Diff({ diff }: { diff: string }) {
   return (
@@ -135,11 +145,15 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
   const [error, setError] = useState<string | null>(null);
   const waiting = item.status === "waiting";
   const status = STATUS[item.status];
+  const desktop = desktopAction(item);
 
   async function run(action: Parameters<typeof act>[0], body?: Parameters<typeof act>[1]) {
     setBusy(true);
     setError(null);
     try {
+      if (action === "edit" && desktop?.kind === "type" && body && typeof body === "object" && "text" in body) {
+        body = { ...body, text: JSON.stringify({ ...JSON.parse(item.text), text: body.text }, null, 2) };
+      }
       await act(action, body);
       if (action === "edit") setEditing(null);
       if (action === "plan") setPlanning(null);
@@ -205,7 +219,24 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
         ) : onPc(item) ? (
           <>
             {typeof item.meta.diff === "string" && item.meta.diff && <Diff diff={item.meta.diff} />}
-            {item.item_type === "file" ? (
+            {item.meta.op === "desktop" && typeof item.meta.preview_url === "string"
+              && /^\/api\/computer\/desktop\/captures\/[a-f0-9]{32}$/.test(item.meta.preview_url) && (
+                <figure className="mb-2">
+                  <figcaption className="mb-1 text-xs text-muted">Window observed for this action</figcaption>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- expiring local window capture */}
+                  <img src={`${BACKEND_URL}${item.meta.preview_url}`} alt="Window observed for the desktop approval"
+                    className="max-h-72 max-w-full rounded-lg border border-line object-contain" />
+                </figure>
+              )}
+            {desktop ? (
+              <div className="space-y-2 text-sm">
+                <p>{desktop.kind === "focus" ? "Bring this app to the front."
+                  : desktop.kind === "type" ? `Focus the selected editor and type into ${item.meta.target_label || "the document"}:`
+                  : desktop.kind === "key" ? `Press ${desktop.key.toUpperCase()} in ${item.meta.target_label || "the editor"}.`
+                  : `Click ${item.meta.target_label || "the selected control"}.`}</p>
+                {desktop.kind === "type" && <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-line p-2 font-sans text-sm">{desktop.text}</pre>}
+              </div>
+            ) : item.item_type === "file" ? (
               <details open={!item.meta.diff} className="mt-1.5">
                 <summary className="cursor-pointer text-xs text-muted">{item.meta.diff ? "The whole new text" : "The text"}</summary>
                 <pre className="mt-1 max-h-80 overflow-auto rounded-lg border border-line bg-bg p-2 font-mono text-[12px] leading-relaxed whitespace-pre-wrap">
@@ -423,7 +454,8 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
             )}
             {waiting && (
               <>
-                <button type="button" className={button} disabled={busy || item.item_type === "file_transfer"} onClick={() => setEditing(item.text)}>
+                <button type="button" className={button} disabled={busy || item.item_type === "file_transfer" || (!!desktop && desktop.kind !== "type")}
+                  onClick={() => setEditing(desktop?.kind === "type" ? desktop.text : item.text)}>
                   Edit
                 </button>
                 {item.item_type === "post" && (
