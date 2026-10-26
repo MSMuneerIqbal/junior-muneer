@@ -30,6 +30,7 @@ def isolated_settings(tmp_path, monkeypatch, migrated_db):
     monkeypatch.setenv("DATA_DIR", str(data))
     monkeypatch.setenv("OPENAI_API_KEY", "")
     monkeypatch.setenv("DEEPSEEK_API_KEY", "")
+    monkeypatch.setenv("GEMINI_API_KEY", "")
     # Your real connections in backend/.env must never be used by tests.
     for key in ("ARTIFICIAL_ANALYSIS_API_KEY", "META_APP_ID", "META_APP_SECRET", "META_PAGE_ID",
                 "META_PAGE_TOKEN", "META_IG_USER_ID", "LINKEDIN_ACCESS_TOKEN", "LINKEDIN_PERSON_ID", "GITHUB_TOKEN", "GITHUB_AUTH", "GITHUB_USER", "GITHUB_CLIENT_ID",

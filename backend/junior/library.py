@@ -74,6 +74,46 @@ class FileEdit(BaseModel):
     archived: bool = False
 
 
+class FileRemoval(BaseModel):
+    revision: str = Field(min_length=64, max_length=64)
+
+
+@router.delete("/api/library/files/{number}")
+def delete_file(number: int, body: FileRemoval):
+    from junior.audit import audit
+    from junior.computer.sender import to_recycle_bin
+    from junior.db import ApprovalItem, BackgroundTask
+    import re
+    with LOCK, session_scope() as s:
+        row, folder = _get(s, number)
+        if output(row, folder)["revision"] != body.revision:
+            raise HTTPException(409, "This file changed. Reopen its menu before deleting it.")
+        for task in s.scalars(select(BackgroundTask).where(BackgroundTask.status == "running")):
+            if number in task.file_ids or re.search(rf"\[file {number}:", task.request):
+                raise HTTPException(409, "A running task uses this file. Stop it or wait for it to finish before deleting.")
+        pending = []
+        for item in s.scalars(select(ApprovalItem).where(ApprovalItem.status.in_(("waiting", "approved", "check_manually")))):
+            if number in (item.meta.get("snapshot_id"), item.meta.get("source_file_id")):
+                if item.meta.get("sending_at") or item.status == "check_manually":
+                    raise HTTPException(409, "An action is sending or awaiting a manual check for this file. Resolve it before deleting.")
+                pending.append(item)
+        if row.stored_as:
+            root = files_dir().resolve()
+            path = root / row.stored_as
+            if path.is_symlink() or path.resolve().parent != root:
+                raise HTTPException(409, "This stored path is not a normal Junior file.")
+            if path.exists():
+                try:
+                    to_recycle_bin(path)
+                except OSError:
+                    raise HTTPException(409, "Couldn't confirm moving this copy to the Recycle Bin. Reopen the file before trying again.") from None
+        for item in pending:
+            item.status, item.reason = "rejected", "The source file was deleted from Junior."
+        s.delete(row)
+    audit("action", "library_file_deleted", detail={"file_id": number})
+    return {"deleted_id": number}
+
+
 @router.put("/api/library/files/{number}")
 def edit_file(number: int, body: FileEdit):
     with LOCK, session_scope() as s:

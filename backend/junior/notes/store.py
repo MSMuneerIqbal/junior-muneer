@@ -245,6 +245,30 @@ def get_note(note_id: int):
         return out(_get(s, note_id))
 
 
+@router.delete("/api/notes/{note_id}")
+def delete_note(note_id: int, body: FolderRevision):
+    from junior.computer.sender import to_recycle_bin
+    from junior.db import BackgroundTask
+    with LOCK, session_scope() as s:
+        note = _get(s, note_id)
+        if out(note)["revision"] != body.revision:
+            raise HTTPException(409, "These notes changed. Reopen their menu before deleting.")
+        task = s.get(BackgroundTask, note.task_id) if note.task_id else None
+        if task and task.status == "running":
+            raise HTTPException(409, "These notes are still being saved. Wait for the task to finish before deleting.")
+        path = _storage_path(note, note.folder.name)
+        if path.is_symlink():
+            raise HTTPException(409, "The note's storage file cannot be a link.")
+        if path.exists():
+            try:
+                to_recycle_bin(path)
+            except OSError:
+                raise HTTPException(409, "Couldn't confirm moving these notes to the Recycle Bin. Reopen them before trying again.") from None
+        s.delete(note)
+    audit("action", "class_note_deleted", detail={"note_id": note_id})
+    return {"deleted_id": note_id}
+
+
 class NoteEdit(BaseModel):
     model_config = ConfigDict(extra="forbid")
     revision: str = Field(min_length=64, max_length=64)

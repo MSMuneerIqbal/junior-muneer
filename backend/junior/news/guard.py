@@ -4,7 +4,7 @@ The news agent may only point to articles by their number in the list of article
 really read today. Links and dates are attached here, from those articles, so the AI can't
 invent a link or change one. An item is removed when:
     - it points to no article that was read (an invented item),
-    - one of its articles is older than 15 days (or dated in the future),
+    - one of its articles is older than three days (or dated in the future),
     - it contains a number that none of its articles contains (an invented figure),
     - its section isn't one of the digest's sections.
 Any link the AI writes into the text is removed. Answers to questions keep only links to
@@ -93,7 +93,7 @@ def _allowed_numbers(articles: list[Article]) -> set[str]:
 
 def guard_digest(raw: DigestIn, articles: dict[int, Article], topic: str, now: datetime) -> dict:
     """The checked digest: sections of items with real links and dates, plus what was removed."""
-    oldest, newest = now - timedelta(days=WINDOW_DAYS), now + timedelta(days=1)
+    oldest, newest = now - timedelta(days=WINDOW_DAYS), now
     names = SECTIONS[topic]
     sections: dict[str, list[dict]] = {key: [] for key in names}
     removed: list[dict] = []
@@ -111,7 +111,7 @@ def guard_digest(raw: DigestIn, articles: dict[int, Article], topic: str, now: d
                 remove(item, "not based on an article that was read")
                 continue
             if any(not oldest <= a.published <= newest for a in used):
-                remove(item, "uses a story older than 15 days")
+                remove(item, f"uses a story outside the last {WINDOW_DAYS} days or dated in the future")
                 continue
             headline, n1 = strip_links(item.headline)
             summary, n2 = strip_links(item.summary)
@@ -169,11 +169,13 @@ def top_stories(sections: list[dict], n: int = TOP_N) -> list[dict]:
     return picked
 
 
-def keep_official_links(text: str, sites: list[str] | tuple[str, ...]) -> tuple[str, int]:
+def keep_official_links(text: str, sites: list[str] | tuple[str, ...], known_urls: set[str] | None = None) -> tuple[str, int]:
     """In an answer, keep links only to official sites; others are removed (their text stays)."""
     removed = 0
 
     def ok(url: str) -> bool:
+        if known_urls and url in known_urls:
+            return True  # an exact, publisher-checked Google News RSS link from this fresh digest
         host = site_of(url)
         return urlsplit(url).scheme in ("http", "https") and any(host == s or host.endswith("." + s) for s in sites)
 

@@ -210,6 +210,18 @@ class NewsDigest(Base):
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
 
 
+class NewsDelivery(Base):
+    """Persistent per-story reservations prevent repeats, even after an uncertain SMTP result/restart."""
+    __tablename__ = "news_deliveries"
+    channel: Mapped[str] = mapped_column(String(20), primary_key=True)
+    topic: Mapped[str] = mapped_column(String(20), primary_key=True)
+    story_key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    batch_id: Mapped[str] = mapped_column(String(36), index=True)
+    digest_id: Mapped[int | None] = mapped_column(ForeignKey("news_digests.id", ondelete="SET NULL"), nullable=True)
+    state: Mapped[str] = mapped_column(String(20), default="sending")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
 class Job(Base):
     """A job post you pasted, scored by the Freelance Manager (junior/freelance/jobs.py)."""
 

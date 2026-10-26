@@ -28,7 +28,15 @@ class FakeConnection:
             await asyncio.sleep(0.02)  # like a real call: tools get time to run
             yield event
         if self.events:
-            await asyncio.sleep(0.5)  # the line stays open a moment before hanging up
+            # Keep the synthetic line open until dispatched tools reply, rather than racing a fixed half second.
+            expected = {e.get("call_id") for e in self.events if e.get("type") == "response.function_call_arguments.done"}
+            deadline = asyncio.get_running_loop().time() + 3
+            while expected and asyncio.get_running_loop().time() < deadline:
+                done = {e["item"]["call_id"] for e in self.sent if e.get("type") == "conversation.item.create" and e.get("item", {}).get("type") == "function_call_output"}
+                if expected <= done:
+                    break
+                await asyncio.sleep(0.01)
+            await asyncio.sleep(0.05)
 
     async def send(self, event):
         self.sent.append(event)

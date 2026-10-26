@@ -44,6 +44,9 @@ FEEDS = {
 
 @pytest.fixture(autouse=True)
 def offline_news(monkeypatch):
+    async def no_search(*args, **kwargs):
+        return [], None
+    monkeypatch.setattr("junior.news.discovery.discover_news", no_search)
     transport = httpx.MockTransport(lambda r: httpx.Response(200, content=FEEDS[str(r.url)]) if str(r.url) in FEEDS else httpx.Response(404))
     monkeypatch.setattr(digest_module, "load_sources", lambda: [OPENAI, DAWN])
     monkeypatch.setattr(

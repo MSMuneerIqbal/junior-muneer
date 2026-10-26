@@ -35,7 +35,8 @@ test("folder menus rename and delete safely; Back restores the folder, filters a
   await expect.poll(() => page.getByRole("region", { name: "Notes browser", exact: true }).evaluate((el) => el.scrollTop)).toBeGreaterThanOrEqual(Math.max(0, scroll - 10));
   await page.reload();
   await expect(page.getByRole("link", { name: /^Open file Class-/ })).toHaveCount(12);
-  await page.getByRole("checkbox", { name: "Show archived notes", exact: true }).check();
+  await page.getByRole("checkbox", { name: "Show archived notes", exact: true }).click();
+  await expect(page.getByRole("checkbox", { name: "Show archived notes", exact: true })).toBeChecked();
   await page.reload();
   await expect(page.getByRole("checkbox", { name: "Show archived notes", exact: true })).toBeChecked();
   await page.goBack();

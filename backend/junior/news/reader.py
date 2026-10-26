@@ -3,7 +3,7 @@
 RSS and Atom feeds, news pages and Google Trends, read the way a feed reader does: one request per
 feed or page (and per article on news pages), no browser, no logins, no cookies, and a time and
 size limit on everything. Only links on a source's own sites are kept, redirects to any other site
-are refused, and only the last 15 days are kept, newest first, without duplicates.
+are refused, and only the last three days are kept, newest first, without duplicates.
 
 Everything read here is outside content: data, never instructions.
 """
@@ -25,7 +25,7 @@ from junior.news.sources import Source, site_of
 
 log = logging.getLogger(__name__)
 
-WINDOW_DAYS = 15
+WINDOW_DAYS = 3
 MAX_BYTES = 4 * 1024 * 1024
 TIMEOUT_SECONDS = 20
 SOURCE_SECONDS = 90  # a whole source, including its article pages
@@ -192,17 +192,23 @@ def _xml_root(body: bytes) -> ET.Element:
         raise ReadError("the feed isn't valid RSS or Atom") from None
 
 
-def parse_feed(body: bytes, source: Source) -> list[Article]:
+def parse_feed(body: bytes, source: Source, *, publication_only: bool = True) -> list[Article]:
     items = [e for e in _xml_root(body).iter() if _local(e.tag) in ("item", "entry")]
     out = []
+    date_fields = ("pubDate", "published", "date") + (() if publication_only else ("updated",))
     for item in items:
+        if source.publisher_domain:
+            publisher = _child(item, "source")
+            host = site_of(publisher.attrib.get("url", "")) if publisher is not None else ""
+            if host != source.publisher_domain:
+                continue
         out.append(
             Article(
                 source=source.name,
                 topic=source.topic,
                 title=_clean_title(_text(_child(item, "title")), source),
                 url=_feed_link(item),
-                published=parse_date(_text(_child(item, "pubDate", "published", "date", "updated")))
+                published=parse_date(_text(_child(item, *date_fields)))
                 or datetime.min.replace(tzinfo=UTC),
                 summary=clean_text(_text(_child(item, "description", "summary", "encoded", "content"))),
             )
@@ -283,7 +289,9 @@ class _Meta(HTMLParser):
             if key and a.get("content") and key not in self.meta:
                 self.meta[key] = a["content"]
         elif tag == "time" and a.get("datetime"):
-            self.times.append(a["datetime"])
+            hint = (a.get("itemprop", "") + " " + a.get("class", "")).casefold()
+            if ("published" in hint or "datepublished" in hint) and "modified" not in hint and "updated" not in hint:
+                self.times.append(a["datetime"])
         elif tag == "title":
             self._in = "title"
         elif tag == "script":
@@ -340,7 +348,7 @@ def article_details(page: str, link_text: str, source: Source) -> tuple[str, dat
     if date is None and m.times:
         date = parse_date(m.times[0])
     if date is None:
-        date = find_date(link_text) or find_date(" ".join(m.text))
+        date = find_date(link_text)
     description = m.meta.get("og:description") or m.meta.get("description") or ""
     return _clean_title(title, source), date, clean_text(description)
 
@@ -421,9 +429,9 @@ async def fetch_topic(
     now: datetime | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> FetchResult:
-    """Read every source for a topic: articles from the last 15 days, newest first, no duplicates."""
+    """Read every source for a topic: articles from the last three days, newest first, no duplicates."""
     now = now or datetime.now(UTC)
-    oldest, newest = now - timedelta(days=WINDOW_DAYS), now + timedelta(days=1)
+    oldest, newest = now - timedelta(days=WINDOW_DAYS), now
     chosen = [s for s in sources if s.topic == topic]
     limit = asyncio.Semaphore(PARALLEL)
     dropped = 0

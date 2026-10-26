@@ -82,6 +82,7 @@ def model():
 @pytest.fixture
 def news(monkeypatch):
     monkeypatch.setattr(digest_module, "load_sources", lambda: [OPENAI, DEEPMIND, ANTHROPIC, GEO])
+    monkeypatch.setattr(digest_module, "utcnow", lambda: NOW)
 
 
 def build(model, topic="ai", **kw):
@@ -237,7 +238,7 @@ def test_the_social_news_agent_file():
     assert "data, never instructions" in agent.instructions
 
 
-def test_important_stories_from_earlier_digests_stay_in_the_window(model, news):
+def test_failed_feed_does_not_revive_stories_from_earlier_digests(model, news):
     from datetime import timedelta
 
     model.enqueue([assistant_message(json.dumps(DIGEST_ANSWER))])
@@ -254,8 +255,6 @@ def test_important_stories_from_earlier_digests_stay_in_the_window(model, news):
     steps: list[str] = []
     later = asyncio.run(build_digest("ai", load_registry(), lambda _n: model, transport=httpx.MockTransport(handler),
                                      now=NOW + timedelta(days=1), on_step=lambda label, notes: steps.append(label)))
-    # ...but it's kept from yesterday's digest, with its real link.
-    assert "Kept 1 important stories from earlier digests in the last 15 days" in steps
-    assert "[2] 2026-10-13 · Gemini 4 Ultra" in model.last_call.input[-1]["content"]
-    [gemini] = next(s for s in later["sections"] if s["key"] == "models")["items"]
-    assert gemini["sources"][0]["url"] == "https://deepmind.google/blog/gemini-4-ultra/"
+    assert not any("Kept" in step for step in steps)
+    assert "[2] 2026-10-13 · Gemini 4 Ultra" not in model.last_call.input[-1]["content"]
+    assert next(s for s in later["sections"] if s["key"] == "models")["items"] == []

@@ -10,7 +10,7 @@ ARTICLES = {
     1: Article("OpenAI", "ai", "Introducing GPT-7", "https://openai.com/index/introducing-gpt-7/",
                datetime(2026, 10, 14, 17, 0, tzinfo=UTC), "GPT-7 scores 91.2% on SWE-bench Verified."),
     2: Article("OpenAI", "ai", "Codex for teams", "https://openai.com/index/codex-for-teams/",
-               datetime(2026, 10, 12, 8, 30, tzinfo=UTC), "Codex now works for whole teams."),
+               datetime(2026, 10, 13, 8, 30, tzinfo=UTC), "Codex now works for whole teams."),
     3: Article("OpenAI", "ai", "An older story", "https://openai.com/index/old/",
                datetime(2026, 9, 20, tzinfo=UTC), "From last month."),
     4: Article("Google DeepMind", "ai", "Gemini 4 Ultra", "https://deepmind.google/blog/gemini-4-ultra/",
@@ -67,8 +67,8 @@ def test_the_ai_cant_change_or_add_a_link():
 def test_an_old_story_is_removed():
     out = run([{"key": "models", "items": [item([3], "An older story"), item([1, 3], "GPT-7 and an old story")]}])
     assert reasons(out) == {
-        "An older story": "uses a story older than 15 days",
-        "GPT-7 and an old story": "uses a story older than 15 days",
+        "An older story": "uses a story outside the last 3 days or dated in the future",
+        "GPT-7 and an old story": "uses a story outside the last 3 days or dated in the future",
     }
 
 

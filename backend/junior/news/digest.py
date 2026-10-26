@@ -19,7 +19,9 @@ from junior.audit import audit
 from junior.chat.history import save_usage
 from junior.config import get_settings
 from junior.costs import budget_left
-from junior.db import NewsArticle, NewsDigest, session_scope
+from junior.db import NewsDigest, session_scope
+from junior.db.models import utcnow
+from junior.news.freshness import POLICY_VERSION, recent_sections
 from junior.news.guard import SECTIONS, DigestIn, guard_digest
 from junior.news.leaderboards import fetch_leaderboards
 from junior.news.reader import WINDOW_DAYS, Article, fetch_topic
@@ -33,9 +35,8 @@ TOPICS = ("ai", "pakistan")
 AGENTS = {"ai": "ai_news_agent", "pakistan": "social_news_agent"}
 LABELS = {"ai": "AI", "pakistan": "Pakistan"}
 MAX_ARTICLES = 120  # given to the agent, newest first
-MAX_EARLIER = 40  # important stories kept from earlier digests
 SUMMARY_CHARS = 300
-FRESH_FOR = timedelta(hours=12)  # a question uses the digest if it's at most this old
+FRESH_FOR = timedelta(hours=1)
 
 Step = Callable[[str, list[str] | None], None]
 _locks: dict[tuple[int, str], asyncio.Lock] = {}
@@ -67,44 +68,27 @@ def digest_prompt(topic: str, numbered: dict[int, Article]) -> str:
     )
 
 
-def earlier_digest_articles(topic: str, now: datetime, exclude: set[int]) -> dict[int, Article]:
-    """Articles that earlier digests in the window used (their important stories), newest first."""
-    oldest = now - timedelta(days=WINDOW_DAYS)
-    with session_scope() as s:
-        digests = s.scalars(
-            select(NewsDigest).where(NewsDigest.topic == topic, NewsDigest.built_at >= oldest)
-        ).all()
-        urls = {src["url"] for d in digests for sec in d.data.get("sections", []) for i in sec["items"] for src in i["sources"]}
-        rows = s.scalars(
-            select(NewsArticle)
-            .where(NewsArticle.url.in_(urls), NewsArticle.published_at >= oldest)
-            .order_by(NewsArticle.published_at.desc())
-        ).all()
-        return {
-            r.id: Article(r.source, r.topic, r.title, r.url, r.published_at, r.summary, r.extra or {})
-            for r in rows
-            if r.id not in exclude
-        }
-
-
-def _with_id(row: NewsDigest) -> dict:
+def _with_id(row: NewsDigest, now=None) -> dict:
     from junior.news.guard import top_stories
 
+    sections = recent_sections(row.data.get("sections", []), now or utcnow())
     return {
         **row.data,
+        "sections": sections,
+        "window_days": WINDOW_DAYS,
         "id": row.id,
         "built_at": row.built_at.isoformat(),
         "cost_usd": row.cost_usd,
-        "top": top_stories(row.data.get("sections", [])),
+        "top": top_stories(sections),
     }
 
 
-def latest_digest(topic: str) -> dict | None:
+def latest_digest(topic: str, now=None) -> dict | None:
     with session_scope() as s:
         row = s.scalars(
             select(NewsDigest).where(NewsDigest.topic == topic).order_by(NewsDigest.built_at.desc()).limit(1)
         ).first()
-        return _with_id(row) if row else None
+        return _with_id(row, now) if row else None
 
 
 async def build_digest(
@@ -126,12 +110,32 @@ async def build_digest(
 
     settings = all_settings()
     budget_left(settings)  # stop before spending anything if the cap is reached
-    now = now or datetime.now(UTC)
+    now = now or utcnow()
+    context = TurnContext(conversation_id=None, settings=settings)
+    context.mark_outside()
+    sources = load_sources()
+    discovered, search_problem = [], None
+    if transport is None and not get_settings().fake_ai:
+        from junior.news.discovery import discover_news
+        step("Searching Google for dated news from the last three days")
+        discovered, search_problem = await discover_news(topic, context, now, sources)
     if transport is None and get_settings().fake_ai:
         from junior.news.fake import sample_transport
 
         transport = sample_transport()  # FAKE_AI: sample news, no network
-    fetched = await fetch_topic(topic, load_sources(), now=now, transport=transport)
+    fetched = await fetch_topic(topic, sources, now=now, transport=transport)
+    from junior.news.reader import normalize_url, _title_key
+    seen_urls = {normalize_url(a.url) for a in fetched.articles}
+    seen_titles = {_title_key(a.title) for a in fetched.articles}
+    for article in discovered:
+        if normalize_url(article.url) not in seen_urls and _title_key(article.title) not in seen_titles:
+            fetched.articles.append(article)
+            seen_urls.add(normalize_url(article.url)); seen_titles.add(_title_key(article.title))
+    fetched.articles.sort(key=lambda a: a.published, reverse=True)
+    if search_problem:
+        fetched.failed.append({"source": "Google Search", "reason": search_problem})
+    elif discovered:
+        fetched.read.append("Google Search (official publication dates verified)")
     total = len(fetched.read) + len(fetched.failed)
     step(
         f"Read {len(fetched.read)} of {total} official sources: {len(fetched.articles)} articles from the last {WINDOW_DAYS} days",
@@ -139,17 +143,8 @@ async def build_digest(
     )
     ids = save_articles(fetched.articles, now)
     numbered = {ids[a.url]: a for a in fetched.articles[:MAX_ARTICLES]}
-    # News sites' feeds only carry their latest stories: keep the important ones from earlier
-    # digests in the window too, so a digest really covers the last 15 days.
-    earlier = earlier_digest_articles(topic, now, exclude=set(numbered))
-    for n, a in list(earlier.items())[: MAX_EARLIER]:
-        numbered[n] = a
-    if earlier:
-        step(f"Kept {min(len(earlier), MAX_EARLIER)} important stories from earlier digests in the last {WINDOW_DAYS} days")
     leaderboards = await fetch_leaderboards(transport) if topic == "ai" else None
 
-    context = TurnContext(conversation_id=None, settings=settings)
-    context.mark_outside()  # news is outside content: never instructions, never memories
     if numbered:
         helpers = HelperRunner(registry, model_provider)
         raw = await helpers.run_structured(AGENTS[topic], digest_prompt(topic, numbered), context, DigestIn)
@@ -166,6 +161,8 @@ async def build_digest(
         "topic": topic,
         "label": LABELS[topic],
         "window_days": WINDOW_DAYS,
+        "policy_version": POLICY_VERSION,
+        "google_articles": len(discovered),
         "sections": checked["sections"],
         "removed": checked["removed"],
         "failed": fetched.failed,
@@ -174,11 +171,11 @@ async def build_digest(
         "leaderboards": leaderboards,
     }
     with session_scope() as s:
-        row = NewsDigest(topic=topic, data=data, cost_usd=cost)
+        row = NewsDigest(topic=topic, data=data, cost_usd=cost, built_at=now)
         s.add(row)
         save_usage(s, context.usage, None, None, mode="news")
         s.flush()
-        digest = _with_id(row)
+        digest = _with_id(row, now)
     items = sum(len(sec["items"]) for sec in checked["sections"])
     audit(
         "news",
@@ -204,7 +201,7 @@ async def fresh_digest(topic: str, registry, model_provider, *, on_step: Step | 
     """Today's digest if there is a fresh one, else build it (one build at a time per topic)."""
     async with _lock(topic):
         latest = latest_digest(topic)
-        if latest and datetime.fromisoformat(latest["built_at"]) > datetime.now(UTC) - FRESH_FOR:
+        if latest and latest.get("policy_version") == POLICY_VERSION and datetime.fromisoformat(latest["built_at"]) > utcnow() - FRESH_FOR:
             if on_step:
                 on_step(f"Using today's {LABELS[topic]} digest", None)
             return latest
@@ -243,7 +240,8 @@ async def answer_question(topic: str, question: str, context: TurnContext, on_st
         f"{fence} START OF DIGEST {fence}\n{digest_text(digest)}{rankings}\n{fence} END OF DIGEST {fence}"
     )
     answer = await helpers.run(AGENTS[topic], prompt, context)
-    answer, removed = keep_official_links(answer, official_sites(topic))
+    known = {src["url"] for section in digest["sections"] for item in section["items"] for src in item["sources"]}
+    answer, removed = keep_official_links(answer, official_sites(topic), known)
     if removed and on_step:
         on_step(f"Removed {removed} link(s) to non-official sites from the answer", None)
     return answer
@@ -272,7 +270,7 @@ async def morning_digests(registry, provider_factory, now: datetime | None = Non
     built: list[str] = []
     for topic in TOPICS:
         latest = latest_digest(topic)
-        if latest and datetime.fromisoformat(latest["built_at"]).astimezone(tz).date() == local.date():
+        if latest and latest.get("policy_version") == POLICY_VERSION and datetime.fromisoformat(latest["built_at"]).astimezone(tz).date() == local.date():
             continue
         if topic in _last_try and now - _last_try[topic] < RETRY_AFTER:
             continue

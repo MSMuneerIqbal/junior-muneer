@@ -108,7 +108,7 @@ async def read_feed(client: httpx.AsyncClient, url: str) -> tuple[str, list]:
     source = Source(name=site_of(url), topic="feeds", kind="rss", url=url)
     try:
         _, body = await download(client, url, source)
-        items = parse_feed(body, source)
+        items = parse_feed(body, source, publication_only=False)  # personal Atom feeds may legitimately only have updated
         title = feed_title(body)
     except ReadError as e:
         raise FeedError(NOT_A_FEED if "valid RSS" in str(e) else f"Couldn't read it: {e}.") from None

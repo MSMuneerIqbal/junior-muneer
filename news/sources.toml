@@ -1,4 +1,4 @@
-# Official news sources for the news agents (PLAN.md section 6.4). ONLY these are read.
+# Approved news sources (PLAN 6.4): official publishers plus Muneer's AI News choice. ONLY these are read.
 # You can add or remove sources. A broken entry stops the backend from starting, with a clear message.
 #
 # Each source:
@@ -36,6 +36,16 @@ name = "OpenAI"
 topic = "ai"
 kind = "rss"
 url = "https://openai.com/news/rss.xml"
+
+# Muneer approved ainews.com on 2026-10-26. Its direct reader is Cloudflare-blocked;
+# the public Google News RSS index is readable. Publisher identity and the 72-hour limit are checked in code.
+[[source]]
+name = "AI News (ainews.com)"
+topic = "ai"
+kind = "rss"
+url = "https://news.google.com/rss/search?q=site%3Aainews.com%20when%3A3d&hl=en-US&gl=US&ceid=US%3Aen"
+domains = ["ainews.com"]
+max_items = 15
 
 [[source]]
 name = "Anthropic"

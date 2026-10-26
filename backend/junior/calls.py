@@ -64,7 +64,7 @@ AI_NEWS_TOOL = {
     "type": "function",
     "name": "ai_news",
     "description": (
-        "The AI-News-Agent: AI news of the last 15 days from the big AI companies' own sites: new "
+        "The AI-News-Agent: verified AI news of the last three days from official sources and Google discovery: new "
         "models, benchmarks and which model is best, agents and tools, business moves. Use it for "
         "any AI news question. Returns an answer with sources for you to say briefly."
     ),
@@ -78,7 +78,7 @@ PAKISTAN_NEWS_TOOL = {
     "type": "function",
     "name": "pakistan_news",
     "description": (
-        "The Social-News-Agent: news in Pakistan of the last 15 days from established Pakistani news "
+        "The Social-News-Agent: verified news in Pakistan of the last three days from established Pakistani news "
         "organisations, what's trending in Pakistan, prices and the economy. Use it for any question "
         "about what's happening in Pakistan. Returns an answer with sources for you to say briefly."
     ),

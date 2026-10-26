@@ -50,6 +50,9 @@ FEEDS = {
 @pytest.fixture(autouse=True)
 def offline_news(monkeypatch):
     """The news agents read sample feeds through a fake internet."""
+    async def no_search(*args, **kwargs):
+        return [], None
+    monkeypatch.setattr("junior.news.discovery.discover_news", no_search)
     transport = httpx.MockTransport(lambda r: httpx.Response(200, content=FEEDS[str(r.url)]) if str(r.url) in FEEDS else httpx.Response(404))
     monkeypatch.setattr(digest_module, "load_sources", lambda: [OPENAI, DAWN])
 
@@ -120,7 +123,7 @@ def test_an_ai_news_question_in_chat(client, model):
     done = chat(client, "Which AI model is best for coding right now?")[-1]
     labels = [s["label"] for s in done["steps"]]
     assert labels[0] == "Asking the AI-News-Agent"
-    assert labels[1].startswith("Read 1 of 1 official sources: 1 articles")
+    assert any(label.startswith("Read 1 of 1 official sources: 1 articles") for label in labels)
     assert "AI digest ready: 1 items from official sources" in labels
     assert "Removed 1 link(s) to non-official sites from the answer" in labels
 

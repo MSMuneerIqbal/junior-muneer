@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>OpenAI News</title>
+    <link>https://openai.com/news</link>
+    <atom:link href="https://openai.com/news/rss.xml" rel="self" type="application/rss+xml"/>
+    <item>
+      <title><![CDATA[Introducing GPT-7]]></title>
+      <link>https://openai.com/index/introducing-gpt-7/</link>
+      <description><![CDATA[<p>GPT-7 scores 91.2% on SWE-bench Verified &amp; is rolling out today.</p>]]></description>
+      <pubDate>Wed, 14 Oct 2026 17:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>An older story from last month</title>
+      <link>https://openai.com/index/old-story/</link>
+      <description>Too old for the digest.</description>
+      <pubDate>Fri, 25 Sep 2026 10:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>A link to another site</title>
+      <link>https://evil.example/fake-openai-news</link>
+      <description>Not on openai.com, so it is dropped.</description>
+      <pubDate>Tue, 13 Oct 2026 10:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Introducing GPT-7</title>
+      <link>https://openai.com/index/introducing-gpt-7/?utm_source=rss</link>
+      <description>The same story again.</description>
+      <pubDate>Wed, 14 Oct 2026 17:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>No date at all</title>
+      <link>https://openai.com/index/no-date/</link>
+    </item>
+    <item>
+      <title>Codex for teams</title>
+      <link>https://openai.com/index/codex-for-teams/</link>
+      <dc:date>2026-10-13T08:30:00Z</dc:date>
+      <description>Codex now works for whole teams.</description>
+    </item>
+  </channel>
+</rss>

@@ -31,7 +31,7 @@ test("the News page builds and shows sourced digests for AI and Pakistan", async
   const models = page.getByRole("region", { name: "New models and releases" });
   await expect(models.getByText("Introducing GPT-7 (sample)")).toBeVisible({ timeout: 20_000 });
   await expect(models.getByRole("link", { name: /OpenAI ·/ }).first()).toHaveAttribute("href", "https://openai.com/index/sample-gpt-7/");
-  await expect(page.getByTestId("digest-info")).toContainText("articles from 16 sources");
+  await expect(page.getByTestId("digest-info")).toContainText("articles from 17 sources");
   await expect(page.getByText("Live rankings are off")).toBeVisible();
 
   await page.getByRole("tab", { name: "Pakistan" }).click();
@@ -62,12 +62,19 @@ test("the morning digest can be switched off and its time changed", async ({ pag
   await expect(toggle).toHaveAttribute("aria-checked", "true");
   await page.getByLabel("Morning digest time").fill("06:45");
   await toggle.click();
-  await page.getByRole("button", { name: "Save" }).click();
+  const [saved] = await Promise.all([
+    page.waitForResponse((response) => response.url().endsWith("/api/settings") && response.request().method() === "PATCH"),
+    page.getByRole("button", { name: "Save" }).click(),
+  ]);
+  expect((await saved.json()).news_digest_enabled).toBe(false);
   await page.reload();
   await expect(page.getByRole("switch", { name: "Build the news digests every morning" })).toHaveAttribute("aria-checked", "false");
   await expect(page.getByLabel("Morning digest time")).toHaveValue("06:45");
   // Back to the default for other runs.
   await page.getByRole("switch", { name: "Build the news digests every morning" }).click();
   await page.getByLabel("Morning digest time").fill("07:30");
-  await page.getByRole("button", { name: "Save" }).click();
+  await Promise.all([
+    page.waitForResponse((response) => response.url().endsWith("/api/settings") && response.request().method() === "PATCH"),
+    page.getByRole("button", { name: "Save" }).click(),
+  ]);
 });

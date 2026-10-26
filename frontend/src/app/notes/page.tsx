@@ -9,6 +9,7 @@ import { Markdown } from "@/components/chat/Markdown";
 import { ApprovalCard } from "@/components/approvals/ApprovalCard";
 import type { ApprovalItem } from "@/lib/types";
 import { FolderActions, type NotesFolder } from "@/components/notes/FolderActions";
+import { DeleteEntry } from "@/components/notes/DeleteEntry";
 
 type Folder = NotesFolder;
 type SavedFile = { id: number; filename: string; mime: string; size: number; folder_id: number; folder_name: string;
@@ -51,7 +52,7 @@ function EditNote({ note, folders, done }: { note: Note; folders: Folder[]; done
   </form>;
 }
 
-function NoteDetail({ note, folders }: { note: Note; folders: Folder[] }) {
+function NoteDetail({ note, folders, onDeleted }: { note: Note; folders: Folder[]; onDeleted: () => void }) {
   const { mutate } = useSWRConfig();
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -72,6 +73,7 @@ function NoteDetail({ note, folders }: { note: Note; folders: Folder[] }) {
       <button onClick={() => setEditing(true)} className="rounded-lg border border-line px-3 py-1.5">Edit notes</button>
       <a href={`${BACKEND_URL}/api/notes/${note.id}/download`} className="rounded-lg border border-line px-3 py-1.5">Download Markdown</a>
       <button onClick={archive} disabled={busy} className="rounded-lg border border-line px-3 py-1.5 text-muted">{note.archived ? "Restore notes" : "Archive notes"}</button>
+      <DeleteEntry button entry={{ id: note.id, name: note.title, revision: note.revision, kind: "note" }} onDeleted={onDeleted} />
     </div>
     {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
     <p dir="auto" className="mt-6 text-sm leading-relaxed text-muted">{note.summary}</p>
@@ -97,7 +99,7 @@ function FileCover({ file }: { file: SavedFile }) {
   </div>;
 }
 
-function FileDetail({ file, folders, approval, onPrepared }: { file: SavedFile; folders: Folder[]; approval?: ApprovalItem; onPrepared: (item: ApprovalItem) => void }) {
+function FileDetail({ file, folders, approval, onPrepared, onDeleted }: { file: SavedFile; folders: Folder[]; approval?: ApprovalItem; onPrepared: (item: ApprovalItem) => void; onDeleted: () => void }) {
   const { mutate } = useSWRConfig();
   const [name, setName] = useState(file.filename);
   const [folder, setFolder] = useState(file.folder_id);
@@ -124,6 +126,7 @@ function FileDetail({ file, folders, approval, onPrepared }: { file: SavedFile; 
     <div><p className="text-xs text-muted">{file.folder_name} · {file.created_at.slice(0, 10)} · {fileType(file)}{file.archived ? " · Archived" : ""}</p><h2 dir="auto" className="mt-2 break-words text-2xl font-semibold">{file.filename}</h2></div>
     <div className="flex flex-wrap gap-2 text-sm"><a className="rounded-lg border border-line px-3 py-2" href={`${BACKEND_URL}/api/library/files/${file.id}/download`}>Download original</a>{file.drive_link && <a className="rounded-lg border border-line px-3 py-2" href={file.drive_link} target="_blank" rel="noopener noreferrer">Open in Drive</a>}<button disabled={busy} onClick={() => save(!file.archived)} className="rounded-lg border border-line px-3 py-2">{file.archived ? "Restore file" : "Archive file"}</button></div>
     {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+    <DeleteEntry button entry={{ id: file.id, name: file.filename, revision: file.revision, kind: "file", local: file.local }} onDeleted={onDeleted} />
     {image && file.local &&
       // eslint-disable-next-line @next/next/no-img-element -- selected private file, no AI analysis
       <img alt={file.filename} src={`${BACKEND_URL}/api/library/files/${file.id}/inline`} className="max-h-[32rem] max-w-full rounded-xl object-contain" />}
@@ -219,6 +222,11 @@ function NotesLibrary() {
       navigate({ folder: null, id: null, file: null }, true);
     }
   }
+  function entryDeleted(kind: "file" | "note", number: number) {
+    if ((kind === "file" && selectedFile === number) || (kind === "note" && selected === number)) {
+      navigate({ file: null, id: null, folder: folder || (kind === "file" ? savedFile?.folder_id : note?.folder_id) || null }, true);
+    }
+  }
   async function upload(files: FileList | null) {
     if (!files?.length) return;
     setUploadBusy(true); setUploadError("");
@@ -261,8 +269,8 @@ function NotesLibrary() {
         {notes?.length === 0 && savedFiles?.length === 0 && <p className="mt-5 text-sm text-muted">Nothing here yet. Upload a file or <Link href="/" className="text-accent underline">ask Junior to make class notes.</Link></p>}
         <h2 className="mt-6 text-sm font-semibold">Files and notes</h2>
         <ul aria-label="File gallery" className={`mt-3 grid gap-3 ${hasSelection ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-3 xl:grid-cols-4"}`}>
-          {notes?.map((n) => <li key={`note-${n.id}`}><Link href={hrefFor({ id: n.id, file: null })} onClick={(event) => openDetail(event, { id: n.id, file: null })} className={`block h-full rounded-xl border p-3 ${selected === n.id ? "border-accent bg-accent-soft" : "border-line bg-panel hover:bg-panel-2"}`}><div className="flex aspect-[4/3] items-center justify-center rounded-lg bg-accent-soft text-sm font-semibold text-accent">MD · Class notes</div><p dir="auto" className="mt-3 break-words text-sm font-medium">{n.title}</p><p className="mt-1 text-xs text-muted">{n.class_date} · {n.folder_name}</p>{n.subject && <p className="mt-1 text-xs text-muted">{n.subject}</p>}</Link></li>)}
-          {savedFiles?.map((f) => <li key={`file-${f.id}`}><Link href={hrefFor({ file: f.id, id: null })} onClick={(event) => openDetail(event, { file: f.id, id: null })} aria-label={`Open file ${f.filename}`} className={`block h-full rounded-xl border p-3 ${selectedFile === f.id ? "border-accent bg-accent-soft" : "border-line bg-panel hover:bg-panel-2"}`}><FileCover file={f} /><p dir="auto" className="mt-3 break-words text-sm font-medium">{f.filename}</p><p className="mt-1 text-xs text-muted">{fileType(f)} · {f.folder_name}</p><p className="mt-1 text-xs text-muted">{f.created_at.slice(0, 10)}{f.local ? ` · ${Math.max(1, Math.round(f.size / 1024))} KB` : " · Drive"}</p></Link></li>)}
+          {notes?.map((n) => <li key={`note-${n.id}`} className="relative"><div className="absolute right-3 top-3 z-10"><DeleteEntry entry={{ id: n.id, name: n.title, revision: n.revision, kind: "note" }} onDeleted={() => entryDeleted("note", n.id)} /></div><Link href={hrefFor({ id: n.id, file: null })} onClick={(event) => openDetail(event, { id: n.id, file: null })} className={`block h-full rounded-xl border p-3 ${selected === n.id ? "border-accent bg-accent-soft" : "border-line bg-panel hover:bg-panel-2"}`}><div className="flex aspect-[4/3] items-center justify-center rounded-lg bg-accent-soft text-sm font-semibold text-accent">MD · Class notes</div><p dir="auto" className="mt-3 break-words text-sm font-medium">{n.title}</p><p className="mt-1 text-xs text-muted">{n.class_date} · {n.folder_name}</p>{n.subject && <p className="mt-1 text-xs text-muted">{n.subject}</p>}</Link></li>)}
+          {savedFiles?.map((f) => <li key={`file-${f.id}`} className="relative"><div className="absolute right-3 top-3 z-10"><DeleteEntry entry={{ id: f.id, name: f.filename, revision: f.revision, kind: "file", local: f.local }} onDeleted={() => entryDeleted("file", f.id)} /></div><Link href={hrefFor({ file: f.id, id: null })} onClick={(event) => openDetail(event, { file: f.id, id: null })} aria-label={`Open file ${f.filename}`} className={`block h-full rounded-xl border p-3 ${selectedFile === f.id ? "border-accent bg-accent-soft" : "border-line bg-panel hover:bg-panel-2"}`}><FileCover file={f} /><p dir="auto" className="mt-3 break-words text-sm font-medium">{f.filename}</p><p className="mt-1 text-xs text-muted">{fileType(f)} · {f.folder_name}</p><p className="mt-1 text-xs text-muted">{f.created_at.slice(0, 10)}{f.local ? ` · ${Math.max(1, Math.round(f.size / 1024))} KB` : " · Drive"}</p></Link></li>)}
         </ul>
         {savedFiles && savedFiles.length >= limit && limit < 1000 && <button className="mt-4 rounded-lg border border-line px-3 py-2 text-sm" onClick={() => setLimit(limit + 200)}>Load more files</button>}
       </section>
@@ -270,10 +278,10 @@ function NotesLibrary() {
         <button type="button" onClick={back} className="mb-5 inline-block text-sm text-muted hover:underline">← Back to notes</button>
         {detailError && <p role="alert" className="text-sm text-danger">{detailError.message}</p>}
         {selected > 0 && !note && !detailError && <p className="text-sm text-muted">Loading saved note…</p>}
-        {note && selected > 0 && <NoteDetail key={note.revision} note={note} folders={folders ?? []} />}
+        {note && selected > 0 && <NoteDetail key={note.revision} note={note} folders={folders ?? []} onDeleted={() => entryDeleted("note", note.id)} />}
         {fileError && <p role="alert" className="text-sm text-danger">{fileError.message}</p>}
         {selectedFile > 0 && !savedFile && !fileError && <p className="text-sm text-muted">Loading file…</p>}
-        {savedFile && selectedFile > 0 && <FileDetail key={savedFile.revision} file={savedFile} folders={folders ?? []} approval={driveApprovals[savedFile.id]} onPrepared={(item) => setDriveApprovals((current) => ({ ...current, [savedFile.id]: item }))} />}
+        {savedFile && selectedFile > 0 && <FileDetail key={savedFile.revision} file={savedFile} folders={folders ?? []} approval={driveApprovals[savedFile.id]} onPrepared={(item) => setDriveApprovals((current) => ({ ...current, [savedFile.id]: item }))} onDeleted={() => entryDeleted("file", savedFile.id)} />}
       </section>}
     </div>
   </section>;

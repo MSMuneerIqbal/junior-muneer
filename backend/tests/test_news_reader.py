@@ -117,7 +117,7 @@ def test_sources_only_allow_their_own_sites():
 # ---- reading feeds -----------------------------------------------------------------------
 
 
-def test_rss_keeps_15_days_on_site_no_duplicates_newest_first():
+def test_rss_keeps_three_days_on_site_no_duplicates_newest_first():
     result, _ = fetch("ai", [OPENAI], {OPENAI.url: sample("openai_rss.xml")})
     assert result.failed == [] and result.read == ["OpenAI"]
     assert [a.title for a in result.articles] == ["Introducing GPT-7", "Codex for teams"]
@@ -125,7 +125,7 @@ def test_rss_keeps_15_days_on_site_no_duplicates_newest_first():
     assert gpt.url == "https://openai.com/index/introducing-gpt-7/"
     assert gpt.published == datetime(2026, 10, 14, 17, 0, tzinfo=UTC)
     assert gpt.summary == "GPT-7 scores 91.2% on SWE-bench Verified & is rolling out today."
-    assert result.articles[1].published == datetime(2026, 10, 12, 8, 30, tzinfo=UTC)  # dc:date
+    assert result.articles[1].published == datetime(2026, 10, 13, 8, 30, tzinfo=UTC)  # dc:date
     # Left out: the old story, the off-site link, the duplicate and the undated item.
     assert result.dropped == 4
 

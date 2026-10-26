@@ -1,7 +1,7 @@
 """Sample news for FAKE_AI mode: no network, no cost.
 
 Small feeds for a few of the real sources, dated relative to now (so they're always inside the
-15 days); every other source answers with an empty feed. The real reader, fact guard and
+three days); every other source answers with an empty feed. The real reader, fact guard and
 digest code run on them.
 """
 
@@ -41,7 +41,7 @@ def _routes() -> dict[str, bytes]:
         "https://openai.com/news/rss.xml": _rss(
             [
                 ("Introducing GPT-7 (sample)", "https://openai.com/index/sample-gpt-7/", "A sample model release.", 5 * h),
-                ("Codex for teams (sample)", "https://openai.com/index/sample-codex-teams/", "A sample tools update.", 3 * d),
+                ("Codex for teams (sample)", "https://openai.com/index/sample-codex-teams/", "A sample tools update.", d),
             ]
         ),
         "https://deepmind.google/blog/rss.xml": _rss(

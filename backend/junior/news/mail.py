@@ -24,6 +24,10 @@ _last_try: dict[str, datetime] = {}
 NewsEmailError = MailError
 
 
+class NoFreshNews(MailError):
+    """Nothing new to deliver is a normal skip, not a failed SMTP attempt."""
+
+
 def _day(iso: str, tz) -> str:
     return datetime.fromisoformat(iso).astimezone(tz).strftime("%d %b")
 
@@ -34,7 +38,7 @@ def news_email(digest: dict, timezone: str) -> tuple[str, str, str]:
     built = datetime.fromisoformat(digest["built_at"]).astimezone(tz)
     top = digest.get("top") or []
     subject = f"Your top {len(top)} AI news · {built:%a %d %b}"
-    text = [f"Your top {len(top)} AI news, {built:%A %d %B}. From official sources only.\n"]
+    text = [f"Your top {len(top)} AI news, {built:%A %d %B}. From your approved news sources.\n"]
     rows = []
     for n, item in enumerate(top, 1):
         sources = item["sources"]
@@ -55,7 +59,7 @@ def news_email(digest: dict, timezone: str) -> tuple[str, str, str]:
     text.append("More on the News page in Junior Muneer, or ask him for more.")
     body = (
         f'<h2 style="margin:0 0 4px">Your top {len(top)} AI news</h2>'
-        f'<p style="margin:0 0 8px;color:#888;font-size:13px">{built:%A %d %B} · from official sources only</p>'
+        f'<p style="margin:0 0 8px;color:#888;font-size:13px">{built:%A %d %B} · from your approved news sources</p>'
         f'<table style="width:100%;border-collapse:collapse">{"".join(rows)}</table>'
         '<p style="color:#888;font-size:12px;margin-top:16px">More on the News page, or ask Junior Muneer for more. '
         "Turn this email off in Settings → News.</p>"
@@ -77,10 +81,22 @@ async def send_news_email(digest: dict | None = None, *, by_you: bool = False) -
         raise MailError("Not sent: Junior Muneer is paused.")
     digest = digest or latest_digest("ai")
     if not digest or not digest.get("top"):
-        raise MailError("There's no AI news yet: build the AI digest first (News page).")
+        raise NoFreshNews("No verified AI news from the last three days. Refresh News; older stories will not be emailed.")
     settings = all_settings()
+    from junior.news.freshness import recent_sections
+    from junior.news.delivery import claim, finish
+    digest = {**digest, "sections": recent_sections(digest.get("sections", []), datetime.now(UTC))}
+    batch, selected = claim(digest)
+    if not selected:
+        raise NoFreshNews("No new, undelivered AI stories from the last three days. Nothing was emailed again.")
+    digest["top"] = selected
     subject, text, body = news_email(digest, settings["timezone"])
-    address = await send_to_self(subject, text, body)
+    try:
+        address = await send_to_self(subject, text, body)
+    except BaseException:
+        finish(batch, "unclear")
+        raise
+    finish(batch, "sent")
     today = datetime.now(UTC).astimezone(zone(settings["timezone"])).date().isoformat()
     set_setting("news_emailed_on", today)
     audit("action", "news_email", detail={"items": len(digest["top"]), "digest": digest.get("id"), "by_you": by_you})
@@ -107,6 +123,9 @@ async def daily_news_email(now: datetime | None = None) -> bool:
     _last_try["ai"] = now
     try:
         await send_news_email(digest)
+    except NoFreshNews:
+        audit("action", "news_email_skipped", detail={"reason": "No new verified stories within three days."})
+        return False
     except MailError as e:
         log.warning("Daily news email: %s", e)
         audit("action", "news_email", result="error", detail={"error": str(e)})

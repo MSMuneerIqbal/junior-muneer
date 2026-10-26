@@ -121,6 +121,7 @@ function DigestView({ digest }: { digest: Digest }) {
   const total = digest.sections.reduce((n, s) => n + s.items.length, 0);
   return (
     <div className="flex flex-col gap-8">
+      {total === 0 && <p role="status" className="rounded-xl border border-line px-4 py-3 text-sm text-muted">No verified news published within the last three days. Refresh to check again; older stories are not shown.</p>}
       {digest.failed.length > 0 && (
         <p role="note" className="rounded-xl bg-warn-soft px-4 py-2.5 text-sm text-warn">
           Couldn&apos;t read today: {digest.failed.map((f) => `${f.source} (${f.reason})`).join(", ")}. Nothing was filled
@@ -346,7 +347,7 @@ export default function NewsPage() {
           <p className="mt-1 text-sm text-muted">
             {tab === "feeds"
               ? "News sites and blogs you follow, read every 3 hours. Every post links to where it came from."
-              : "The last 15 days, from official sources only. Every item links to where it came from."}
+              : "The last 3 days, from Google Search, official sources and AI News (ainews.com). Daily emails skip stories already sent."}
           </p>
         </header>
 

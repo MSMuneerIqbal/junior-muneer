@@ -24,7 +24,7 @@ The design is in [PLAN.md](PLAN.md); progress and set-up steps per feature are i
 | **Freelance** | Upwork job scoring and scam signs, proposals with screening answers, client replies, Fiverr orders and reminders; Upwork/Fiverr notification emails read by themselves (job alerts scored, orders tracked, client messages checked for scams) |
 | **Gmail** | Inbox watcher (sorts new mail, important ones to WhatsApp), read and search, drafts sent after Approve (or Auto for new emails) |
 | **Google** | Docs and Sheets (create, read), Calendar (add, list, in the briefing), Drive (find, read, send to you, save files you send) |
-| **News** | AI and Pakistan news from official sources only (fact guard in code), top 5 first, top 5 AI news by email each morning |
+| **News** | AI and Pakistan news published within the last three days; Google discovery plus official feeds, verified dates/links, up to five previously undelivered AI stories by daily email |
 | **Every day** | Morning briefing, "what happened today?", background tasks, your own RSS feeds, weekly memory tidy-up |
 | **Send to you** | "Email me / WhatsApp me this": text, Drive files, files from your PC, docs as Word or PDF |
 | **Your PC** | The **Computer Agent**: find, read, create, change, move and delete files (deletes go to the Recycle Bin) and run terminal commands, only in your allowed folders; changes and commands are cards you approve |
@@ -52,6 +52,9 @@ Use a folder's **⋯** menu (on its card or beside its name) to rename it or del
 Deleting a folder asks for confirmation and keeps its files and notes, including archived items, in **Unfiled**.
 The **Back** button and browser Back/Forward restore the previous folder, filters and scroll position; folder/search/
 date/archive filters also survive a reload. These controls manage folders inside Junior's Notes library.
+Individual files and saved notes also have **⋯ → Delete**, plus a Delete button in the open item. Confirming removes
+the selected item from Junior and puts its managed local copy in the Recycle Bin. Other PC/Google Drive copies and
+original sources of a deleted note remain available. Running tasks or uncertain sends must finish/be resolved first.
 “Just save/upload this to …” preserves the original without AI reading, rewriting or summarizing it. Ask explicitly
 to read or make notes when you want analysis. Raw text can also be saved as a TXT or MD file.
 
@@ -62,6 +65,13 @@ in chat. Existing private files stay private until you share them. Open a file i
 or **Update Drive sharing**, or ask Junior to share its Drive link. ZIP delivery keeps its private-link behavior.
 
 ## Models and costs (Settings)
+
+News rebuilds search Google through the configured Gemini key and read approved sources, including **AI News
+(ainews.com)** through its publisher-filtered Google News RSS feed (its direct reader is currently blocked). Every publication must be
+within the last 72 hours, including when an old saved digest is displayed or sent. The hourly chat cache saves repeated
+search costs; Refresh forces a new build. Daily emails skip already delivered stories across restarts, and skip sending
+when there is nothing new. Uncertain email delivery is held for checking, rather than automatically retried. Missing
+or unavailable Google Search is shown in the digest's source problems; recent official feeds still work.
 
 | What | Choices |
 |---|---|

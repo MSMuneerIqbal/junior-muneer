@@ -703,7 +703,7 @@ async def news_for(context: TurnContext, topic: str, question: str, call_id: str
 
 @function_tool
 async def ai_news(ctx: Ctx, question: str) -> str:
-    """Ask the AI-News-Agent: the last 15 days of AI news from the big AI companies' own sites.
+    """Ask the AI-News-Agent: verified AI news from the last three days, with fresh Google discovery on rebuild.
 
     New models and releases, benchmarks and who's on top by field (coding, reasoning, voice,
     image, video), agents and tools, business moves. Use it for ANY question about AI news,
@@ -717,7 +717,7 @@ async def ai_news(ctx: Ctx, question: str) -> str:
 
 @function_tool
 async def pakistan_news(ctx: Ctx, question: str) -> str:
-    """Ask the Social-News-Agent: the last 15 days of news in Pakistan from established Pakistani news organisations.
+    """Ask the Social-News-Agent: verified news from the last three days in Pakistan from established Pakistani news organisations.
 
     Top stories, what's trending in Pakistan, prices and the economy, tech, internet and
     freelancing. Use it for ANY question about what's happening in Pakistan.

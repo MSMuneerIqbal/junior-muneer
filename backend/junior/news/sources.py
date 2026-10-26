@@ -1,9 +1,10 @@
 """The official news sources (news/sources.toml): the only things the news agents read."""
 
 import tomllib
+import re
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
 
 from junior.config import REPO_DIR
 
@@ -34,6 +35,16 @@ class Source:
     link_prefix: str = ""
     keywords: tuple[str, ...] = ()
     max_items: int = 30
+
+    @property
+    def publisher_domain(self) -> str:
+        """Google News RSS is restricted to the publisher explicitly requested in its site: query."""
+        parts = urlsplit(self.url)
+        if site_of(self.url) == "news.google.com" and parts.path == "/rss/search":
+            query = parse_qs(parts.query).get("q", [""])[0]
+            match = re.search(r"(?:^|\s)site:([a-zA-Z0-9.-]+)", query)
+            return match.group(1).casefold().removeprefix("www.") if match else ""
+        return ""
 
     @property
     def sites(self) -> tuple[str, ...]:
@@ -121,7 +132,7 @@ def official_sites(topic: str, path: Path | None = None) -> list[str]:
     sites: list[str] = []
     for s in load_sources(path):
         if s.topic == topic:
-            sites.extend(s.sites)
+            sites.extend((s.publisher_domain, *s.domains) if s.publisher_domain else s.sites)
     extra = tomllib.loads(path.read_text(encoding="utf-8")).get("search", {}).get(topic, [])
     if not isinstance(extra, list) or not all(isinstance(e, str) for e in extra):
         raise NewsSourceError(f"news/sources.toml: [search] {topic} must be a list of sites.")

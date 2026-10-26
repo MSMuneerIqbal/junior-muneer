@@ -1,0 +1,43 @@
+import { expect, test } from "@playwright/test";
+
+test("file cards and saved notes can be deleted after confirmation", async ({ page, request }, info) => {
+  test.setTimeout(90000);
+  const api = "http://127.0.0.1:8100";
+  const folder = `Delete checks ${info.project.name} ${Date.now()}`;
+  const created = await (await request.post(`${api}/api/note-folders`, { data: { name: folder } })).json();
+  const name = `Remove-${info.project.name}.txt`;
+  const keepName = `Keep-${info.project.name}.txt`;
+  const uploaded = await (await request.post(`${api}/api/files`, { multipart: { folder_id: String(created.id), file: { name, mimeType: "text/plain", buffer: Buffer.from("Synthetic file for deletion") } } })).json();
+  const kept = await (await request.post(`${api}/api/files`, { multipart: { folder_id: String(created.id), file: { name: keepName, mimeType: "text/plain", buffer: Buffer.from("Keep this original") } } })).json();
+  await page.goto(`/notes?folder=${created.id}`);
+  await page.getByRole("button", { name: `Options for ${name}`, exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete file", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Delete file", exact: true });
+  await expect(dialog).toContainText("Recycle Bin");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByRole("link", { name: `Open file ${name}`, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: `Options for ${name}`, exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete file", exact: true }).click();
+  await page.screenshot({ path: `test-results/file-delete-${info.project.name}.png`, fullPage: true });
+  await dialog.getByRole("button", { name: "Delete file", exact: true }).click();
+  await expect(page.getByRole("link", { name: `Open file ${name}`, exact: true })).toHaveCount(0);
+  expect((await request.get(`${api}/api/library/files/${uploaded.id}`)).status()).toBe(404);
+  expect((await (await request.get(`${api}/api/library/files/${kept.id}/download`)).body()).toString()).toBe("Keep this original");
+  await page.getByRole("link", { name: `Open file ${keepName}`, exact: true }).click();
+  await page.getByRole("article", { name: "Saved file", exact: true }).getByRole("button", { name: "Delete file", exact: true }).click();
+  await page.getByRole("dialog", { name: "Delete file", exact: true }).getByRole("button", { name: "Delete file", exact: true }).click();
+  await expect(page.getByLabel("Notes folder filter", { exact: true })).toHaveValue(String(created.id));
+  await expect(page.getByRole("article", { name: "Saved file", exact: true })).toHaveCount(0);
+
+  await page.goto("/");
+  const message = page.getByRole("textbox", { name: "Message", exact: true });
+  await message.fill(`Make class notes in folder ${folder}: Tokenization divides text into tokens. NLP processes human language.`);
+  await message.press("Enter");
+  const open = page.getByRole("link", { name: "Open saved notes", exact: true }).last();
+  await expect(open).toBeVisible({ timeout: 30000 });
+  await page.goto((await open.getAttribute("href"))!);
+  await page.getByRole("article", { name: "Saved note", exact: true }).getByRole("button", { name: "Delete notes", exact: true }).click();
+  await page.getByRole("dialog", { name: "Delete notes", exact: true }).getByRole("button", { name: "Delete notes", exact: true }).click();
+  await expect(page.getByRole("article", { name: "Saved note", exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Notes folder filter", { exact: true })).toHaveValue(String(created.id));
+});

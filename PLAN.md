@@ -180,8 +180,8 @@ and posts the result in the chat when it's ready.
 | **Social Media Manager** | Plans content, picks pasted posts worth commenting on, handles comments on your posts | Meta API (read), pasted content | No, drafts only |
 | **Freelance Manager** | Scores Upwork jobs from alert emails and pastes, tracks Fiverr orders and deadlines, drafts client replies | Email (read), pasted content | No, drafts only |
 | **Email Agent** | Reads, sorts and summarizes your inbox; drafts replies; turns Upwork/Fiverr alerts into tasks | Gmail API (read) | No, drafts only |
-| **AI News Agent** | The last 15 days of AI news, straight from the big companies' own pages: new models, how they work, benchmarks and who is on top in each field (coding, reasoning, agents, voice, image and video, open models), plus big business moves. Gives you a short, sourced summary | Official RSS feeds and newsroom pages (plain HTTP reads, no browser bots), official leaderboards, web search as a fallback | No, read and summarize only |
-| **Social News Agent** | Pakistan only: what is happening in the country and what people are talking about online, in the last 15 days (newest first). Neutral, no political opinions | RSS feeds of big Pakistani news sites, Google Trends for Pakistan, web search as a fallback | No, read and summarize only |
+| **AI News Agent** | Verified AI news published in the last three days, including models, benchmarks, tools and business updates | Fresh Google Search discovery, fetched official pages/RSS and current official leaderboards | No, read and summarize only |
+| **Social News Agent** | Pakistan news and trends published in the last three days, newest first; neutral and sourced | Fresh Google discovery, established Pakistani sources and Google Trends | No, read and summarize only |
 | **Developer Agent** | Your GitHub helper: lists repos, summarizes issues, PRs and commits, reviews code, drafts issues, PR descriptions and commit messages. Later it proposes terminal commands | GitHub MCP (read-only tools) | No, it drafts and plans; the Dev Executor runs approved actions |
 | **Dev Executor** | Runs **one approved** GitHub action (create an issue, push a branch...) or terminal command, exactly as approved | GitHub MCP (write tools), terminal (later) | **Yes, approved items only** |
 | **Writer** | Writes posts, comments, proposals, messages and emails, using the platform's playbook | None | No |
@@ -211,11 +211,15 @@ Two read-only subagents that keep you in touch with the market and your country.
   (The News was dropped: its feeds stopped updating in 2025.)
   Read with plain HTTP (RSS, Atom or the page itself), the same way a feed reader does: **no browser bots, no logins**.
   The list lives in one editable file, `news/sources.toml`, so you can add or remove sources.
+  On 2026-10-26 Muneer approved **AI News (ainews.com)** as an additional publisher. Direct requests are Cloudflare
+  blocked, so it is read through Google's public publisher-filtered RSS feed. The RSS publisher identity must match
+  ainews.com, and publication dates still must be inside 72 hours. Source attribution says AI News reports, not that
+  the underlying AI company confirmed it. Google News wrapper links are retained only as exact checked digest links.
 - **Only real news from official sources (no fakes, no rumours):**
   - Only sources on the allowed list in `news/sources.toml` are read: the companies' own sites for AI news, and the official leaderboards for rankings.
     Pakistan news comes only from established news organisations, never from social media posts, blogs or forwarded messages.
   - Every item in a digest must point to an article that was actually fetched from an allowed source. **Code checks this, not the AI:**
-    an item whose link isn't in the fetched list, or whose date is outside the 15 days, is dropped before you see it.
+    an item whose link isn't in the fetched list, whose publication date is unknown/future, or which is older than 72 hours is dropped before you see it.
   - The AI only summarizes what the article says. No guessing, no "reportedly", no numbers that aren't in the source.
     Benchmark scores and rankings are quoted from the official leaderboard or the company's own release, with the source named ("OpenAI says…", "LMArena shows…").
   - A claim only one source makes is shown as that source's claim. Web search is used only to find an official page, and its result must also be on the allowed list.
@@ -224,11 +228,16 @@ Two read-only subagents that keep you in touch with the market and your country.
   Pakistan: top stories · trending online · tech, internet and freelancing · economy that affects you), each item with its date and a link to the source.
   Facts only from the sources; when sources disagree, both are given. In English, or Urdu if you ask.
 - **Fast and cheap:** each agent builds one digest a day (07:30 by default; on/off and time in Settings) with the small model and keeps it
-  (about $0.003 and 40 seconds a digest). The AI agent's articles are grouped by company so every company's news is seen; news sites' feeds only carry their
-  latest stories, so each digest also keeps the important stories of earlier digests in the 15 days. Questions are answered from the digest in seconds;
-  if a question isn't covered, web search may only search the official sites (`[search]` in `news/sources.toml`). "Refresh" fetches again.
+  and uses a cache of at most one hour for chat questions. Every rebuild performs Google discovery through Gemini
+  when configured and fetches official feeds/pages. Google snippets alone are not dated news: the linked official
+  article must have publication metadata inside the window. No old digest stories are carried forward. Cached items
+  are rechecked at display and delivery time. Refresh fetches again; unavailable sources/search are disclosed.
   News pages are **outside content**: never followed as instructions, never saved to memory. Switching the news agents to the strong model gives richer
   digests for about $0.06 each (one line in `agents/models.toml`).
+- **No repeated daily emails (2026-10-26):** source URL/title identities are reserved in `news_deliveries` before
+  SMTP. Sent and uncertain deliveries survive restart and are excluded from future batches. An empty/new-free
+  digest produces no email. Upgrade seeds recorded historical digest identities through the last email marker.
+  Uncertain sends wait for checking and are never automatically replayed. The existing permission and Pause rules apply.
 - **Where you see it:** in the chat and live calls (Junior Muneer reads you the summary), and on a **News** page with two tabs (AI · Pakistan).
 
 ### 6.5 Adding new subagents later
@@ -437,7 +446,7 @@ Each phase ends with you testing it. We only move on when it works for you.
 | **0. Foundation + text chat** | Git repo, FastAPI backend, Next.js dashboard shell, OpenAI Agents SDK, model router, agent registry, **Junior Muneer text chat with live streaming**, chat history, memory, web search, audit log, cost tracking, $5/day cap, Pause, daily backups | You chat with Junior Muneer like a friend; the chats are saved and show in the sidebar |
 | **1. Voice** | Voice messages (speak, and he answers aloud) + **live call** mode + transcripts saved in history, in English and Urdu | You hold a 5-minute live call in English and one in Urdu, and both show in the chat history |
 | **2. Writing team, approvals + Paste** | Social Media Manager (planner), Writer, Checker, Humanizer, playbooks, **permission rules (Ask/Auto/Deny), approval queue, approval cards in chat**, **Paste box**, **copy-and-paste items**, image upload | You approve 5 posts you'd really publish, and draft one comment from a pasted post |
-| **2b. News agents** | **AI News Agent** (last 15 days of AI news from the big companies' own pages, benchmarks and who's on top) and **Social News Agent** (Pakistan news and what's trending), a daily digest, a News page, used in chat and calls | "What's new in AI?" and "What's happening in Pakistan?" give correct, sourced summaries of the last 15 days |
+| **2b. News agents** | AI and Pakistan agents: verified stories from the last three days, Google discovery, official sources and no-repeat daily email | Chat/calls/News give recent sourced stories, or clearly say there are no verified new stories |
 | **3. Official social APIs** | Facebook Page and Instagram professional (Meta), LinkedIn posts; comments on Page/IG posts through the API | An approved post goes live through the API, and a reply to a real comment is sent |
 | **4. Email** | Email Agent: inbox summary, sorting, reply drafts, sending | You answer a real email from the dashboard |
 | **5. Freelance** | Upwork job scoring from alert emails and pastes, proposals, Fiverr orders and messages, client replies: all copy and paste | A real proposal, drafted from a real job alert, is ready for you to paste into Upwork |
@@ -609,6 +618,12 @@ rewrite Markdown mirrors before removing old exact mirror paths. No recursive fi
 Gallery folder/search/date/archive/pagination and selection live in URL parameters. Native browser history and an
 explicit Back control preserve the previous view; per-view scroll is restored when its data is ready. Direct links
 fall back to the selected item's folder when there is no previous gallery view.
+
+Individual file/note deletion (2026-10-26): three-dot card menus and detail controls confirm removal of the selected
+managed copy to the Recycle Bin. Database records disappear; external PC/Google copies and a note's original source
+files are retained. Revisions protect against stale deletion, running tasks are held, unsent dependent approvals
+are rejected, and an in-progress/uncertain send must be resolved first. Hidden internal snapshots cannot be deleted
+through the gallery API. Failed Recycle Bin operations retain the record for checking. No AI is used.
 
 Drive link sharing is separate from creation: `google.drive.share` defaults to Ask and compound approvals require
 both save/create and sharing permission. New file actions pin private/reader/writer before approval and show the

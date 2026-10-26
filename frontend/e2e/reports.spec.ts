@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("“What happened today?” is answered from the app's records", async ({ page }, info) => {
+  test.setTimeout(60000); // two streamed answers can exceed 30s on a cold, busy Windows machine
   const tag = `${info.project.name}-${Date.now().toString(36)}`;
   await page.goto("/");
   await page.getByRole("textbox", { name: "Message" }).fill(`draft A post about ${tag}`);

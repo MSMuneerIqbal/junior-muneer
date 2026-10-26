@@ -255,6 +255,29 @@ Read-only: these agents never post or send anything. News pages are outside cont
     5. Optional: get a free key at artificialanalysis.ai, add it to `backend/.env` as `ARTIFICIAL_ANALYSIS_API_KEY=...`, restart, and press Refresh on the AI tab to see live rankings.
   - Tell me anything wrong or missing; we fix it, then push and start Phase 3.
 
+- [x] **P2b-07** Three-day news + fresh Google discovery + no-repeat daily email (requested 2026-10-26):
+  replace 15-day carry-forward with a strict 72-hour publication limit; prune cached stories at display/send time;
+  query Google on rebuild and verify actual official-page dates; persist delivery reservations across restarts.
+  Do not send older or already delivered stories to fill a digest.
+    - Google discovery uses the Gemini key; only grounded links to approved sites with fetched publication metadata
+      qualify. RSS requires publication dates; modified dates or arbitrary page-text dates cannot revive old news.
+      Personal Atom feeds retain their separate updated-date behaviour. Chat cache lasts at most one hour.
+    - Migration fa2c4e6a8b0d adds news_deliveries reservations before SMTP, with sent/uncertain holds across restarts;
+      previous digest identities through the last email marker are seeded. No new items is a normal no-email skip.
+      Permission/Pause rules still apply. Source/search failures are disclosed; no old-story fallback.
+    - Muneer also approved ainews.com. Its direct page/feed paths return Cloudflare 403; its public Google News RSS
+      feed returns 200. Added AI News (ainews.com), enforcing the feed's publisher identity and the same 72-hour limit.
+      At the live reader check it had zero eligible indexed stories. Google wrapper links are preserved only when
+      they are exact publisher-checked links from the current digest; Google News is not broadly search-whitelisted.
+    - Checked 2026-10-26: full backend **1,007 passed**, followed by **72 passing source/news checks** including the
+      added AI News case. Full browser **103 passed/14 skipped** with one old reports-test total timeout; its total
+      allowance was corrected. Final **14 passed/2 skipped** on desktop/phone for deletion, news, folders and reports.
+      TypeScript/ESLint passed. Fixed synthetic call-hangup timing and awaited Settings-save persistence in tests.
+    - Isolated real Google/feed check: 57.4s, $0.002554, all kept sources within 72 hours, stale cache rejected, no
+      email/WhatsApp invoked. Live AI digest refresh: 17 sources including AI News, 3 stories, $0.002507. Combined
+      requested verification/refresh model cost **$0.005061**. Live DB backed up/migrated and backend restarted.
+      Separate actual issue: Google OAuth login is expired (Drive/inbox); reconnect in Settings → Connections.
+
 ## Phase 3: Official social APIs (Meta + LinkedIn)
 
 > **Paused (2026-10-16, Muneer's choice):** posting stays copy and paste for now; the API connections come later.
@@ -676,6 +699,12 @@ with its links arrives in the chat you asked from, WhatsApp included.
       content, stale changes, mirror failures, Back/Forward, reload, filters, scroll and keyboard menu access.
       Live DB backed up; backend restarted; health, folder revisions and dashboard checked. No real folder was deleted
       during testing; controlled data only. No push or phase acceptance claimed.
+- [x] **P10-04f** Delete individual gallery files and saved notes (requested 2026-10-26): three-dot card menus,
+  detail-page Delete, confirmation, managed-copy Recycle Bin removal, revision/running-task/approval safeguards.
+  External PC/Google copies and other saved material stay available. Unsent dependent approvals are cancelled;
+  running tasks and in-progress/uncertain sends must finish or be resolved before deletion. Hidden snapshots cannot
+  be removed through the gallery API. Recycle failures retain the record. Controlled backend and desktop/phone
+  deletion/cancel checks passed (see P2b-07); no real user files were deleted for testing. App restarted and healthy.
 - [ ] **P10-05** Slides (Google Slides API, one more Google permission) and PDF export
 - [ ] **P10-06** First skills: CV review, scholarship roadmap, research report, pitch deck, proposal
 - [ ] **P10-07** Your acceptance test + push
