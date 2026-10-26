@@ -25,7 +25,7 @@ from pathlib import Path
 
 import yaml
 from fastapi import APIRouter, HTTPException, Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from junior.audit import audit
 from junior.config import REPO_DIR
@@ -37,9 +37,16 @@ _LOCK = RLock()
 NOT_SKILL_FILES = {"README.md"}
 _HEADER = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?(.*)\Z", re.DOTALL)
 _NAME = re.compile(r"^[a-z][a-z0-9_]{1,49}$")
-_FIELDS = {"name", "description", "for"}
+_FIELDS = {"name", "description", "for", "resources"}
 MIN_INSTRUCTIONS = 40
 MAX_INSTRUCTIONS = 20_000
+MAX_SKILL_BYTES = 320_000
+
+
+def secret_free(text: str):
+    from junior.privacy import credential_present
+    if credential_present(text):
+        raise SkillError("Credentials cannot be stored in skills or their resources. Use the account/settings connection instead.")
 
 
 class SkillError(Exception):
@@ -54,6 +61,34 @@ class SkillConflict(SkillError):
     pass
 
 
+class SkillResource(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    path: str = Field(max_length=90)
+    kind: str
+    content: str = Field(min_length=1, max_length=8000)
+
+    @model_validator(mode="after")
+    def valid_resource(self):
+        endings = {"script": ("scripts", {".py", ".ps1", ".js"}),
+                   "reference": ("references", {".md", ".txt", ".json", ".csv"}),
+                   "template": ("templates", {".md", ".txt", ".json", ".html", ".css"})}
+        if self.kind not in endings:
+            raise ValueError("Choose script, reference or template.")
+        prefix, suffixes = endings[self.kind]
+        if not re.fullmatch(r"[a-z]+/[a-zA-Z0-9][a-zA-Z0-9_.-]{0,69}", self.path):
+            raise ValueError("Use a resource path like references/guide.md, without links, drives or traversal.")
+        folder, name = self.path.split("/")
+        if folder != prefix or Path(name).suffix.lower() not in suffixes or name.split(".")[0].casefold() in {"con", "nul", "aux", "prn", *(f"com{i}" for i in range(1,10)), *(f"lpt{i}" for i in range(1,10))}:
+            raise ValueError("Resource folder/type/extension does not match, or uses a reserved filename.")
+        if any(ord(char) < 32 and char not in "\n\t\r" for char in self.content):
+            raise ValueError("Resources must be ordinary text without control characters.")
+        try:
+            secret_free(self.content)
+        except SkillError as e:
+            raise ValueError(str(e)) from None
+        return self
+
+
 @dataclass(frozen=True)
 class Skill:
     name: str
@@ -61,6 +96,7 @@ class Skill:
     instructions: str
     agents: tuple[str, ...] = ()  # empty: every agent with the skills tool
     revision: str = ""
+    resources: tuple[SkillResource, ...] = ()
 
     def for_agent(self, agent: str) -> bool:
         return not self.agents or agent in self.agents
@@ -70,13 +106,16 @@ def parse_skill(text: str, filename: str) -> Skill:
     def fail(msg: str) -> SkillError:
         return SkillError(f"skills/{filename}: {msg}")
 
+    if len(text.encode("utf-8")) > MAX_SKILL_BYTES:
+        raise fail("the skill bundle is too large.")
+    secret_free(text)
     match = _HEADER.match(text.replace("\r\n", "\n"))
     if not match:
         raise fail("it must start with a --- header (name, description) and a closing ---.")
     try:
         header = yaml.safe_load(match.group(1)) or {}
-    except yaml.YAMLError as e:
-        raise fail(f"the header isn't valid YAML: {e}") from None
+    except yaml.YAMLError:
+        raise fail("the header isn't valid YAML.") from None
     if not isinstance(header, dict):
         raise fail("the header must be name: value lines.")
     if unknown := set(header) - _FIELDS:
@@ -97,8 +136,17 @@ def parse_skill(text: str, filename: str) -> Skill:
         raise fail(f"the instructions under the header are missing or too short (at least {MIN_INSTRUCTIONS} characters).")
     if len(instructions) > MAX_INSTRUCTIONS:
         raise fail(f"the instructions are over {MAX_INSTRUCTIONS:,} characters; split it into two skills.")
+    raw_resources = header.get("resources", [])
+    if not isinstance(raw_resources, list) or len(raw_resources) > 6:
+        raise fail("use at most six script/reference/template resources.")
+    try:
+        resources = tuple(SkillResource.model_validate(resource) for resource in raw_resources)
+    except ValidationError:
+        raise fail("a resource has an invalid path, type, text length or credential content.") from None
+    if len({resource.path.casefold() for resource in resources}) != len(resources):
+        raise fail("resource paths must be unique.")
     return Skill(name, " ".join(description.split()), instructions, tuple(agents),
-                 hashlib.sha256(text.encode("utf-8")).hexdigest())
+                 hashlib.sha256(text.encode("utf-8")).hexdigest(), resources)
 
 
 def _path(name: str, folder: Path) -> Path:
@@ -115,7 +163,7 @@ def _path(name: str, folder: Path) -> Path:
 def _read(name: str, folder: Path) -> Skill:
     path = _path(name, folder)
     try:
-        if path.stat().st_size > 128_000:
+        if path.stat().st_size > MAX_SKILL_BYTES:
             raise SkillError(f"skills/{path.name}: file is too large.")
         return parse_skill(path.read_text(encoding="utf-8"), path.name)
     except FileNotFoundError:
@@ -145,14 +193,20 @@ def skills_list(agent: str, folder: Path | None = None) -> str:
 
 
 def save_skill(name: str, description: str, instructions: str, folder: Path | None = None,
-               *, agents: tuple[str, ...] = (), revision: str | None = None) -> Path:
+               *, agents: tuple[str, ...] = (), revision: str | None = None,
+               resources: list[SkillResource] | None = None) -> Path:
     """Write a new skill file (checked exactly like the ones read at startup). Raises SkillError."""
     folder = folder or SKILLS_DIR
     name = (name or "").strip().lower().replace(" ", "_").replace("-", "_")
     filename = f"{name}.md"
     header = {"name": name, "description": description.strip()}
+    if resources is None and revision is not None:
+        with _LOCK:
+            resources = list(_read(name, folder).resources)
     if agents:
         header["for"] = list(agents)
+    if resources:
+        header["resources"] = [resource.model_dump() for resource in resources]
     text = f"---\n{yaml.safe_dump(header, sort_keys=False, allow_unicode=True, width=1000)}---\n{instructions.strip()}\n"
     parse_skill(text, filename)
     with _LOCK:
@@ -162,6 +216,9 @@ def save_skill(name: str, description: str, instructions: str, folder: Path | No
                 raise SkillConflict(f"skills/{filename} already exists; pick another name (or edit that file).")
         elif _read(name, folder).revision != revision:
             raise SkillConflict("This skill changed since you opened it. Reopen it before saving or deleting.")
+        if path.exists():
+            from junior.skill_history import archive
+            archive(name, path.read_text(encoding="utf-8"), path.stat().st_mtime)
         folder.mkdir(parents=True, exist_ok=True)
         temporary = None
         try:
@@ -184,15 +241,21 @@ def delete_skill(name: str, revision: str, folder: Path | None = None) -> None:
     with _LOCK:
         if _read(name, folder).revision != revision:
             raise SkillConflict("This skill changed since you opened it. Reopen it before saving or deleting.")
-        _path(name, folder).unlink()
+        from junior.skill_history import archive
+        path = _path(name, folder)
+        archive(name, path.read_text(encoding="utf-8"), path.stat().st_mtime)
+        path.unlink()
 
 
 def _out(skill: Skill) -> dict:
     return {"name": skill.name, "description": skill.description, "instructions": skill.instructions,
-            "for": list(skill.agents), "revision": skill.revision}
+            "for": list(skill.agents), "revision": skill.revision,
+            "resources": [resource.model_dump() for resource in skill.resources]}
 
 
-def _http_error(error: SkillError) -> HTTPException:
+def _http_error(error: SkillError | OSError) -> HTTPException:
+    if isinstance(error, OSError):
+        return HTTPException(503, "Skill storage is unavailable. Reopen Skills to check its current state before retrying.")
     status = 404 if isinstance(error, SkillNotFound) else 409 if isinstance(error, SkillConflict) else 422
     return HTTPException(status, str(error))
 
@@ -202,6 +265,7 @@ class SkillInput(BaseModel):
     description: str = Field(max_length=300)
     instructions: str = Field(max_length=MAX_INSTRUCTIONS)
     agents: list[str] = Field(default_factory=list, alias="for", max_length=50)
+    resources: list[SkillResource] | None = Field(default=None, max_length=6)
 
 
 class SkillCreate(SkillInput):
@@ -220,7 +284,7 @@ class SkillDelete(BaseModel):
 def get_skills() -> list[dict]:
     try:
         return [_out(s) for s in load_skills().values()]
-    except SkillError as e:
+    except (SkillError, OSError) as e:
         raise _http_error(e) from None
 
 
@@ -229,9 +293,9 @@ def create_skill(body: SkillCreate) -> dict:
     # Settings is an explicit owner edit, not a model tool or an imported document.
     try:
         with _LOCK:
-            path = save_skill(body.name, body.description, body.instructions, agents=tuple(body.agents))
+            path = save_skill(body.name, body.description, body.instructions, agents=tuple(body.agents), resources=body.resources)
             result = _out(_read(path.stem, SKILLS_DIR))
-    except SkillError as e:
+    except (SkillError, OSError) as e:
         raise _http_error(e) from None
     audit("setting", "skill_created", detail={"skill": path.stem})
     return result
@@ -242,9 +306,9 @@ def update_skill(name: str, body: SkillUpdate) -> dict:
     try:
         with _LOCK:
             _path(name, SKILLS_DIR)  # updates cannot normalize/rename the target
-            save_skill(name, body.description, body.instructions, agents=tuple(body.agents), revision=body.revision)
+            save_skill(name, body.description, body.instructions, agents=tuple(body.agents), revision=body.revision, resources=body.resources)
             result = _out(_read(name, SKILLS_DIR))
-    except SkillError as e:
+    except (SkillError, OSError) as e:
         raise _http_error(e) from None
     audit("setting", "skill_updated", detail={"skill": name})
     return result
@@ -254,7 +318,7 @@ def update_skill(name: str, body: SkillUpdate) -> dict:
 def remove_skill(name: str, body: SkillDelete) -> Response:
     try:
         delete_skill(name, body.revision)
-    except SkillError as e:
+    except (SkillError, OSError) as e:
         raise _http_error(e) from None
     audit("setting", "skill_deleted", detail={"skill": name})
     return Response(status_code=204)

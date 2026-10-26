@@ -246,6 +246,16 @@ class ChatService:
         context = TurnContext(
             conversation_id=conversation_id, settings=settings, paste=saved_paste, user_text=text
         )
+        from junior.chat.commands import handle as local_command
+        context.user_message_ids = [user_message_id]
+        if local_result := local_command(context, text, saved_paste):
+            for event in context.pending_events:
+                yield event
+            message_id = self._finish(conversation_id, local_result)
+            attach_to_message(context.approval_ids, message_id)
+            yield {"type": "done", "conversation_id": conversation_id, "message_id": message_id,
+                   "text": local_result.text, "steps": [], "cost_usd": 0.0}
+            return
         context.start_background = lambda title, request: self.start_background(
             conversation_id, title, request, saved_paste, context
         )

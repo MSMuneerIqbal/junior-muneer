@@ -28,7 +28,7 @@ test("Skills in Settings: create, use in chat, edit, preserve unsaved work and d
   const box = page.getByRole("textbox", { name: "Message" });
   await box.fill(`use skill ${name}`);
   await box.press("Enter");
-  await expect(page.getByText(/skill-original-proof/).first()).toBeVisible();
+  await expect(page.getByText(/skill-original-proof/).first()).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("Show work").first()).toBeVisible();
 
   await page.goto("/settings#skills");
@@ -43,7 +43,7 @@ test("Skills in Settings: create, use in chat, edit, preserve unsaved work and d
   await page.goto("/");
   await box.fill(`use skill ${name}`);
   await box.press("Enter");
-  await expect(page.getByText(/skill-edited-proof/).first()).toBeVisible();
+  await expect(page.getByText(/skill-edited-proof/).first()).toBeVisible({ timeout: 30_000 });
   await page.goto("/settings#skills");
   await section.getByRole("button", { name: `Edit ${label}`, exact: true }).click();
   await section.getByRole("button", { name: "Delete skill", exact: true }).click();

@@ -798,8 +798,24 @@ with its links arrives in the chat you asked from, WhatsApp included.
     origin protection. Full UI 114 passed/14 existing skips/two phone timing failures; those unchanged chat/writing
     cases passed on a fresh server. Final rebuilt desktop/phone browser/chat/writing/visual run: 16 passed. Screenshots
     inspected; temporary spec removed. TypeScript/ESLint, compilation and whitespace passed. No additional model cost.
-- [ ] **P11-05** `/learn`, `/skills`, `/reload-skills`, `/memory`: reviewed, versioned reusable resources,
+- [x] **P11-05** `/learn`, `/skills`, `/reload-skills`, `/memory`: reviewed, versioned reusable resources,
   existing Settings CRUD, task matching, user-only personal memory and no permission escalation.
+  - Done 2026-10-27: local zero-model commands; locked-Ask learned-skill cards; up to six 8k-text
+    script/reference/template resources bundled atomically with instructions and loaded individually by assigned
+    agents. Script loading never executes code. Settings edits/previews saved versions and restores deleted skills.
+    Archive prior bundles before replacement/deletion; retain 20 prior versions plus current. Credentials are
+    rejected from skill/resource/memory writes, and API validation errors omit submitted bodies. No new WhatsApp integration.
+  - Scope/provenance/single-load checks, path/type/size limits, secret-safe errors, original-message linking,
+    Plan/Pause/Ask, stale saves, full resource restoration, damaged history, storage failure and 20-version retention
+    tested. Existing resources survive updates by older clients that omit the resource field. Archive timestamps
+    preserve the most recently active bundle when restoring/deleting a previously used version.
+  - Checks: full backend 1,153 passed (473/332/348 isolated batches); focused skills/memory/settings 68 passed,
+    final whitespace-command check passed. Full UI 119 passed/14 existing skips/one transfer test race; that test now
+    waits for the previous reply before sending its next request. Final rebuilt desktop/phone Skills/resources/
+    versions/local commands/transfers/visuals: 12 passed. TypeScript/ESLint, compilation, whitespace and visual
+    inspection passed; temporary visual spec removed. No schema migration needed.
+    Real-model natural-language learning check on throwaway storage: waited for approval, then saved only there;
+    10.3s, $0.004914804. No owner skill, memory, approval or chat writes; no real WhatsApp sending tested.
 - [ ] **P11-06** `/update --check` and controlled updates: clean-worktree checks, explicit approval,
   backup/tests/migration/supervised restart/rollback; preserve local changes and interrupted-work reporting.
 - [ ] **P11-07** User-requested code-change proposals in isolated checkout: readable diff, bounded tests,

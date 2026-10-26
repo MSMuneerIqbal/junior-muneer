@@ -95,6 +95,8 @@ CATALOG: dict[str, ActionType] = {
            note="The card specifies public viewing or public editing. Anyone with an edit link can change the file."),
         _t("google.calendar.create", "Add an event to your Google Calendar", "Google", "auto",
            note="Only when you ask, on your own calendar; nobody is invited."),
+        _t("skills.learn", "Save a learned workflow as a reusable skill", "Skills", "ask", True,
+           "Review its steps before saving. Skills never grant tool permissions or run scripts by themselves."),
         _t("github.issue.create", "Create a GitHub issue", "GitHub", "ask"),
         _t("github.comment", "Comment on GitHub", "GitHub", "ask"),
         _t("github.pr.open", "Open a pull request", "GitHub", "ask"),

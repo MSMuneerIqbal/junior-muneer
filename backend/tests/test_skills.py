@@ -98,10 +98,13 @@ def test_use_skill_loads_its_instructions(folder):
 
 def test_you_can_make_a_skill_from_chat(folder):
     words = "make a skill for my weekly client report"
-    with TestClient(create_app()):
-        out = save_skill_for(said(words), "weekly_client_report", "My weekly report for a client: done, next, blockers.",
+    with TestClient(create_app()) as client:
+        context = said(words)
+        out = save_skill_for(context, "weekly_client_report", "My weekly report for a client: done, next, blockers.",
                              "## Steps\n1. List what was done this week.\n2. What's next.\n3. Blockers and questions.", words)
-        assert out.startswith("Saved the skill 'weekly_client_report'")
+        assert "waiting for approval" in out
+        assert "weekly_client_report" not in load_skills()
+        assert client.post(f"/api/approvals/{context.approval_ids[-1]}/approve").json()["status"] == "posted"
     assert "weekly_client_report" in load_skills()
 
 

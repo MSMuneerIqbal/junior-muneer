@@ -63,6 +63,7 @@ PLATFORM_LABELS = {
     "email": "Email",
     "github": "GitHub",
     "computer": "Your PC",
+    "skills": "Skills",
     "whatsapp": "Your WhatsApp",
     "other": "Other",
 }

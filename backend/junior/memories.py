@@ -139,6 +139,9 @@ async def tidy_now(request: Request) -> dict:
 
 @router.post("/api/memories", response_model=MemoryOut, status_code=201)
 def add_memory(body: MemoryIn) -> MemoryOut:
+    from junior.privacy import credential_present
+    if credential_present(body.content):
+        raise HTTPException(422, "Credentials belong in account/settings connections, never personal memory.")
     with session_scope() as s:
         memory = Memory(content=" ".join(body.content.split()))
         s.add(memory)
@@ -150,6 +153,9 @@ def add_memory(body: MemoryIn) -> MemoryOut:
 
 @router.patch("/api/memories/{memory_id}", response_model=MemoryOut)
 def edit_memory(memory_id: int, body: MemoryIn) -> MemoryOut:
+    from junior.privacy import credential_present
+    if credential_present(body.content):
+        raise HTTPException(422, "Credentials belong in account/settings connections, never personal memory.")
     with session_scope() as s:
         memory = s.get(Memory, memory_id)
         if memory is None:

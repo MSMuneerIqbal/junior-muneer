@@ -7,6 +7,8 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from junior import __version__
@@ -84,6 +86,8 @@ def default_senders(settings, pc_jobs=None, browser=None) -> SenderRegistry:
     from junior.computer.sender import ComputerSender
 
     registry.add(ComputerSender(pc_jobs, browser))  # approved local actions (Phase 9/11)
+    from junior.skill_learning import SkillSender
+    registry.add(SkillSender())
     from junior.transfers.sender import ArchiveWhatsAppSender
     registry.add(ArchiveWhatsAppSender())
     if settings.fake_ai and not registry.for_action("facebook.page.post"):
@@ -174,6 +178,15 @@ def create_app(
                     await scheduler
 
     app = FastAPI(title="Junior Muneer", version=__version__, lifespan=lifespan)
+    @app.exception_handler(RequestValidationError)
+    async def invalid_request(request, error):
+        # Validation errors must not echo submitted credential/resource bodies back into UI/logged errors.
+        from junior.privacy import safe_error
+        return JSONResponse(status_code=422, content={"detail": [
+            {"loc": [safe_error(part) if isinstance(part, str) else part for part in item["loc"]],
+             "msg": safe_error(item["msg"]), "type": item["type"]}
+            for item in error.errors()
+        ]})
     app.add_middleware(LocalOnly)  # only the WhatsApp webhook answers to outside addresses
     app.add_middleware(
         CORSMiddleware,
@@ -224,6 +237,8 @@ def create_app(
     app.include_router(desktop_router)
     from junior.browser.tools import router as browser_router
     app.include_router(browser_router)
+    from junior.skill_history import router as skill_history_router
+    app.include_router(skill_history_router)
     app.include_router(images_router)
     return app
 

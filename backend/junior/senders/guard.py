@@ -95,7 +95,7 @@ def check(item: ApprovalItem, text: str) -> list[str]:
             continue
         if pattern.search(text):
             problems.append(f"It contains {what}. " + ("Junior never writes or runs that." if computer else "That must never be posted."))
-    if computer:
+    if computer or item.platform == "skills":
         return problems
     if PLACEHOLDERS.search(text):
         problems.append("It still has a placeholder (like [link] or TODO) to fill in.")

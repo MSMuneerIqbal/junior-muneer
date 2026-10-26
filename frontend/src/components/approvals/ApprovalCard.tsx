@@ -131,7 +131,7 @@ function SendState({
   if (blocked.length || error) {
     return (
       <p role="note" className="mx-4 mb-3 rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">
-        {onPc(item) ? "Not done" : "Not posted"}: {blocked[0] ?? error}
+        {onPc(item) ? "Not done" : item.platform === "skills" ? "Not saved" : "Not posted"}: {blocked[0] ?? error}
       </p>
     );
   }
@@ -208,7 +208,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
           </span>
         ) : null}
         <span className={`${item.planned_at && (item.status === "waiting" || item.status === "approved") ? "" : "ml-auto"} rounded-full px-2 py-0.5 text-[11px] font-medium ${status.style}`} data-testid="approval-status">
-          {item.status === "posted" && onPc(item)
+          {item.status === "posted" && item.platform === "skills" ? "Saved" : item.status === "posted" && onPc(item)
             ? item.meta.op === "start_job" ? "Started" : "Done"
             : item.status === "posted" && isSent(item) ? "Sent" : status.label}
         </span>
@@ -457,7 +457,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
                 <button type="button" className={primary} disabled={busy} onClick={() => run("approve")}>
                   {busy && item.can_send ? "Working…" : item.can_send ? (item.item_type === "file_transfer"
                     ? item.platform === "computer" ? "Approve & copy" : item.platform === "google" ? "Approve & save" : "Approve & send"
-                    : onPc(item) ? "Approve & run" : "Approve & post") : "Approve"}
+                    : onPc(item) ? "Approve & run" : item.platform === "skills" ? "Approve & save" : "Approve & post") : "Approve"}
                 </button>
                 {item.can_always_allow && (
                   <button

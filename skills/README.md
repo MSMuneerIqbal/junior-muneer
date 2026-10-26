@@ -17,7 +17,7 @@ for: [junior_muneer, documents_agent]   # optional: only these agents see it
 
 - Checked at startup: a broken file stops the backend with a clear message (file and problem).
 - Ask Junior in chat: "make a skill for my weekly client report" (only from your own words, never from a pasted
-  text, an email or a web page).
+  text, an email or a web page). A skill card waits for review/approval before anything is saved.
 - Agents with skills today: Junior Muneer and the Computer Agent.
 
 ## Manage your skills
@@ -25,6 +25,18 @@ for: [junior_muneer, documents_agent]   # optional: only these agents see it
 Open **Settings → Skills** (`/settings#skills`). Search the library, **Add skill**, or choose **Edit** to change
 its description, instructions and the agent that can use it. **Delete skill** asks for confirmation. Saved changes
 apply from the next message without restarting; a task already running may still have its earlier instructions.
+Settings also edits up to six text resources (8,000 characters each): `scripts/name.py` (`.py`, `.ps1`, `.js`),
+`references/name.md` (`.md`, `.txt`, `.json`, `.csv`) and `templates/name.md` (`.md`, `.txt`, `.json`, `.html`, `.css`).
+Resources are bundled in the validated YAML header, so a save is one atomic file change. Agents see resource names
+and call `read_skill_resource` only for the one needed. Loading a script never runs it; execution still requires
+an approved computer command. Credentials cannot be stored in skills, resources or personal memory.
+
+Prior complete bundles are archived before edits/deletion in private app storage (20 previous versions plus the
+current bundle). Select a version in the editor, load it for review and Save to restore it. Deleted skills have a
+**Review restore** action. History never overwrites your active skill until you explicitly save the reviewed version.
+
+Local chat commands: `/skills [search]`, `/reload-skills`, `/memory [search]`, and
+`/learn name | when to use it | workflow steps`. These make no model calls; `/learn` prepares the approval card.
 The description should say when to use the skill. Junior matches the meaning of a request in English or Urdu;
 you do not have to say the skill's name. Matching is done by the model, so review results on your real work.
 

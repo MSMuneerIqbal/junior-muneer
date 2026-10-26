@@ -679,6 +679,12 @@ Build one acceptance-sized task at a time, with safety tests and regression chec
    runtime skill/memory storage and Settings. Draft, validate and review learned workflows; support bounded script,
    reference and template resources with versions. Skills never grant additional tool permissions. Only the user's
    words ground personal memories; credentials stay outside memory. Test task matching and prompt-injection cases.
+   Keep local commands ahead of model/history work. `/learn name | when to use it | steps` prepares a locked-Ask
+   skill card; Settings edits remain direct owner edits. Store up to six named script/reference/template text
+   resources (8k characters each) in the validated skill bundle; load only the requested resource, never auto-run
+   scripts. Archive the prior complete bundle before atomic save/delete, retain 20 versions, and offer preview/
+   restoration in Settings. Skills/resources cannot change permissions or accept credentials. `/skills`, reload
+   and memory views are local, with no model calls; personal memory keeps its existing user-source rules.
 6. **P11-06 — Controlled updates.** `/update --check` previews configured upstream changes. Approved update
    worker validates a clean worktree, backs up state, installs pinned dependencies, migrates, runs checks and
    restarts through a supervisor with rollback. Never silently discard local work or claim active calls survive.

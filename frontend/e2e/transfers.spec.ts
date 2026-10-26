@@ -30,6 +30,7 @@ test("actual document copy and ZIP WhatsApp delivery use reviewable approval car
     const status = await request.get("http://127.0.0.1:8100/api/google/status");
     expect((await status.json()).connected).toBe(true);
     await box.fill(`zip folder ${JSON.stringify({ folder: target, send_whatsapp: true })}`);
+    await expect(page.getByRole("button", { name: "Send", exact: true })).toBeEnabled();
     await box.press("Enter");
     const zip = page.getByRole("article", { name: "Your WhatsApp file_transfer: Send ZIP NLP.zip", exact: true });
     await expect(zip.getByTestId("approval-status")).toHaveText("Waiting for you");

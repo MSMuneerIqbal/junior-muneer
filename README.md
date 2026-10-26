@@ -172,8 +172,9 @@ Run it on **one PC at a time**. A Docker set-up for a server (Caddy with HTTPS a
 | Change a setting by asking | "Junior, switch web search to DeepSeek", "reply in Urdu from now on" |
 | Emails to other people | "Junior, email sara@x.com that…" (a file from your PC too): your Send-email rule decides: Ask = a card, **Approve** sends it; Auto = sent at once |
 | Files and commands on your PC | "Junior, what's in my Downloads?", "run git status in ...": changes and commands are cards; **Settings → Computer** for your allowed folders |
-| Make a skill | "Junior, make a skill for my weekly client report" (saved in `skills/`) |
-| Manage skills | **Settings → Skills**: search the starter library, add your own, edit instructions or delete a skill; changes apply to the next message |
+| Make a skill | "Junior, make a skill for my weekly client report" or `/learn name \| when to use it \| workflow steps`; review and approve its card to save |
+| Manage skills | **Settings → Skills**: add/edit/delete skills, script/reference/template text resources, preview saved versions and restore deleted skills; changes apply to the next message |
+| Local commands | `/skills [search]`, `/reload-skills`, `/memory [search]` and `/clear` / `cls` work without model calls; credential text is excluded from skills and memory |
 | Make a presentation | "Make 10 slides about NLP for beginners." Junior researches, checks and attaches the finished PowerPoint; 1–24 slides including cover/sources |
 | Check a long task | Ask "status?" in its chat, or see its current step in the chat and **Running now & recent work** in the Today panel |
 | Control background cost | **Settings → Background tasks**: allowance per task (default $0.50), time limit (600 seconds) and shared retry/revision limit (one). The daily cap still applies |
