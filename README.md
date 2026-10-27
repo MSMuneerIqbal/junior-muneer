@@ -14,6 +14,16 @@ the terminal on your PC, the news, voice messages and live calls, on the dashboa
 
 The design is in [PLAN.md](PLAN.md); progress and set-up steps per feature are in [TASK.md](TASK.md).
 
+**Research documents:** ask “Make 12 Google Slides about NLP”, “Make 8 PDF slides about solar energy”, or
+“Research this topic and give me a PDF report”. Junior researches, checks sources and returns the finished file
+with task progress. PDF reports and decks are generated locally without Google (Chromium installation below is
+required). Google Slides also returns a local editable PowerPoint; creating the online presentation waits for
+approval and uses your chosen sharing rule. Enable Google Slides API in your Google Cloud project if it is disabled.
+The existing `drive.file` permission is sufficient; reconnect only if your Google login is expired or missing.
+See [Google's create authorization requirements](https://developers.google.com/workspace/slides/api/reference/rest/v1/presentations/create).
+Slide decks support 1–24 slides including sources; PDF reports are limited to 100 pages/20 MB. Printing has a
+45-second limit within the task budget. Existing Google Docs/Slides can also be sent as PDFs when requested.
+
 **PC jobs:** ask Junior to run a PowerShell command in the background in an allowed folder. Approve its card,
 then open **Settings → Computer → PC jobs** to see the status, view output or press Stop. The default limit is
 10 minutes (up to one hour when requested), with at most three jobs at once. Output checks here use no AI tokens.

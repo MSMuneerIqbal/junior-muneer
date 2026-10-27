@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("“What happened today?” is answered from the app's records", async ({ page }, info) => {
-  test.setTimeout(60000); // two streamed answers can exceed 30s on a cold, busy Windows machine
+  test.setTimeout(90000); // the accumulated full-suite activity report streams more text than an isolated run
   const tag = `${info.project.name}-${Date.now().toString(36)}`;
   await page.goto("/");
   await page.getByRole("textbox", { name: "Message" }).fill(`draft A post about ${tag}`);
@@ -14,7 +14,7 @@ test("“What happened today?” is answered from the app's records", async ({ p
   const answer = page.getByText("(fake AI) Here's your day:").locator("xpath=ancestor::div[contains(@class,'prose-chat')]");
   await expect(answer).toContainText("What happened: today", { timeout: 15_000 });
   await expect(answer).toContainText("Drafts and posting");
-  await expect(answer).toContainText("Waiting for your OK right now");
+  await expect(answer).toContainText("Waiting for your OK right now", { timeout: 45000 });
   await page.getByRole("button", { name: "▸ Show work" }).last().click();
   await expect(page.getByText("Checking what happened")).toBeVisible();
 });

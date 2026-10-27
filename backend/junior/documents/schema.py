@@ -3,6 +3,8 @@ from pydantic import BaseModel, Field
 
 Short = Annotated[str, Field(min_length=1, max_length=160)]
 Bullet = Annotated[str, Field(min_length=1, max_length=180)]
+SLIDE_FORMATS = ("pptx", "google_slides", "slides_pdf")
+FORMATS = (*SLIDE_FORMATS, "pdf", "docx", "markdown", "xlsx", "google_doc", "google_sheet")
 
 
 class Slide(BaseModel):
@@ -35,17 +37,21 @@ class DocumentReview(BaseModel):
 
 def validate_document(doc: ResearchDocument, sources: list[dict], output_format: str, count: int) -> None:
     known = {s["id"] for s in sources}
-    parts = doc.slides if output_format == "pptx" else doc.sections if output_format not in ("xlsx", "google_sheet") else []
+    parts = doc.slides if output_format in SLIDE_FORMATS else doc.sections if output_format not in ("xlsx", "google_sheet") else []
     for n, part in enumerate(parts):
-        cover = output_format == "pptx" and n == 0 and part.layout == "cover"
-        label = f"slide {n + 1}: {part.title}" if output_format == "pptx" else f"section: {part.heading}"
+        cover = output_format in SLIDE_FORMATS and n == 0 and part.layout == "cover"
+        label = f"slide {n + 1}: {part.title}" if output_format in SLIDE_FORMATS else f"section: {part.heading}"
         if not set(part.source_ids) <= known:
             raise ValueError(f"Unknown source IDs on {label}. Use only catalog IDs {sorted(known)}.")
         if not part.source_ids and not cover:
             raise ValueError(f"Missing source IDs on {label}. Cite supporting catalog IDs from {sorted(known)}.")
-    if output_format in ("docx", "markdown", "google_doc") and not doc.sections:
+    if output_format in ("docx", "markdown", "google_doc", "pdf") and not doc.sections:
         raise ValueError("A written report needs complete sections with cited source IDs.")
-    if output_format == "pptx":
+    if output_format in SLIDE_FORMATS:
+        if not any(slide.source_ids for slide in doc.slides):
+            raise ValueError("A researched presentation needs at least one cited source, including a single-slide presentation.")
+        if len({i for slide in doc.slides for i in slide.source_ids}) > 12:
+            raise ValueError("Use at most 12 distinct sources across a slide deck so its reference slide stays readable.")
         expected = count - 1 if count > 1 else 1  # the exporter adds the sources slide
         if len(doc.slides) != expected:
             raise ValueError(f"Provide exactly {expected} content slides; the exporter adds sources when needed.")

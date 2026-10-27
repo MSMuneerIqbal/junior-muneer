@@ -171,13 +171,17 @@ class FakeModel(Model):
                 return [assistant_message(last.get("output", ""))], False
             return [function_call("task_status", {}, call_id="fake-task-status")], False
         if "ask_documents_agent" in tool_names and (re.search(r"\b(pptx?|powerpoint|slides|presentation)\b", text, re.I)
-                                                    or text.lower().startswith("research report:")):
+                                                    or text.lower().startswith(("research report:", "pdf report:"))):
             if isinstance(last, dict) and last.get("type") == "function_call_output":
                 said = last.get("output", "")
                 return [assistant_message("(fake AI) " + (said if said.startswith("NOT ") else
                     "I'm researching the topic and making your file. You can keep chatting; it will appear here."))], False
             fmt = "docx" if text.lower().startswith("research report:") else "pptx"
-            count = re.search(r"(\d+)\s*(?:slides|slide)", text, re.I)
+            if "google" in text.lower():
+                fmt = "google_slides" if fmt == "pptx" else "google_doc"
+            if "pdf" in text.lower():
+                fmt = "slides_pdf" if re.search(r"\b(slides|presentation)\b", text, re.I) else "pdf"
+            count = re.search(r"(\d+)\s*(?:(?:google|pdf|powerpoint)\s+)*(?:slides|slide)", text, re.I)
             return [function_call("ask_documents_agent", {"request": text, "your_words": text, "output_format": fmt,
                 "slide_count": int(count.group(1)) if count else 10}, call_id="fake-documents")], False
         if text.startswith("## Morning briefing facts"):

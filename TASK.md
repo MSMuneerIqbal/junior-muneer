@@ -705,7 +705,20 @@ with its links arrives in the chat you asked from, WhatsApp included.
   running tasks and in-progress/uncertain sends must finish or be resolved before deletion. Hidden snapshots cannot
   be removed through the gallery API. Recycle failures retain the record. Controlled backend and desktop/phone
   deletion/cancel checks passed (see P2b-07); no real user files were deleted for testing. App restarted and healthy.
-- [ ] **P10-05** Slides (Google Slides API, one more Google permission) and PDF export
+- [x] **P10-05** Google Slides API and PDF export (completed 2026-10-27)
+  - Official Slides API with existing drive.file scope; researched creation always waits for approval. Readable
+    slide/notes/source preview, local editable PPTX fallback, pinned creation ID/content hash and no duplicate
+    copies after partial failure. Pause and permission changes are checked before each mutating API stage.
+  - Local PDF reports/decks use an offline owned Chromium worker: 45 seconds, 20 MB, 100 report pages, 1–24
+    slides and up to 12 cited sources. Finished files return to the originating chat/gallery. No model-written code.
+  - Checks: full backend 1,238 passed at the main checkpoint; subsequent document/sender checks cover the final
+    pause/citation fixes. Full UI 123 passed/14 existing skips/5 failures; fixed fake slide-count parsing and two
+    old test isolation/timing issues. Final rebuilt UI 28 passed/2 skips across documents/news/reports/approvals/
+    posting on desktop and phone. TypeScript/ESLint and visual PDF/approval checks passed. Native PDF test waits
+    now allow the renderer's real 45-second deadline instead of the old 15-second generic document wait.
+  - Real-model throwaway-data NLP check: five PDF pages, 80.9 seconds, estimated $0.0925705. No owner chat or
+    live Google write used. Real Google Slides creation/API enablement and current OAuth freshness remain unverified;
+    enable Slides API/reconnect Google if required. Phase acceptance and push remain separate (P10-07).
 - [ ] **P10-06** First skills: CV review, scholarship roadmap, research report, pitch deck, proposal
 - [ ] **P10-07** Your acceptance test + push
 

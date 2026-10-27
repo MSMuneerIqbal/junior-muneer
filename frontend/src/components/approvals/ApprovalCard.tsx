@@ -5,6 +5,7 @@ import { toLocalInput, useApprovalItem, whenText } from "@/lib/approvals";
 import type { ApprovalItem, ApprovalStatus } from "@/lib/types";
 import { BACKEND_URL } from "@/lib/api";
 import { urduClass } from "@/lib/urdu";
+import { PresentationReview, presentationText } from "./PresentationReview";
 
 const STATUS: Record<ApprovalStatus, { label: string; style: string }> = {
   waiting: { label: "Waiting for you", style: "bg-warn-soft text-warn" },
@@ -157,6 +158,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
   const status = STATUS[item.status];
   const desktop = desktopAction(item);
   const browser = browserAction(item);
+  const presentation = item.action_type === "google.slides.create";
 
   async function run(action: Parameters<typeof act>[0], body?: Parameters<typeof act>[1]) {
     setBusy(true);
@@ -177,7 +179,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(item.text);
+      await navigator.clipboard.writeText(presentation ? presentationText(item.text) : item.text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -208,7 +210,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
           </span>
         ) : null}
         <span className={`${item.planned_at && (item.status === "waiting" || item.status === "approved") ? "" : "ml-auto"} rounded-full px-2 py-0.5 text-[11px] font-medium ${status.style}`} data-testid="approval-status">
-          {item.status === "posted" && item.item_type.startsWith("code_") ? item.item_type === "code_test" ? "Tested" : item.item_type === "code_apply" ? "Applied" : "Restored" : item.status === "posted" && item.item_type === "update" ? "Queued" : item.status === "posted" && item.platform === "skills" ? "Saved" : item.status === "posted" && onPc(item)
+          {item.status === "posted" && presentation ? "Created" : item.status === "posted" && item.item_type.startsWith("code_") ? item.item_type === "code_test" ? "Tested" : item.item_type === "code_apply" ? "Applied" : "Restored" : item.status === "posted" && item.item_type === "update" ? "Queued" : item.status === "posted" && item.platform === "skills" ? "Saved" : item.status === "posted" && onPc(item)
             ? item.meta.op === "start_job" ? "Started" : "Done"
             : item.status === "posted" && isSent(item) ? "Sent" : status.label}
         </span>
@@ -227,7 +229,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
             onChange={(e) => setEditing(e.target.value)}
             className={`w-full resize-y rounded-xl border border-line bg-bg px-3 py-2 text-sm leading-relaxed outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 ${onPc(item) ? "font-mono text-[13px]" : urduClass(editing)}`}
           />
-        ) : onPc(item) ? (
+        ) : presentation ? <PresentationReview text={item.text} /> : onPc(item) ? (
           <>
             {typeof item.meta.diff === "string" && item.meta.diff && <Diff diff={item.meta.diff} />}
             {item.meta.op === "desktop" && typeof item.meta.preview_url === "string"
@@ -452,13 +454,13 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
             )}
             {item.status === "posted" && typeof item.meta.post_url === "string" && item.meta.post_url && (
               <a href={item.meta.post_url} target="_blank" rel="noopener noreferrer" className={button}>
-                {item.item_type === "file_transfer" ? "Open file ↗" : "View post ↗"}
+                {presentation || item.item_type === "file_transfer" ? "Open file ↗" : "View post ↗"}
               </a>
             )}
             {waiting && item.kind === "api" && (
               <>
                 <button type="button" className={primary} disabled={busy} onClick={() => run("approve")}>
-                  {busy && item.can_send ? "Working…" : item.can_send ? (item.item_type === "file_transfer"
+                  {busy && item.can_send ? "Working…" : item.can_send ? (presentation ? "Approve & create" : item.item_type === "file_transfer"
                     ? item.platform === "computer" ? "Approve & copy" : item.platform === "google" ? "Approve & save" : "Approve & send"
                     : item.item_type.startsWith("code_") ? `Approve & ${item.meta.op}` : item.item_type === "update" ? "Approve & update" : onPc(item) ? "Approve & run" : item.platform === "skills" ? "Approve & save" : "Approve & post") : "Approve"}
                 </button>
@@ -477,7 +479,7 @@ export function ApprovalCard({ item: initial }: { item: ApprovalItem }) {
             )}
             {waiting && (
               <>
-                <button type="button" className={button} disabled={busy || item.platform === "maintenance" || item.item_type === "file_transfer" || (!!desktop && desktop.kind !== "type") || (!!browser && browser.kind !== "fill")}
+                <button type="button" className={button} disabled={busy || presentation || item.platform === "maintenance" || item.item_type === "file_transfer" || (!!desktop && desktop.kind !== "type") || (!!browser && browser.kind !== "fill")}
                   onClick={() => setEditing(desktop?.kind === "type" ? desktop.text : browser?.kind === "fill" ? browser.text : item.text)}>
                   Edit
                 </button>

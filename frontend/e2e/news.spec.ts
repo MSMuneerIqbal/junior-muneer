@@ -56,7 +56,10 @@ test("the top 5 AI news can be emailed now from Settings", async ({ page }, test
   await expect(page.getByText(/last sent \d{4}-\d\d-\d\d/)).toBeVisible();
 });
 
-test("the morning digest can be switched off and its time changed", async ({ page }) => {
+test("the morning digest can be switched off and its time changed", async ({ page, request }) => {
+  const before = await (await request.get("http://127.0.0.1:8100/api/settings")).json();
+  await request.patch("http://127.0.0.1:8100/api/settings", { data: { news_digest_enabled: true } });
+  try {
   await page.goto("/settings#news");
   const toggle = page.getByRole("switch", { name: "Build the news digests every morning" });
   await expect(toggle).toHaveAttribute("aria-checked", "true");
@@ -70,11 +73,10 @@ test("the morning digest can be switched off and its time changed", async ({ pag
   await page.reload();
   await expect(page.getByRole("switch", { name: "Build the news digests every morning" })).toHaveAttribute("aria-checked", "false");
   await expect(page.getByLabel("Morning digest time")).toHaveValue("06:45");
-  // Back to the default for other runs.
-  await page.getByRole("switch", { name: "Build the news digests every morning" }).click();
-  await page.getByLabel("Morning digest time").fill("07:30");
-  await Promise.all([
-    page.waitForResponse((response) => response.url().endsWith("/api/settings") && response.request().method() === "PATCH"),
-    page.getByRole("button", { name: "Save" }).click(),
-  ]);
+  } finally {
+    // Restore even if a UI assertion fails; desktop and phone share this throwaway database.
+    await request.patch("http://127.0.0.1:8100/api/settings", { data: {
+      news_digest_enabled: before.news_digest_enabled, news_digest_time: before.news_digest_time,
+    } });
+  }
 });

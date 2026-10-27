@@ -11,7 +11,7 @@ from junior.google.auth import GoogleError
 Ctx = RunContextWrapper[TurnContext]
 
 NEEDS = {
-    "drive.file": "creating Docs and Sheets",
+    "drive.file": "creating Docs, Sheets and Slides",
     "documents.readonly": "reading your Google Docs",
     "spreadsheets.readonly": "reading your Google Sheets",
     "calendar.events": "your calendar",

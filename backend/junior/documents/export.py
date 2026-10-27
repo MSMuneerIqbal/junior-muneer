@@ -96,7 +96,7 @@ def _pptx(doc: ResearchDocument, sources: list[dict], count: int) -> bytes:
 
 
 def export(doc: ResearchDocument, sources: list[dict], output_format: str, count: int = 10) -> tuple[bytes, str, str]:
-    if output_format == "pptx":
+    if output_format in ("pptx", "google_slides"):
         return _pptx(doc, sources, count), ".pptx", PPTX_MIME
     if output_format in ("docx", "google_doc"):
         from docx import Document

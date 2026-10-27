@@ -26,6 +26,7 @@ class FakeGoogle:
         self.sheets: dict[str, dict] = {
             "sheet-income": {"title": "Income", "tabs": {"Sheet1": [["Month", "USD"], ["Sep", "900"], ["Oct", "1200"]]}}
         }
+        self.presentations: dict[str, dict] = {}
         self.files: dict[str, dict] = {
             "file-cv-2026": {"name": "Muneer Iqbal CV.pdf", "mimeType": "application/pdf", "size": "52000",
                              "data": tiny_pdf("Muneer Iqbal - Agentic AI Engineer, Lahore")},
@@ -89,6 +90,27 @@ class FakeGoogle:
                 content = [{"paragraph": {"elements": [{"textRun": {"content": line + "\n"}}]}} for line in doc["text"].split("\n")]
                 return httpx.Response(200, json={"documentId": m.group(1), "title": doc["title"], "body": {"content": content}})
             return httpx.Response(404, json={"error": {"message": "Requested entity was not found."}})
+
+        # Slides: emulate API structure, including real note shape IDs and immutable object IDs.
+        if host == "slides.googleapis.com":
+            if method == "POST" and path == "/v1/presentations":
+                fid = self._id("presentation")
+                self.presentations[fid] = {"title": body["title"], "slides": [], "requests": []}
+                return httpx.Response(200, json={"presentationId": fid, "pageSize": {
+                    "width": {"magnitude": 9144000, "unit": "EMU"}, "height": {"magnitude": 5143500, "unit": "EMU"}}})
+            match = re.fullmatch(r"/v1/presentations/([^/:]+)(:batchUpdate)?", path)
+            if match and match[1] in self.presentations:
+                deck = self.presentations[match[1]]
+                if match[2]:
+                    for request in body["requests"]:
+                        if "createSlide" in request:
+                            oid = request["createSlide"]["objectId"]
+                            deck["slides"].append({"objectId": oid, "slideProperties": {
+                                "notesPage": {"notesProperties": {"speakerNotesObjectId": oid + "_notes"}}}})
+                    deck["requests"].extend(body["requests"])
+                    return httpx.Response(200, json={"presentationId": match[1]})
+                return httpx.Response(200, json={"presentationId": match[1], **deck})
+            return httpx.Response(404, json={"error": {"message": "Presentation not found."}})
 
         # Sheets
         if host == "sheets.googleapis.com":
@@ -218,6 +240,7 @@ class FakeGoogle:
     def _all_files(self) -> dict[str, dict]:
         files = {fid: {"name": d["title"], "mimeType": "application/vnd.google-apps.document"} for fid, d in self.docs.items()}
         files |= {fid: {"name": s["title"], "mimeType": "application/vnd.google-apps.spreadsheet"} for fid, s in self.sheets.items()}
+        files |= {fid: {"name": s["title"], "mimeType": "application/vnd.google-apps.presentation"} for fid, s in self.presentations.items()}
         return files | {fid: {k: v for k, v in f.items() if k != "data"} for fid, f in self.files.items()}
 
     def _drive(self, request: httpx.Request, path: str) -> httpx.Response:

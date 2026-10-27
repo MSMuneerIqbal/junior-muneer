@@ -28,8 +28,8 @@ def chat(c, text, conversation_id=None):
     return events[-1]
 
 
-def wait(c, conversation_id, state="done"):
-    end = time.monotonic() + 15
+def wait(c, conversation_id, state="done", timeout=15):
+    end = time.monotonic() + timeout
     while time.monotonic() < end:
         tasks = c.get(f"/api/tasks?conversation_id={conversation_id}").json()
         if tasks and tasks[0]["status"] == state:

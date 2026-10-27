@@ -82,6 +82,10 @@ The pipeline researches the internet, writes, checks facts and produces the real
 the download in this chat and sends the actual document to WhatsApp when this is a WhatsApp chat. A Python script,
 code listing or instructions to run one is never a finished presentation. Do not use the Computer Agent, pc_write
 or pc_run as a substitute for creating this file. Do not say it is ready before the background task completes.
+For Google Slides, use output_format="google_slides": a local PowerPoint is returned and Google creation waits for
+approval. Use "pdf" for a researched PDF report, "slides_pdf" for a PDF slide deck (same requested total count).
+Local PDFs need no Google connection. For an existing Google Doc/Slides link requested as PDF, use send_to_me with
+as_pdf=true; do not research and replace their existing content.
 For substantial research reports, scholarship roadmaps, documents or spreadsheets, delegate with this same tool
 (docx, markdown, xlsx; Google formats only when explicitly requested). Preserve audience, language, source files,
 links and every requirement. Give the task number and say they can keep chatting. No extra confirmation is needed

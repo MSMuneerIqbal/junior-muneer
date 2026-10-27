@@ -40,7 +40,7 @@ USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
 SCOPES = {
     "openid": "your sign-in",
     "email": "your email address",
-    "https://www.googleapis.com/auth/drive.file": "creating Docs and Sheets in your Drive",
+    "https://www.googleapis.com/auth/drive.file": "creating Docs, Sheets and Slides in your Drive",
     "https://www.googleapis.com/auth/drive.readonly": "finding and sending you files from your Drive (read-only)",
     "https://www.googleapis.com/auth/documents.readonly": "reading your Google Docs",
     "https://www.googleapis.com/auth/spreadsheets.readonly": "reading your Google Sheets",

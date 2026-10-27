@@ -522,7 +522,7 @@ in the chat (and on WhatsApp when you asked there).
 a 10-minute limit) and keep you waiting. A specialist in the background avoids that, and Junior stays free to chat.
 
 **The Documents & Research Agent:** researches (web search, your PC files, Drive) and makes Google Docs, Sheets,
-**Slides** (Google Slides API: reconnect Google once with one more permission), **PDFs** (a Doc or Slides exported)
+**Slides** (Google Slides API with existing drive.file permission), **PDFs** (local reports/decks or Google exports)
 and **Markdown** files (Drive, or your PC through a card). It always runs as a background task. Junior hands it any
 long job by himself ("this needs research and a doc: I've started it"), not only when you say "in the background".
 
@@ -542,7 +542,15 @@ selected search API, writes structured content, checks it against that evidence,
 inside the app's data folder. A script is never substituted for a deck. Sources are collected from the search
 provider's actual citations; drafts use numeric source IDs. The local download returns to the original chat;
 WhatsApp receives the real document attachment. Google Docs/Sheets creation uses approval cards after research.
-Google Slides API and PDF export remain later work under P10-05.
+P10-05 resumed 2026-10-27: Google Slides creation uses the official Slides API and existing drive.file scope,
+which Google documents as sufficient for creating and editing app-created presentations; no broader presentation
+scope is requested. Google Slides API must be enabled in the owner's Cloud project. Researched creation waits for
+approval and returns a local PowerPoint even when Google is unavailable. Speaker notes and clickable sources are
+included; partial creation pins its ID/content hash and never silently creates a second copy.
+Local PDF reports and slide decks use escaped application-owned HTML, offline Chromium, no supplied scripts or
+network requests, and a 45-second owned worker. Limits: 20 MB, 100 report pages, 1–24 slide pages and at most 12
+distinct slide citations for readable references. Cancellation terminates the worker; only validated finished PDFs
+enter the gallery/originating chat. Existing Google Docs/Slides PDF export via send_to_me remains available.
 
 Each task snapshots its cost allowance (default $0.50), wall-clock limit (600 seconds), and shared retry/revision
 limit (one), configurable in Settings → Background tasks. Responses have output-token bounds and a conservative
@@ -773,6 +781,9 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 - **Terminal access** is powerful. It stays limited to one folder and an allowed-commands list, every command needs your OK, and dangerous commands are always denied.
 
 ## 18. Change log
+
+- **v10.1 (2026-10-27):** researched Google Slides with readable approval previews and pinned partial creations;
+  local offline PDF reports/decks with owned workers, citation links and exact slide counts (section 14d).
 
 - **v10.0 (2026-10-26):** authorized staged PC/browser/learning/update work (section 14h), preserving approvals
   and existing API configuration. All new WhatsApp integration work deferred by Muneer. Each step is tracked in

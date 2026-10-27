@@ -35,13 +35,13 @@ async def run_documents(context, request: str, output_format: str, slide_count: 
     content_slides = slide_count - 1 if slide_count > 1 else 1
     brief = (
         f"Request: {request}\nOutput format: {output_format}\nContent slide count: {content_slides}\n"
-        "For PowerPoint, produce exactly that many slides, including a cover only if more than one content slide. "
+        "For pptx, google_slides or slides_pdf, produce exactly that many slides, including a cover only if more than one content slide. "
         "The exporter adds one source slide, so do not add one yourself. Each slide needs 1–5 concise bullets, "
         "one clear purpose, speaker notes and source_ids. Use varied points/comparison/steps layouts when meaningful. "
         "Use sections for a full written report. For spreadsheets provide headers and rows, including a Source column "
         "whose value is an exact catalog URL in every row; use no formulas. Do not invent statistics or research findings. "
         "Cite every factual content section and slide using real catalog IDs (numbered from 1). A title-only cover "
-        "can leave source_ids empty. Match the requested language and audience. For PowerPoint leave sections, "
+        "can leave source_ids empty. Match the requested language and audience. For slide formats leave sections, "
         "headers and rows empty. For a written document leave slides, headers and rows empty.\n\n"
         + gate.fence(context, json.dumps(sources, ensure_ascii=False), "verified search citation catalog")
         + "\n" + gate.fence(context, "\n\n".join(findings)[:26000], "research findings")
@@ -83,7 +83,12 @@ async def run_documents(context, request: str, output_format: str, slide_count: 
         doc = await retry_read(context, lambda: context.helpers.run_structured("documents_agent", fix, context, ResearchDocument))
 
     stage("Building your file", 4)
-    data, extension, mime = await asyncio.to_thread(export, doc, sources, output_format, slide_count)
+    if output_format in ("pdf", "slides_pdf"):
+        from junior.documents.pdf import render_pdf
+        data = await render_pdf(doc, sources, output_format, slide_count)
+        extension, mime = ".pdf", "application/pdf"
+    else:
+        data, extension, mime = await asyncio.to_thread(export, doc, sources, output_format, slide_count)
     context.check_task_limits()
     filename = safe_name(re.sub(r"[\[\]()`]", "", doc.title))[:110] + extension
     number, _ = save_received(data, filename, mime, "generated", context.conversation_id)
@@ -92,9 +97,11 @@ async def run_documents(context, request: str, output_format: str, slide_count: 
     audit("action", "document_created", detail={"file_id": number, "format": output_format, "sources": len(sources)},
           conversation_id=context.conversation_id)
     result = f"**{doc.title}**\n\n{doc.summary}\n\n[Download {filename}](/api/files/{number}/download)"
-    if output_format == "pptx":
+    if output_format in ("pptx", "google_slides"):
         result += f"\n\n{slide_count} editable slides, with source links and speaker notes."
-    if output_format in ("google_doc", "google_sheet"):
+    if output_format == "slides_pdf":
+        result += f"\n\n{slide_count} PDF slides, with source links."
+    if output_format in ("google_doc", "google_sheet", "google_slides"):
         from junior.documents.workspace import queue_workspace
-        result += "\n\n" + queue_workspace(context, doc, sources, output_format)
+        result += "\n\n" + queue_workspace(context, doc, sources, output_format, slide_count)
     return result

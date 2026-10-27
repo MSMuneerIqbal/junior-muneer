@@ -1256,7 +1256,7 @@ function GoogleConnection() {
 
   if (!data) return null;
   return (
-    <Row wide label="Google (Docs, Sheets, Calendar, Drive, Gmail)">
+    <Row wide label="Google (Docs, Sheets, Slides, Calendar, Drive, Gmail)">
       <div className="flex flex-col gap-1.5 text-sm">
         <div className="flex flex-wrap items-center gap-2">
           {data.connected ? (
@@ -1287,6 +1287,7 @@ function GoogleConnection() {
             Not allowed on Google: {data.missing.join(", ")}. Use “Connect again” and tick them, if you want those.
           </p>
         )}
+        <p className="text-xs text-muted">Slides uses the existing file-creation permission. Enable Google Slides API in your Google Cloud project if Google reports it is disabled. Local PDF and PowerPoint downloads work without Google.</p>
         {data.connected && !data.drive_folder_access && (
           <div className="mt-1 text-xs text-muted">
             <p>To save directly into folders you already created, Google requires broader Drive access. Junior still adds copies and keeps existing files.</p>

@@ -89,6 +89,8 @@ CATALOG: dict[str, ActionType] = {
            note="A new doc only; your existing docs are only read."),
         _t("google.sheets.create", "Create a Google Sheet in your Drive", "Google", "auto",
            note="A new sheet only; your existing sheets are only read."),
+        _t("google.slides.create", "Create Google Slides in your Drive", "Google", "ask",
+           note="A new presentation only; researched content always waits for approval."),
         _t("google.drive.save", "Save a file you sent to your Google Drive", "Google", "auto",
            note="Only adds new files; never changes or deletes yours."),
         _t("google.drive.share", "Share a Drive file with anyone who has its link", "Google", "ask",

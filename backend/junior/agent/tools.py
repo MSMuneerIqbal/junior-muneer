@@ -1041,8 +1041,9 @@ def documents_for(context: TurnContext, request: str, output_format: str, slide_
         return "NOT started: your_words must quote the user's own request exactly."
     if not request.strip() or len(request) > 12000:
         return "NOT started: provide the complete request, up to 12,000 characters."
-    if output_format not in ("pptx", "docx", "markdown", "xlsx", "google_doc", "google_sheet"):
-        return "NOT started: supported formats are pptx, docx, markdown, xlsx, google_doc and google_sheet."
+    from junior.documents.schema import FORMATS
+    if output_format not in FORMATS:
+        return "NOT started: supported formats are " + ", ".join(FORMATS) + "."
     if not 1 <= slide_count <= 24:
         return "NOT started: a PowerPoint can have 1 to 24 slides."
     if output_format.startswith("google_") and not any(w in your_words.lower() for w in ("google", "گوگل")):
@@ -1054,11 +1055,12 @@ def documents_for(context: TurnContext, request: str, output_format: str, slide_
 
 @function_tool
 def ask_documents_agent(ctx: Ctx, request: str, your_words: str,
-                        output_format: Literal["pptx", "docx", "markdown", "xlsx", "google_doc", "google_sheet"] = "docx",
+                        output_format: Literal["pptx", "docx", "markdown", "xlsx", "google_doc", "google_sheet", "google_slides", "pdf", "slides_pdf"] = "docx",
                         slide_count: int = 10) -> str:
     """Delegate internet research and produce a finished PowerPoint, report or spreadsheet in the background.
     Use for any request to make slides/PPT/presentation (pptx), researched document (docx/markdown) or
-    researched spreadsheet (xlsx). Internet research, citations, review and actual file creation are included.
+    researched spreadsheet (xlsx), PDF report (pdf), PDF slide deck (slides_pdf), or Google Slides (google_slides).
+    Internet research, citations, review and actual file creation are included.
     Return the job number; its completed FILE will arrive in this chat, also as a document on WhatsApp.
     Never substitute a script, instructions or pc_run for this tool. Preserve the full topic, audience,
     language and requested slide count (1–24 total, including cover and sources). Default to 10 slides.
