@@ -26,6 +26,7 @@ async def ask_code_for(context, request, your_words):
         return "NOT started: keep credentials out of code requests. Configure connections in Settings instead."
     if context.code_session is not None:
         return "One code proposal per turn. Review its status in Settings → Advanced."
+    context.code_session = {"_reserved": True}  # reserve before the first await; parallel tool calls cannot fork this turn
     step = {"type": "step", "id": "code-proposal", "kind": "team", "name": "code_agent", "label": "Preparing a reviewed code proposal", "status": "running"}
     context.emit(step)
     old_budget = context.task_budget_usd

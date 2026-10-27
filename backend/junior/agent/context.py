@@ -48,6 +48,7 @@ class TurnContext:
     proposal_jobs: set[int] = field(default_factory=set)
     # Every model call so far, kept here so the cost is saved even if the turn fails.
     usage: list[ModelUsage] = field(default_factory=list)
+    chat_model_calls: int = 0  # shared by a typed reply, all helpers and any provider fallback
     # Long requests: starts one in the background (set by the chat; None in calls and background work).
     start_background: Any = None
     background: bool = False  # this turn is itself a background task

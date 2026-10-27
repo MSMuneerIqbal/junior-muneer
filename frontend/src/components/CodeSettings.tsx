@@ -4,7 +4,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { fetcher, send } from "@/lib/api";
 
-type Proposal = { id: string; summary: string; status: string; diff: string; test_result: string };
+type Proposal = { id: string; summary: string; status: string; diff: string; test_result: string; estimated_cost_usd?: number; preparation_seconds?: number };
 
 export default function CodeSettings() {
   const { data, error, mutate } = useSWR<Proposal[]>("/api/code-proposals", fetcher, { refreshInterval: 3000 });
@@ -28,6 +28,7 @@ export default function CodeSettings() {
       <h4 className="font-medium">{p.summary}</h4>
       <p className="break-all text-xs text-muted">{p.id}</p>
       <p role="status">{p.status.replaceAll("_", " ")}: {p.test_result}</p>
+      {typeof p.estimated_cost_usd === "number" && <p className="text-xs text-muted">AI draft estimate: ${p.estimated_cost_usd.toFixed(6)} · {p.preparation_seconds}s preparation</p>}
       <details><summary className="cursor-pointer">Review full diff</summary><pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-words text-xs">{p.diff}</pre></details>
       <div className="flex flex-wrap gap-2">
         {[["test", ["staged", "test_failed", "interrupted"]], ["apply", ["passed"]], ["rollback", ["applied"]]].map(([op, states]) => (states as string[]).includes(p.status) && <button key={op as string} disabled={!!busy} className="rounded-lg border border-line px-3 py-2 disabled:opacity-50" onClick={() => review(p.id, op as string)}>Prepare {op as string} review</button>)}

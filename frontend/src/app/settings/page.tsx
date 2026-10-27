@@ -8,6 +8,7 @@ import { SettingsIcon } from "@/components/icons";
 import SkillsSettings from "@/components/SkillsSettings";
 import UpdatesSettings from "@/components/UpdatesSettings";
 import CodeSettings from "@/components/CodeSettings";
+import LimitSummary from "@/components/LimitSummary";
 import ComputerJobs from "@/components/ComputerJobs";
 import DesktopSettings from "@/components/DesktopSettings";
 import BrowserSettings from "@/components/BrowserSettings";
@@ -641,6 +642,16 @@ function SettingsForm({ initial }: { initial: Settings }) {
       </Section>
 
       <Section id="budget" title="Budget" description="A safety net against surprises.">
+        <LimitSummary />
+        <Row label="Cost allowance per chat reply (USD)" hint="A typed reply and its helpers share this allowance. Input, schema and output are bounded before requests; estimates and in-flight provider billing can differ.">
+          <input type="number" min={0.01} max={10} step={0.01} value={form.chat_budget_usd} onChange={e => set("chat_budget_usd", e.target.value as unknown as number)} className={`${input} max-w-40`} aria-label="Chat cost allowance in US dollars" />
+        </Row>
+        <Row label="AI calls per chat reply" hint="Includes helper agents and provider fallback. Background tasks keep their existing 12-call cap; live calls have their own limits.">
+          <input type="number" min={1} max={24} value={form.chat_max_model_calls} onChange={e => set("chat_max_model_calls", Number(e.target.value))} className={`${input} max-w-40`} aria-label="AI calls per chat reply" />
+        </Row>
+        <Row label="Output tokens per AI response" hint="Maximum generated tokens, including hidden reasoning and tool-call text. Very low limits can prevent long documents from completing.">
+          <input type="number" min={512} max={16000} step={1} value={form.max_output_tokens} onChange={e => set("max_output_tokens", Number(e.target.value))} className={`${input} max-w-40`} aria-label="Output tokens per AI response" />
+        </Row>
         <Row
           label="Daily safety cap"
           hint="When today's AI spend reaches this, new AI work stops until midnight. Live calls end too."

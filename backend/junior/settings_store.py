@@ -11,6 +11,9 @@ DEFAULTS: dict[str, Any] = {
     "language": "match",
     "timezone": "Asia/Karachi",
     "daily_cap_usd": 5.0,
+    "chat_budget_usd": 0.5,
+    "chat_max_model_calls": 16,
+    "max_output_tokens": 10000,
     "drive_share_default": "private",  # This owner's preference is editable; ZIP delivery stays private.
     "task_budget_usd": 0.5,
     "task_timeout_seconds": 600,

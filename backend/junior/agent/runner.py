@@ -120,10 +120,18 @@ class TurnHooks(RunHooks[TurnContext]):
         context.context.check_task_limits()
         if context.context.task_id is not None:
             context.context.task_model_calls += 1
+        elif not context.context.memory_locked:
+            cap = context.context.settings.get("chat_max_model_calls", 16)
+            if context.context.chat_model_calls >= cap:
+                raise BudgetExceeded(f"Stopped: this reply reached its limit of {cap} AI calls, including helpers. Continue with a new message or adjust Settings → Budget.")
+            context.context.chat_model_calls += 1
         spent = sum(u.cost_usd for u in context.context.usage)
-        if self.budget is not None and spent >= self.budget:
+        allowance = self.budget
+        if context.context.task_id is None and not context.context.memory_locked:
+            allowance = min(allowance if allowance is not None else float("inf"), context.context.settings.get("chat_budget_usd", .5))
+        if allowance is not None and spent >= allowance:
             raise BudgetExceeded(
-                f"Stopped: this answer used up what was left of today's cap (${spent:.2f})."
+                f"Stopped: this answer reached its cost cap (${spent:.2f} used, ${allowance:.2f} allowance)."
             )
 
     async def on_llm_end(

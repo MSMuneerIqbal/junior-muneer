@@ -263,3 +263,25 @@ are shown for manual inspection and are never replayed. Ten proposal copies are 
 Preparation uses the existing model/provider, with a 120-second/$0.25 limit inside the existing daily budget.
 If a deployed release is ahead of the original development checkout, sync that checkout locally first. Junior
 refuses proposals against a different running revision; releases stay immutable and local work is preserved.
+
+## Keeping API costs bounded
+
+Settings → **Budget** now includes a cost allowance per typed reply (default **$0.50**), total model calls per
+reply including helpers/fallback (default **16**) and output tokens per AI response (default **10,000**, adjustable
+512–16,000). The existing daily safety cap remains in place. Replies still stop after ten minutes. The input,
+tool definitions, structured schema and output allowance are checked before bounded chat/helper requests; a very
+small allowance may refuse a request before any API call. OpenAI hosted search permits one built-in call per response.
+
+Background task defaults remain $0.50, ten minutes, one shared retry, up to 12 model calls and four search requests.
+Typed model transport retains its existing one network retry; actions are never automatically retried. PC jobs,
+browser operations, updates and code checks keep their own bounded lifetimes and zero action retries. Budget
+shows the current screenshot/session limits too. Live calls keep their existing daily/minute controls.
+
+`/clear`/`cls`, `/skills`, `/reload-skills`, `/memory`, `/learn` and `/update` use no model tokens. Clearing context
+does **not** erase today's Usage/spending records or reset the daily cap. Status polling also uses no AI calls.
+Code proposals display their draft cost estimate and preparation time; chat/provider/agent spending remains in Usage.
+Figures use `agents/models.toml`; keep its prices current when provider rates change. Conservative estimates can
+stop work before the allowance is fully used, and in-flight requests/provider billing may differ. Output caps
+include non-visible generated tokens; see [OpenAI's token-counting documentation](https://developers.openai.com/api/docs/guides/token-counting).
+Very low output limits can prevent long documents from completing. Existing providers and keys are retained;
+optional local speech or extra providers require separate validation/setup and are not enabled automatically.

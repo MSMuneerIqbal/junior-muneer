@@ -33,8 +33,10 @@ class HelperRunner:
 
     async def _run(self, agent_name: str, prompt: str, context: TurnContext, output_type=None):
         router = get_router()
+        from junior.documents.limits import task_provider
+        provider = self.model_provider if context.memory_locked else task_provider(self.model_provider, context, router)
         agent, model_name = build_agent(
-            self.registry.get(agent_name), router, self.model_provider, output_type=output_type
+            self.registry.get(agent_name), router, provider, output_type=output_type
         )
         budget = budget_left(context.settings)
         if context.task_budget_usd is not None:

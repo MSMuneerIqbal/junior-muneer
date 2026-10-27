@@ -25,6 +25,9 @@ class SettingsUpdate(BaseModel):
     language: Literal["match", "english", "urdu"] | None = None
     timezone: str | None = None
     daily_cap_usd: float | None = Field(default=None, ge=0, le=1000)
+    chat_budget_usd: float | None = Field(default=None, ge=0.01, le=10, allow_inf_nan=False)
+    chat_max_model_calls: int | None = Field(default=None, ge=1, le=24)
+    max_output_tokens: int | None = Field(default=None, ge=512, le=16000)
     task_budget_usd: float | None = Field(default=None, ge=0.01, le=10, allow_inf_nan=False)
     task_timeout_seconds: int | None = Field(default=None, ge=30, le=1800)
     task_max_retries: int | None = Field(default=None, ge=0, le=2)

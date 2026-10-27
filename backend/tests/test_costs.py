@@ -79,30 +79,30 @@ def test_raising_the_cap_lets_messages_through_again(client, model):
 
 
 def test_yesterdays_spend_does_not_count(client, model):
-    set_setting("daily_cap_usd", 0.01)
+    set_setting("daily_cap_usd", 0.5)  # fits the bounded prompt; yesterday's $1 would exceed this
     add_spend(1.0, days_ago=2)
     model.enqueue(chunked_answer("ok"))
     assert chat(client, "Hello")[-1]["type"] == "done"
 
 
 def test_runaway_tool_loop_is_stopped_mid_answer_and_its_cost_saved(client, model):
-    set_setting("daily_cap_usd", 0.01)
-    # First model call costs $0.02 (10k input tokens), more than the whole cap.
+    set_setting("daily_cap_usd", 0.5)
+    # Simulate unexpectedly high reported usage: still record it and stop before another call.
     model.extend(
         [
             {
                 "output": [function_call("spending", {"period": "today"}, call_id="c1")],
-                "usage": usage(10_000, 0),
+                "usage": usage(300_000, 0),
             },
             chunked_answer("never reached"),
         ]
     )
     events = chat(client, "Loop forever please")
     assert events[-1]["type"] == "error"
-    assert "used up what was left" in events[-1]["message"]
+    assert "cost cap" in events[-1]["message"]
     assert len(model.calls) == 1  # the second call never happened
-    with session_scope() as s:  # the $0.02 is still on the books
-        assert s.scalar(select(Usage.cost_usd)) == pytest.approx(0.02)
+    with session_scope() as s:
+        assert s.scalar(select(Usage.cost_usd)) == pytest.approx(0.6)
 
 
 def test_daily_history(client):

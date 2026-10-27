@@ -270,8 +270,9 @@ class ChatService:
         )
         try:
             budget = budget_left(settings)
-            provider = self.model_provider()
+            from junior.documents.limits import task_provider
             router = get_router()
+            provider = task_provider(self.model_provider(), context, router)
             spec = self.registry.get(MAIN_AGENT)
             # Other providers (DeepSeek) are for typed chat only: a voice message is
             # answered by the default OpenAI model, so voice never waits on them.

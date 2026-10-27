@@ -714,6 +714,15 @@ Build one acceptance-sized task at a time, with safety tests and regression chec
    add task-model/screenshot limits where missing, usage estimates and explicit failure states. Verify real local
    operations on synthetic fixtures and model quality on isolated data. Validate any optional local STT/TTS or new
    provider against actual installed capabilities before enabling. No new subscriptions or provider switch by default.
+   Typed replies/helpers now share a configurable $0.50 allowance and 16 logical model calls by default, including
+   provider fallback. The existing task response limiter also bounds typed replies using conservative input/tool/
+   schema cost and remaining allowance before each request. All agent responses have a configurable 10,000-token
+   output ceiling (512–16,000); OpenAI hosted search is limited to one built-in call per response. Background task
+   limits remain $0.50/600s/one shared retry/up to 12 model calls/four search requests. Native action retries stay zero.
+   Budget settings and /api/usage/limits show effective caps; code proposals record their draft cost and duration.
+   Local commands/status polling cost no model tokens; session reset retains Usage. Live calls retain daily/minute
+   controls. Estimates use configured prices and can differ from provider billing/in-flight usage. Optional local
+   speech/new providers are left disabled; no setup or subscriptions are assumed.
 
 Across all steps: existing Ask/Auto/Deny, Pause/Plan, source provenance, at-most-once dispatch and audit remain.
 No generic `approvals.mode: off`; owner access remains restricted. Windows terminal filtering is not a sandbox:

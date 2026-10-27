@@ -153,10 +153,12 @@ def build_agent(
     def instructions(ctx: RunContextWrapper[TurnContext], _agent: Agent[TurnContext]) -> str:
         return render_instructions(spec, ctx.context.settings, ctx.context.user_text)
 
+    from junior.settings_store import get_setting
     agent = Agent[TurnContext](
         name=spec.name,
         instructions=instructions,
         model=model_provider(model_name),
+        model_settings=ModelSettings(max_tokens=get_setting("max_output_tokens")),
         tools=build_tools(spec.tools, spec.name),
         output_type=output_type,
     )

@@ -185,6 +185,9 @@ export type Settings = {
   timezone: string;
   daily_cap_usd: number;
   task_budget_usd: number;
+  chat_budget_usd: number;
+  chat_max_model_calls: number;
+  max_output_tokens: number;
   task_timeout_seconds: number;
   task_max_retries: number;
   paused: boolean;

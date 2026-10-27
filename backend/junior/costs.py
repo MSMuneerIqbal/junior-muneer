@@ -17,6 +17,26 @@ from junior.timeutil import start_of_today_utc, zone
 router = APIRouter()
 
 
+@router.get("/api/usage/limits")
+def runtime_limits():
+    from junior.chat.service import TURN_SECONDS
+    from junior.computer.desktop import MAX_SNAPSHOTS
+    from junior.computer.jobs import MAX_RUNNING, MAX_SECONDS
+    from junior.maintenance.supervisor import TOTAL_SECONDS
+    from junior.maintenance.code import TEST_SECONDS
+    from junior.ai_client import RETRIES
+    settings = all_settings()
+    return {"estimated_costs": True,
+            "chat": {"budget_usd": settings["chat_budget_usd"], "model_calls": settings["chat_max_model_calls"],
+                     "seconds": TURN_SECONDS, "output_tokens": settings["max_output_tokens"], "transport_retries": RETRIES},
+            "background": {"budget_usd": settings["task_budget_usd"], "seconds": settings["task_timeout_seconds"],
+                           "retries": settings["task_max_retries"], "model_calls": 12, "searches": 4},
+            "computer": {"jobs": MAX_RUNNING, "job_seconds": MAX_SECONDS, "retries": 0,
+                         "desktop_snapshots": MAX_SNAPSHOTS, "browser_snapshots": 6, "browser_session_seconds": 900},
+            "maintenance": {"update_seconds": TOTAL_SECONDS, "code_test_seconds": TEST_SECONDS, "retries": 0},
+            "local_commands": ["/clear", "cls", "/skills", "/reload-skills", "/memory", "/learn", "/update"]}
+
+
 class BudgetExceeded(Exception):
     """The daily cap is reached: no new AI work until tomorrow (or a higher cap)."""
 

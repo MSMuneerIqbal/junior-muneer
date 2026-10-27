@@ -1,4 +1,4 @@
-"""Bound each task's model responses and retry only a failed read/model step, never the whole job."""
+"""Bound task/chat responses using the shared allowance; retry only failed read steps, never actions."""
 import json
 from agents import Model, ModelSettings, WebSearchTool
 from openai import APIConnectionError, InternalServerError, RateLimitError
@@ -9,27 +9,38 @@ from junior.models import get_router
 
 
 class TaskModel(Model):
-    def __init__(self, model, name, context):
+    def __init__(self, model, name, context, router=None):
         self.model, self.name, self.context = model, name, context
+        self.router = router or get_router()
         # A task's retry policy owns retries. Disable the OpenAI client's hidden retries for this model instance.
         client = getattr(model, "_client", None)
-        if client is not None and hasattr(client, "with_options"):
+        if context.task_id is not None and client is not None and hasattr(client, "with_options"):
             model._client = client.with_options(max_retries=0)
 
     def settings_for(self, instructions, items, settings, tools, schema):
         self.context.check_task_limits()
-        price = get_router().price(self.name)
-        left = min(budget_left(), self.context.task_budget_usd) - sum(u.cost_usd for u in self.context.usage)
+        price = self.router.price(self.name)
+        allowance = self.context.task_budget_usd
+        if self.context.task_id is None:
+            allowance = min(allowance if allowance is not None else float("inf"), self.context.settings.get("chat_budget_usd", .5))
+        left = min(budget_left(), allowance) - sum(u.cost_usd for u in self.context.usage)
         # UTF-8 bytes are a conservative input-token allowance; include tool/schema overhead and unbilled cache misses.
-        payload = str(instructions) + str(items) + str(schema)
-        payload += json.dumps([getattr(t, "params_json_schema", {}) for t in tools], ensure_ascii=False)
+        structured = schema is not None and hasattr(schema, "json_schema") and not (hasattr(schema, "is_plain_text") and schema.is_plain_text())
+        schema_text = schema.json_schema() if structured else str(schema)
+        payload = str(instructions) + str(items) + json.dumps(schema_text, ensure_ascii=False)
+        payload += json.dumps([{"name": getattr(t, "name", ""), "description": getattr(t, "description", ""),
+                                "parameters": getattr(t, "params_json_schema", {})} for t in tools], ensure_ascii=False)
         tokens = len(payload.encode("utf-8")) + 4096
         reserve = tokens * price.input / 1_000_000
-        reserve += sum(get_router().tool_prices.get("web_search", 0) for t in tools if isinstance(t, WebSearchTool))
+        hosted = any(isinstance(t, WebSearchTool) for t in tools)
+        reserve += self.router.tool_prices.get("web_search", 0) if hosted else 0
         output = int((left - reserve) * 1_000_000 / max(price.output, .01))
         if output < 512:
-            raise BudgetExceeded("There isn't enough task allowance for another bounded AI call. Raise it in Settings → Background tasks.")
-        return settings.resolve(ModelSettings(max_tokens=min(settings.max_tokens or 10000, output, 10000)))
+            section = "Background tasks" if self.context.task_id is not None else "Budget"
+            raise BudgetExceeded(f"There isn't enough allowance for another bounded AI call. Use a smaller request or adjust Settings → {section}.")
+        limit = self.context.settings.get("max_output_tokens", 10000)
+        extra = {"max_tool_calls": 1} if hosted and self.router.provider_of(self.name) == "openai" else None
+        return settings.resolve(ModelSettings(max_tokens=min(settings.max_tokens or limit, output, limit), extra_args=extra))
 
     async def get_response(self, system_instructions, input, model_settings, tools, output_schema, *args, **kwargs):
         settings = self.settings_for(system_instructions, input, model_settings, tools, output_schema)
@@ -41,8 +52,15 @@ class TaskModel(Model):
             yield event
 
 
-def task_provider(provider, context):
-    return lambda name: TaskModel(provider(name), name, context)
+def task_provider(provider, context, router=None):
+    def bounded(name):
+        model = provider(name)
+        if isinstance(model, TaskModel) and model.context is context:
+            if router is not None:
+                model.router = router
+            return model
+        return TaskModel(model, name, context, router)
+    return bounded
 
 
 async def retry_read(context, operation):

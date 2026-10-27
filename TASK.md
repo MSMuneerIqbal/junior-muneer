@@ -859,5 +859,26 @@ with its links arrives in the chat you asked from, WhatsApp included.
     on desktop/phone, with readable visuals. TypeScript/ESLint, compilation and whitespace passed. No migration.
     Build now precedes standalone typecheck in fresh updater copies so Next can generate its required types.
     After deployment ahead of the original checkout, code proposals require locally syncing that checkout first.
-- [ ] **P11-08** Cost/workflow acceptance: task budgets/time/retries/model/screenshot caps, usage, synthetic
+- [x] **P11-08** Cost/workflow acceptance: task budgets/time/retries/model/screenshot caps, usage, synthetic
   local checks and isolated real-model checks. Optional local speech/new providers require validation first.
+  - Done 2026-10-27: typed replies/helpers/fallback share a configurable $0.50 allowance and 16 model calls.
+    The existing response limiter now checks complete prompt/tool/schema cost against remaining task/day allowance;
+    every agent response has a configurable 10,000-token ceiling (512–16,000). OpenAI hosted tools are capped at
+    one built-in call/response. Price snapshots match the agent/router, including fake models and configured providers.
+    Existing background $0.50/600s/one-retry/12-call/four-search limits and native zero-retry boundaries remain.
+  - Budget UI and /api/usage/limits expose chat, task, screenshot/session/job and maintenance caps. Code proposals
+    record their AI draft estimate and preparation time. Parallel code requests reserve one proposal before awaiting
+    source export. /clear retains Usage; local commands/status polling still use no model tokens after budget exhaustion.
+    Existing providers/keys and live-call daily/minute controls are retained. Optional speech/providers stay disabled.
+  - Final checks: full backend 1,223 passed (405/473/345; one nonfatal Windows async pipe cleanup warning);
+    full desktop/phone UI 124 passed, 14 existing skips. TypeScript/ESLint, compilation, whitespace and Budget/code/
+    update/Skills visuals passed. Initial three old assertions were updated for the new settings and preflight refusal;
+    final complete backend run is green. No schema migration required. Live backend serves the new limits.
+  - One real, bounded API reply on throwaway data/profile: 3.9s, one model call, 19 output tokens under a 512 cap,
+    estimated $0.0000128. No owner chat/memory/approval/skill writes. Earlier phase checks cover real owned Windows
+    jobs, disposable editor capture/focus/input, isolated HTTPS browsing, compatible CDP peer preservation, reviewed
+    learning, native synthetic update install/migration/server handover and code proposals/test/apply/rollback.
+    Total recorded estimates for this phase's isolated Junior API checks: $0.059398112 (about six cents).
+  - New WhatsApp work remains deferred; P9-09 PC Helper/VPS and optional cloud/speech setup remain separate.
+    No upstream update was applied to the dirty development checkout, no files were discarded and nothing pushed.
+    One earlier synthetic temp fixture remains after automatic approval review blocked its removal.

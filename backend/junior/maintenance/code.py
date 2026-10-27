@@ -115,7 +115,7 @@ def digest(data):
 
 
 def begin(context):
-    if getattr(context, "code_session", None):
+    if getattr(context, "code_session", None) and not context.code_session.get("_reserved"):
         return context.code_session
     if folder().exists() and len(list(folder().iterdir())) >= 10:
         raise MaintenanceError("Ten proposals are retained. Review/archive them locally before creating more.")
@@ -126,7 +126,8 @@ def begin(context):
         raise MaintenanceError("The running release differs from the original development checkout. Sync that checkout locally before requesting a code proposal; Junior will not overwrite or reset it.")
     source = record_path(identifier) / "source"
     export(root(), base, source)
-    session = {"id": identifier, "base": base, "root": str(root()), "reads": []}
+    session = {"id": identifier, "base": base, "root": str(root()), "reads": [], "_started": time.monotonic(),
+               "_usage_before": sum(u.cost_usd for u in context.usage)}
     context.code_session = session
     return session
 
@@ -173,8 +174,10 @@ def stage(context, change):
         raise MaintenanceError("No editable change was proposed. This request may need a smaller scope or manual developer review.")
     session = context.code_session
     source = record_path(session["id"]) / "source"
-    record = {**session, "summary": change.summary, "conversation_id": context.conversation_id,
+    record = {**{key: value for key, value in session.items() if not key.startswith("_")}, "summary": change.summary, "conversation_id": context.conversation_id,
               "status": "staged", "created_at": time.time(), "files": [], "test_result": "Not run"}
+    record["estimated_cost_usd"] = round(max(0, sum(u.cost_usd for u in context.usage) - session["_usage_before"]), 8)
+    record["preparation_seconds"] = round(time.monotonic() - session["_started"], 1)
     if credential_present(change.summary) or sum(len(f.content) for f in change.files) > MAX_TEXT:
         raise MaintenanceError("Proposal contains credentials or exceeds its text limit.")
     seen, diff = set(), []

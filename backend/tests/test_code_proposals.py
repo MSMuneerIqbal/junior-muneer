@@ -237,3 +237,21 @@ def test_failed_source_write_is_uncertain_and_cannot_be_replayed(checkout, monke
         with pytest.raises(MaintenanceError):
             code.propose(record["id"], "apply")
     assert checkout[1].read_text() == OLD
+
+
+def test_parallel_tool_requests_reserve_one_code_proposal_before_awaiting(checkout):
+    from junior.maintenance.code_tools import ask_code_for
+    request = "Please fix the square function in backend/junior/demo.py"
+    context = said(request)
+    class OneHelper:
+        calls = 0
+        async def run_structured(self, *args):
+            self.calls += 1
+            await asyncio.sleep(.02)
+            raise MaintenanceError("Synthetic stop after the reservation check")
+    context.helpers = OneHelper()
+    async def run():
+        return await asyncio.gather(ask_code_for(context, request, request), ask_code_for(context, request, request))
+    results = asyncio.run(run())
+    assert context.helpers.calls == 1 and any("One code proposal per turn" in result for result in results)
+    assert checkout[1].read_text() == OLD
