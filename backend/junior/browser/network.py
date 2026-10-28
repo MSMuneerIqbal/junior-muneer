@@ -61,7 +61,10 @@ def site(value: str) -> str:
 
 
 def checked_url(url: str, sites: list[str]) -> str:
-    if origin(url) not in sites:
+    current = origin(url)
+    # Even unrestricted scope excludes local/private hostnames and literal addresses.
+    site(current)
+    if "*" not in sites and current not in sites:
         raise BrowserRefused("That website is outside the exact origins allowed in Settings → Computer → Browser.")
     from junior.senders.guard import NEVER_SEND
     from urllib.parse import unquote

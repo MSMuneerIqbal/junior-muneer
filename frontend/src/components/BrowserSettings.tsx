@@ -4,7 +4,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { BACKEND_URL, fetcher, send } from "@/lib/api";
 
-type Browser = { enabled: boolean; sites: string[]; connected: boolean; simulation: boolean; url: string;
+type Browser = { enabled: boolean; sites: string[]; allow_all: boolean; connected: boolean; simulation: boolean; url: string;
   adapter: string; transport_connected: boolean; peer_port: number;
   expires_seconds: number; downloads: { file_id: number; name: string; url: string }[] };
 type Snapshot = { title: string; url: string; text: string; controls: { index: number; tag: string; name: string }[] };
@@ -17,13 +17,13 @@ export default function BrowserSettings() {
   const [preview, setPreview] = useState<Snapshot | null>(null);
   const [port, setPort] = useState("9222");
 
-  async function update(enabled: boolean) {
+  async function update(enabled: boolean, all = data?.allow_all ?? false) {
     if (!data) return;
     setBusy(true); setError("");
     try {
-      const nextSites = sites === null ? data.sites : sites.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+      const nextSites = all ? ["*"] : sites === null ? data.sites.filter((s) => s !== "*") : sites.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
       await mutate(send<Browser>("PUT", "/api/computer/browser", { enabled, sites: nextSites }), {
-        optimisticData: { ...data, enabled, sites: nextSites, connected: false, url: "" },
+        optimisticData: { ...data, enabled, sites: nextSites, allow_all: all, connected: false, url: "" },
         rollbackOnError: true, revalidate: false,
       });
       setSites(null); setPreview(null);
@@ -51,7 +51,7 @@ export default function BrowserSettings() {
 
   return <section aria-label="Browser controls" className="flex min-w-0 flex-col gap-3">
     <h3 className="text-sm font-semibold">Browser controls</h3>
-    <p className="text-xs text-muted">An isolated browser with a temporary profile. Choose exact websites below, then ask Junior to open a page. Every navigation, click, text entry and download waits for your approval.</p>
+    <p className="text-xs text-muted">Junior opens pages in a background browser with a temporary profile, separate from your signed-in browser. Choose allowed websites, ask Junior to open a page and approve it. Then ask: “Read the current browser page.” Every navigation, click, text entry and download waits for your approval.</p>
     <p className="text-xs text-muted">Sessions close after 15 minutes, Pause, Plan mode or Computer off. No passwords, payments or private networks. Page snapshots use no vision calls. Downloads up to 20 MB appear in the Downloads gallery.</p>
     {(error || loadError) && <p role="alert" className="text-xs text-danger">{error || "Couldn't load browser settings."}</p>}
     {!data && !loadError && <p className="text-xs text-muted">Loading browser settings…</p>}
@@ -59,6 +59,10 @@ export default function BrowserSettings() {
       {data.simulation && <p className="text-xs text-warn">Fake AI uses a simulated browser. No websites are contacted.</p>}
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={data.enabled} disabled={busy}
         onChange={(e) => void update(e.target.checked)} />Enable browser controls</label>
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={data.allow_all} disabled={busy}
+        onChange={(e) => void update(data.enabled, e.target.checked)} />Allow all public websites</label>
+      <p className="text-xs text-muted">All public websites includes their subdomains and page resources. Local and private networks remain blocked. Switching scope clears the individual list and closes the current session.</p>
+      {!data.allow_all && <>
       <label className="flex flex-col gap-1 text-xs">Allowed website origins (one per line)
         <textarea value={sites ?? data.sites.join("\n")} onChange={(e) => setSites(e.target.value)} rows={3}
           placeholder="https://example.com" className="w-full rounded-md border border-line bg-bg p-2 text-sm" />
@@ -66,6 +70,7 @@ export default function BrowserSettings() {
       <p className="text-xs text-muted">Include required subdomains separately. Saving scope closes the current session. Personal browser cookies are not loaded.</p>
       <button type="button" disabled={busy || sites === null} onClick={() => void update(data.enabled)}
         className="self-start rounded-md border border-line px-3 py-1.5 text-xs disabled:opacity-50">Save websites</button>
+      </>}
       <p role="status" className="break-words text-xs">{data.connected ? `Connected · ${data.url} · ${Math.ceil(data.expires_seconds / 60)} min remaining`
         : data.transport_connected ? `Debugging browser attached · 127.0.0.1:${data.peer_port}` : "Browser disconnected"}</p>
       {data.adapter === "cdp" && data.transport_connected && <p className="text-xs text-muted">Attached to running browser on 127.0.0.1:{data.peer_port}. {data.connected ? "Junior is using its own temporary session." : "Ask Junior to open an allowed website; navigation still needs approval."}</p>}

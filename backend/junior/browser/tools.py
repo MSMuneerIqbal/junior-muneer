@@ -86,9 +86,11 @@ async def browser_action(ctx: RunContextWrapper[TurnContext], kind: str, url: st
                          element: int = -1, text: str = "") -> str:
     """Prepare ONE locked-Ask browser approval. kind=navigate takes URL; click/fill/download take an observed
     snapshot_id and element index. fill also takes exact text. Always await approval; never claim execution before
-    it. Navigation can start a temporary session; personal browser profiles are never opened implicitly. Downloads
+    it. Approval only opens the page; it does not automatically resume this agent or read it. After approval the user
+    can ask to read the current browser page, and you should call browser_snapshot. Navigation uses a temporary
+    background session; it cannot access the user's signed-in browser profile or tabs. Downloads
     use an observed link and save <=20 MB to the Downloads gallery without opening the file. Exact website scopes,
-    private-network guard, 15-minute sessions, no passwords/OTP/payments/security pages or arbitrary JavaScript.
+    public website scope, private-network guard, 15-minute sessions, no passwords/OTP/payments/security pages or arbitrary JavaScript.
     """
     try:
         spec = BrowserAction(kind=kind, url=url, snapshot_id=snapshot_id, element=element, text=text)
@@ -107,6 +109,10 @@ class BrowserConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_sites(self):
+        if "*" in self.sites:
+            if self.sites != ["*"]:
+                raise ValueError("All websites cannot be combined with individual website origins.")
+            return self
         self.sites = sorted({site(value) for value in self.sites})
         return self
 
@@ -114,6 +120,7 @@ class BrowserConfig(BaseModel):
 def config(browser):
     from junior.config import get_settings
     return {"enabled": get_setting("browser_enabled"), "sites": get_setting("browser_sites"),
+            "allow_all": get_setting("browser_sites") == ["*"],
             "simulation": get_settings().fake_ai, **browser.status()}
 
 

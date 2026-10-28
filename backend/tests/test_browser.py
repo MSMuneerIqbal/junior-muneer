@@ -37,6 +37,23 @@ def test_exact_scope_no_suffix_or_credentials():
             checked_url(value, ["https://example.com"])
 
 
+def test_all_public_scope_keeps_network_and_url_guards():
+    assert checked_url("https://example.com/path", ["*"]) == "https://example.com/path"
+    assert checked_url("https://other.example.org/", ["*"]) == "https://other.example.org/"
+    for value in ("http://127.0.0.1", "http://home.local", "http://metadata.google.internal", "https://example.com/?password=x", "file:///secret"):
+        with pytest.raises(BrowserRefused):
+            checked_url(value, ["*"])
+
+
+def test_all_scope_queues_and_executes_approved_navigation(client):
+    assert client.put("/api/computer/browser", json={"enabled": True, "sites": ["*", "https://example.com"]}).status_code == 422
+    response = client.put("/api/computer/browser", json={"enabled": True, "sites": ["*"]})
+    assert response.status_code == 200 and response.json()["allow_all"] is True
+    item = card(client, BrowserAction(kind="navigate", url="https://other.example.org/page"))
+    assert item["status"] == "waiting" and approve(client, item)["status"] == "posted"
+    assert client.put("/api/computer/browser", json={"enabled": True, "sites": []}).json()["connected"] is False
+
+
 @pytest.mark.parametrize("ips", [["127.0.0.1"], ["169.254.169.254"], ["10.0.0.5"], ["::1"], ["224.0.0.1"], ["ff02::1"], ["8.8.8.8", "192.168.1.1"], []])
 def test_proxy_rejects_private_and_mixed_dns(ips, monkeypatch):
     async def run():
@@ -84,7 +101,9 @@ def test_browser_off_scope_and_locked_approval(client):
     item = card(c, BrowserAction(kind="navigate", url="https://example.com"))
     assert item["status"] == "waiting"
     assert not c.get("/api/computer/browser").json()["connected"]
-    assert approve(c, item)["status"] == "posted"
+    sent = approve(c, item)
+    assert sent["status"] == "posted"
+    assert "has not been read yet" in sent["meta"]["result"]
     assert c.get("/api/computer/browser").json()["connected"]
     assert c.post(f"/api/approvals/{item['id']}/approve").status_code == 409
 
@@ -184,7 +203,8 @@ def test_snapshot_provenance_and_turn_cap(client):
     assert client.post("/api/computer/browser/snapshot").status_code == 409
 
 
-def test_native_chromium_form_download_and_stale_targets(tmp_path, monkeypatch):
+@pytest.mark.parametrize("sites", [["http://fixture.example"], ["*"]])
+def test_native_chromium_form_download_and_stale_targets(tmp_path, monkeypatch, sites):
     hits = []
     class Fixture(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -214,7 +234,7 @@ def test_native_chromium_form_download_and_stale_targets(tmp_path, monkeypatch):
             return await asyncio.open_connection("127.0.0.1", server.server_port)
     monkeypatch.setattr(runtime, "ScopedProxy", FixtureProxy)
     set_setting("browser_enabled", True)
-    set_setting("browser_sites", ["http://fixture.example"])
+    set_setting("browser_sites", sites)
 
     async def run():
         browser = BrowserManager()

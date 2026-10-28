@@ -309,7 +309,8 @@ class BrowserManager:
                     attempted = True
                     await self.page.goto(spec.url, wait_until="domcontentloaded")
                     checked_url(self.page.url, self.sites)
-                    return f"Opened {redact(self.page.url)}. Take a browser snapshot to inspect the result."
+                    return (f"Opened {redact(self.page.url)} in Junior's background browser. It is separate from your signed-in browser. "
+                            "The page has not been read yet. Ask Junior: 'Read the current browser page.'")
                 snap = self.snapshots[spec.snapshot_id]
                 handle = snap.handles[spec.element]
                 current = await handle.evaluate(DESCRIBE)

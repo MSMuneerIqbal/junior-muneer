@@ -46,7 +46,7 @@ class FakeBrowserManager(BrowserManager):
                 self.started = time.monotonic()
                 self.sites = get_setting("browser_sites")
                 self.epoch += 1
-                return "Simulated browser navigation. No website was contacted."
+                return "Simulated browser navigation. No website was contacted. The page has not been read yet; ask Junior to read the current browser page."
             self.snapshots[spec.snapshot_id].used = True
             if spec.kind == "fill":
                 self.text = spec.text

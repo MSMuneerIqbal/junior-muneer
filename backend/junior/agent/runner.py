@@ -183,7 +183,7 @@ class TurnHooks(RunHooks[TurnContext]):
         audit(
             "tool_call",
             getattr(tool, "name", type(tool).__name__),
-            result="refused" if text.startswith("NOT ") else "error" if text.startswith("ERROR: the tool failed") else "ok",
+            result="pending" if text.startswith("NOT done yet - waiting for their OK") else "refused" if text.startswith("NOT ") else "error" if text.startswith("ERROR: the tool failed") else "ok",
             detail={"agent": agent.name, **_tool_log_detail(context, result)},
             conversation_id=context.context.conversation_id,
         )

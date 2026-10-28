@@ -34,14 +34,14 @@ then ask Junior to inspect its window or type into an observed editor. A window 
 for approval; typed text can be edited on the card. Desktop controls require an unlocked Windows PC. File creation
 and saving still use the existing file/document tools.
 
-**Browser:** in **Settings → Computer → Browser controls**, opt in and list exact website origins (for example
-`https://example.com`; subdomains need separate entries). Ask Junior to open a page, then approve its navigation
+**Browser:** in **Settings → Computer → Browser controls**, opt in and choose **Allow all public websites** or list exact website origins (for example
+`https://example.com`; subdomains need separate entries). Switching scope clears the individual list and ends the active session. Ask Junior to open a page, then approve its navigation
 card. The Computer Agent can read page snapshots and propose clicks, form text or a download. Every action waits
 for approval; text can be edited on its card. A fresh snapshot is needed after each input. Settings shows the
 connection, a page preview and Disconnect. Sessions use a temporary profile and close after 15 minutes, Pause,
 Plan mode, Computer off or backend shutdown. Personal cookies are not loaded. Passwords, payments, private
 networks, streaming media and websocket channels are blocked. Downloads up to 20 MB go to the Downloads gallery
-without being opened. Required resource origins must also be listed; some websites will need manual use.
+without being opened. In individual-site mode, required resource origins must also be listed; some websites will need manual use.
 
 Install the matching browser once after Python dependencies: from `backend/`, run
 `.venv\Scripts\python -m playwright install chromium` (Linux: `python -m playwright install --with-deps chromium`).

@@ -731,6 +731,17 @@ with its links arrives in the chat you asked from, WhatsApp included.
 
 ## Phase 11: Controlled PC/browser actions, learning and updates
 
+- [x] **Browser follow-up 2026-10-28:** Investigate reported browser problem and add opt-in all-public-websites
+  scope. Logs show waiting-for-approval actions misclassified as refused, one out-of-scope request and one request
+  while disabled; a real session subsequently opened a page. Full regression before latest follow-up: backend 1,244
+  passed, dashboard 130 passed/14 skips. User retry: approved navigations succeeded, but Junior falsely promised
+  to read automatically. Current page reports missing/inactive organization tenant; signed-in browser is isolated.
+  Guidance and approval result now explain that reading needs another message, and route current-page requests to
+  snapshot instead of another navigation. Real-model isolated simulated-page check used snapshot and answered without
+  a new card (10.8s, $0.0397723); focused browser/agent/backend tests passed, desktop/phone browser UI 6 passed,
+  TypeScript/ESLint passed, both public/exact scope native Chromium fixture checks passed. Real signed-in browser
+  remains unavailable; user's working organization URL requested. Final app restart follows commit.
+
 > Authorized 2026-10-26 after reviewing the system-actions spec. PLAN.md section 14h is the implementation
 > design. Use existing API configuration. **All new WhatsApp integration work is deferred.** Work one step at a
 > time; checked tasks require passing safety/regression tests and honest live-fixture verification.

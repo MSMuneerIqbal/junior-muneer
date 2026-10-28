@@ -4,6 +4,20 @@ Last reviewed: **2026-10-27**, after cost/workflow acceptance (P11-08).
 
 ## Active continuation (2026-10-27)
 
+2026-10-28 browser follow-up: logs showed four pending approvals mislabeled refused, one outside scope and one
+browser-off request; a real isolated session opened a page. Added opt-in `browser_sites=["*"]` for all public
+websites, preserving private-network/proxy guards and locked approvals; Settings exposes the toggle. Pending
+actions now log as pending. Focused browser/settings tests, real Chromium fixture in both scopes, TypeScript,
+ESLint and six desktop/phone browser tests passed. Owner app restarted with uncommitted code, health/dashboard
+working; existing exact-site setting retained. Full backend 1,244 passed; full UI 130 passed/14 skips before final
+guidance changes. Do not claim Google Slides live verification.
+Later user retry: approved cards 87/88 opened successfully; live snapshot showed website's tenant-not-configured
+page (missing/inactive organization subdomain). Junior wrongly promised automatic reading after approval; navigation
+does not resume the agent. The user's signed-in personal browser is isolated. Added truthful action-result and agent
+guidance to ask for and take a snapshot on the next message. Final focused browser/agent tests and six UI tests passed;
+real-model synthetic page read used snapshot, 10.8s/$0.0397723. Commit/restart pending. User asked for working URL.
+All-public scope still off in owner settings.
+
 Muneer asked to do the remaining work after Phase 11. P10-05 Google Slides/local PDF and P10-06 specialist skills
 are complete. Questions about resuming paused integrations/new WhatsApp and VPS/domain
 details were asked asynchronously; no answer recorded yet. Keep new WhatsApp deferred pending clarification.

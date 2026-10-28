@@ -4,6 +4,20 @@ test.afterEach(async ({ request }) => {
   await request.put("http://127.0.0.1:8100/api/computer/browser", { data: { enabled: false, sites: [] } });
 });
 
+test("allow all public websites can be switched on and off", async ({ page }, info) => {
+  await page.goto("/settings#computer");
+  const browser = page.getByRole("region", { name: "Browser controls", exact: true });
+  const all = browser.getByRole("checkbox", { name: "Allow all public websites" });
+  await all.check();
+  await expect(all).toBeChecked();
+  await expect(browser.getByRole("textbox", { name: "Allowed website origins (one per line)" })).toHaveCount(0);
+  await browser.screenshot({ path: `test-results/browser-all-${info.project.name}.png` });
+  await page.reload();
+  await expect(all).toBeChecked();
+  await all.uncheck();
+  await expect(browser.getByRole("textbox", { name: "Allowed website origins (one per line)" })).toBeVisible();
+});
+
 test("explicit local debugging connection shows attachment and disconnects", async ({ page, request }) => {
   await request.put("http://127.0.0.1:8100/api/computer/browser", { data: { enabled: true, sites: ["https://example.com"] } });
   await page.goto("/settings#computer");
@@ -41,6 +55,7 @@ test("browser scope, reviewed navigation, page preview and disconnect", async ({
   await expect(card.getByRole("button", { name: "Edit", exact: true })).toBeDisabled();
   await card.getByRole("button", { name: "Approve & run" }).click();
   await expect(card.getByTestId("approval-status")).toHaveText("Done");
+  await expect(card).toContainText("has not been read yet");
   await expect(page.getByRole("button", { name: "Read aloud" })).toHaveCount(1);
   const marker = `browser-note-${info.project.name}-${Date.now()}`;
   await box.fill(`pc browser fill ${marker}`);

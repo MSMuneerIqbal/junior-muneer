@@ -782,6 +782,10 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 
 ## 18. Change log
 
+- **v10.3 (2026-10-28):** browser scope can opt in to all public websites while preserving network and action
+  protections. Pending approvals log correctly; navigation results and agent guidance distinguish opening a
+  background page from reading it on the next request and from the user's signed-in browser.
+
 - **v10.1 (2026-10-27):** researched Google Slides with readable approval previews and pinned partial creations;
   local offline PDF reports/decks with owned workers, citation links and exact slide counts (section 14d).
 

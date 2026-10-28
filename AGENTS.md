@@ -22,6 +22,11 @@ have not been decided. Do not infer those requirements from the word "product".
 
 ## Where we are (update this at the end of every session)
 
+- **Browser follow-up 2026-10-28:** all-public-websites toggle, pending-approval log fix and honest navigation/
+  reading guidance built; full backend 1,244 and UI 130/14 skips passed before final guidance, then focused
+  browser/agent and six UI checks passed. Real-model simulated page read passed, 10.8s/$0.0397723. Current website
+  reports missing/inactive tenant; owner URL requested. Commit/restart pending; see PROJECT_CONTEXT.md.
+
 - **Current 2026-10-28:** Muneer requested remaining work. P10-05 Slides/PDF and P10-06 skills are complete.
   P10-05 committed as 3e47ba3: full backend 1,238 passed at checkpoint; final UI 28 passed/2 skips after corrections,
   final document checks 33 passed. Real-model five-page PDF passed ($0.0925705); real Google creation unverified.
