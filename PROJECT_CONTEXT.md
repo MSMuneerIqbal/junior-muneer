@@ -15,8 +15,8 @@ Later user retry: approved cards 87/88 opened successfully; live snapshot showed
 page (missing/inactive organization subdomain). Junior wrongly promised automatic reading after approval; navigation
 does not resume the agent. The user's signed-in personal browser is isolated. Added truthful action-result and agent
 guidance to ask for and take a snapshot on the next message. Final focused browser/agent tests and six UI tests passed;
-real-model synthetic page read used snapshot, 10.8s/$0.0397723. Commit/restart pending. User asked for working URL.
-All-public scope still off in owner settings.
+real-model synthetic page read used snapshot, 10.8s/$0.0397723. Commit 4aba5c0 restarted: backend health at that
+revision, supervised=true, dashboard HTTP 200. User asked for working URL. All-public scope is now on in owner settings.
 
 Muneer asked to do the remaining work after Phase 11. P10-05 Google Slides/local PDF and P10-06 specialist skills
 are complete. Questions about resuming paused integrations/new WhatsApp and VPS/domain
