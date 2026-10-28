@@ -75,6 +75,28 @@ def test_a_pc_change_from_whatsapp_comes_with_buttons_and_approve_does_it(wa):
         assert done.startswith("Done on your PC: Created:") and (user / "Desktop" / "todo.txt").read_text() == "call Ali\n"
 
 
+@pytest.mark.parametrize("mode,expected", [("ask_all", "waiting"), ("rules", "posted")])
+def test_whatsapp_own_mode_controls_action_independent_of_dashboard(wa, mode, expected):
+    from junior.permissions import set_mode, set_rule
+    from junior.settings_store import set_setting
+    sent, user = wa
+    model = ScriptedModel([
+        ModelStep(output=[function_call("ask_computer_agent", {"task": "make mode.txt on my Desktop: hello"}, call_id="c1")]),
+        ModelStep(output=[function_call("pc_write", {"file": "Desktop/mode.txt", "content": "hello"}, call_id="c2")]),
+        ModelStep(output=[assistant_message("Action processed.")]),
+        chunked_answer("Action processed."),
+    ])
+    with app(model) as c:
+        set_mode("rules")
+        set_rule("computer.write", "auto")
+        set_setting("whatsapp_action_mode", mode)
+        signed(c, text("Make mode.txt on my Desktop: hello"))
+        wait_for(sent, 1)
+        cards = c.get("/api/approvals?status=all").json()
+        assert cards[0]["status"] == expected and cards[0]["meta"]["origin_channel"] == "whatsapp"
+        assert (user / "Desktop" / "mode.txt").exists() == (expected == "posted")
+
+
 def test_a_command_from_whatsapp_sends_its_output_back(wa):
     sent, user = wa
     model = ScriptedModel([
@@ -135,6 +157,9 @@ def test_send_me_a_file_from_my_pc(wa):
         chunked_answer("Sent your CV here."),
     ])
     with app(model) as c:
+        # This test exercises the automatic delivery rule; WhatsApp now defaults to Manual.
+        from junior.settings_store import set_setting
+        set_setting("whatsapp_action_mode", "rules")
         signed(c, text("WhatsApp me my CV from Downloads"))
         got = wait_for(sent, 4)
         upload = next(m for m in got if "upload" in m)["upload"]

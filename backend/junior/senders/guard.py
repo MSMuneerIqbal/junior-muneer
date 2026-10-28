@@ -58,7 +58,14 @@ def check(item: ApprovalItem, text: str) -> list[str]:
     if item.status != "approved":
         return [f"It isn't approved (it's {item.status.replace('_', ' ')})."]
 
-    decision = decide(item.action_type, from_outside=item.from_outside)
+    browser_directed = False
+    if item.action_type == "computer.browser.input" and item.meta.get("browser_directed"):
+        from junior.browser.intent import persisted_authorizes
+        browser_directed = persisted_authorizes(item)
+    decision = decide(item.action_type, from_outside=item.from_outside, channel=item.meta.get("origin_channel"),
+                      browser_directed=browser_directed)
+    if item.action_type == "computer.browser.input" and item.meta.get("approved_by") == "auto rule" and not browser_directed:
+        problems.append("The original user request no longer authorizes this browser action.")
     if decision.rule == "deny":
         problems.append(decision.reason)
     elif decision.held:
@@ -66,7 +73,7 @@ def check(item: ApprovalItem, text: str) -> list[str]:
     elif decision.rule == "ask" and item.meta.get("approved_by") != "you":
         problems.append(f"It needs your OK first ({decision.reason.rstrip('.')}).")
     for key in item.meta.get("required_actions", []):
-        required = decide(key, from_outside=item.from_outside)
+        required = decide(key, from_outside=item.from_outside, channel=item.meta.get("origin_channel"))
         if required.rule == "deny" or required.held:
             problems.append(required.reason)
         elif required.rule == "ask" and item.meta.get("approved_by") != "you":

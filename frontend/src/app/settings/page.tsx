@@ -984,6 +984,12 @@ function SettingsForm({ initial }: { initial: Settings }) {
       </Section>
 
       <Section id="whatsapp" title="WhatsApp" description="How your WhatsApp messages are grouped into chats (each shows with 🟢 in your chat list).">
+        <Row label="WhatsApp action mode" hint="Applies to requests received from WhatsApp, separately from the dashboard mode. Manual asks before actions; Auto follows your permission rules.">
+          <select value={form.whatsapp_action_mode} onChange={(e) => set("whatsapp_action_mode", e.target.value as "ask_all" | "rules")}
+            className={`${input} max-w-sm`} aria-label="WhatsApp action mode">
+            <option value="ask_all">Manual</option><option value="rules">Auto</option>
+          </select>
+        </Row>
         <Row
           label="Start a new chat"
           hint="Within one chat Junior Muneer remembers what you said. Your saved memories work in every chat."

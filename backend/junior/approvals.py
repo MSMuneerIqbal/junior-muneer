@@ -149,7 +149,7 @@ def to_out(item: ApprovalItem, images: list[dict[str, Any]] | None = None) -> Ap
         images = images_for([item.id]).get(item.id, [])
     can_always_allow = False
     if item.kind == "api" and item.status == "waiting" and item.action_type:
-        can_always_allow = decide(item.action_type, from_outside=item.from_outside).can_always_allow
+        can_always_allow = decide(item.action_type, from_outside=item.from_outside, channel=item.meta.get("origin_channel")).can_always_allow
     return ApprovalOut(
         id=item.id,
         kind=item.kind,
@@ -202,9 +202,12 @@ def create_item(
         raise ApprovalError(f"Unknown platform {platform!r}; use one of {sorted(PLATFORM_LABELS)}.")
     status, reason = "waiting", "You send this yourself: copy it, paste it, then mark it as posted."
     if kind == "api":
+        from junior.permissions import ACTION_CHANNEL
+        meta = {**(meta or {}), "origin_channel": ACTION_CHANNEL.get()}
         if not action_type:
             raise ApprovalError("An API item needs an action type, e.g. linkedin.post.")
-        decision = decide(action_type, from_outside=from_outside)
+        decision = decide(action_type, from_outside=from_outside,
+                          browser_directed=bool((meta or {}).get("browser_directed")))
         additional = [decide(key, from_outside=from_outside) for key in (meta or {}).get("required_actions", [])]
         if any(d.rule == "deny" for d in additional):
             raise ApprovalError(next(d.reason for d in additional if d.rule == "deny"))
@@ -333,7 +336,7 @@ def approve_item(item_id: int, always_allow: bool = False) -> ApprovalOut:
     def fn(item: ApprovalItem) -> None:
         _need(item, "waiting", "api")
         _need_image_if_required(item)
-        decision = decide(item.action_type, from_outside=item.from_outside)
+        decision = decide(item.action_type, from_outside=item.from_outside, channel=item.meta.get("origin_channel"))
         if decision.rule == "deny":
             raise ApprovalError(decision.reason)
         if always_allow:

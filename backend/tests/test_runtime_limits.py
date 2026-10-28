@@ -109,7 +109,7 @@ def test_runtime_limits_status_is_local_and_matches_effective_settings():
         client.patch("/api/settings", json={"chat_budget_usd": .2, "chat_max_model_calls": 5, "max_output_tokens": 2048}).raise_for_status()
         limits = client.get("/api/usage/limits").json()
         assert limits["chat"] == {"budget_usd": .2, "model_calls": 5, "seconds": 600, "output_tokens": 2048, "transport_retries": 1}
-        assert limits["computer"]["desktop_snapshots"] == 4 and limits["computer"]["browser_snapshots"] == 6
+        assert limits["computer"]["desktop_snapshots"] == 4 and limits["computer"]["browser_snapshots"] == 12
         assert limits["maintenance"]["retries"] == 0
 
 

@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.afterEach(async ({ request }) => {
   await request.put("http://127.0.0.1:8100/api/computer/browser", { data: { enabled: false, sites: [] } });
+  await request.put("http://127.0.0.1:8100/api/permissions/mode", { data: { mode: "rules" } });
 });
 
 test("allow all public websites can be switched on and off", async ({ page }, info) => {
@@ -31,8 +32,9 @@ test("explicit local debugging connection shows attachment and disconnects", asy
   await expect(browser.getByRole("status")).toContainText("Ready — no page open yet");
 });
 
-test("browser scope, reviewed navigation, page preview and disconnect", async ({ page }, info) => {
+test("browser scope, reviewed navigation, page preview and disconnect", async ({ page, request }, info) => {
   test.setTimeout(75_000);
+  await request.put("http://127.0.0.1:8100/api/permissions/mode", { data: { mode: "ask_all" } });
   await page.goto("/settings#computer");
   const browser = page.getByRole("region", { name: "Browser controls", exact: true });
   const toggle = browser.getByRole("checkbox", { name: "Enable browser controls" });

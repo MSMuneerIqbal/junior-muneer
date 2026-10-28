@@ -234,6 +234,8 @@ class FakeModel(Model):
                                           "text": task[len("desktop type "):], "key": ""}, call_id="fake-desktop-action")], False
         if text.startswith("## Task from") and "browser_snapshot" in tool_names:
             task = text.split("\n", 2)[1].strip()
+            if task.lower().startswith("browse ") and not (isinstance(last, dict) and last.get("type") == "function_call_output"):
+                return [function_call("browser_action", {"kind": "navigate", "url": task[len("browse "):].strip()}, call_id="fake-browser-navigate")], False
             if task.lower().startswith("browser fill "):
                 outputs = [i for i in input if isinstance(i, dict) and i.get("type") == "function_call_output"]
                 if not outputs:
@@ -250,8 +252,6 @@ class FakeModel(Model):
         ):
             # The Computer Agent: "list FOLDER" or "write FILE: TEXT".
             task = text.split("\n", 2)[1].strip()
-            if task.lower().startswith("browse "):
-                return [function_call("browser_action", {"kind": "navigate", "url": task[len("browse "):].strip()}, call_id="fake-browser-navigate")], False
             if task.lower().startswith("background "):
                 # e2e: pc background 600 Desktop: Write-Output ...
                 match = re.match(r"background (\d+) ([^:]+): (.+)", task, re.IGNORECASE)
@@ -268,6 +268,8 @@ class FakeModel(Model):
         if text.lower().startswith("use skill ") and "use_skill" in tool_names:
             name = next(iter(text[len("use skill "):].strip().split()), "")
             return [function_call("use_skill", {"name": name}, call_id="fake-skill")], False
+        if text.lower().startswith(("pc browse ", "pc browser fill ")) and "ask_browser_agent" in tool_names:
+            return [function_call("ask_browser_agent", {"task": text[3:].strip()}, call_id="fake-browser")], False
         if text.lower().startswith("pc ") and "ask_computer_agent" in tool_names:
             return [function_call("ask_computer_agent", {"task": text[3:].strip()}, call_id="fake-pc")], False
         if "search" in text.lower() and "web_search" in tool_names:

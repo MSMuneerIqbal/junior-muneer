@@ -50,6 +50,7 @@ STEP_LABELS = {
     "browser_snapshot": "Reading the browser page",
     "browser_action": "Preparing a browser action for approval",
     "ask_computer_agent": "Asking the Computer Agent",
+    "ask_browser_agent": "Asking the Browser Agent",
     "save_memory": "Saving a memory",
     "forget_memory": "Forgetting a memory",
     "recall_memory": "Looking through your memories",
@@ -236,7 +237,7 @@ async def stream_turn(
 ) -> AsyncIterator[dict[str, Any]]:
     hooks = TurnHooks(router, {agent.name: model_name}, budget)
     result = Runner.run_streamed(
-        agent, input_items, context=context, hooks=hooks, max_turns=MAX_TURNS
+        agent, input_items, context=context, hooks=hooks, max_turns=20 if agent.name == "browser_agent" else MAX_TURNS
     )
     steps: dict[str, dict[str, Any]] = {}
     text_parts: list[str] = []
@@ -340,7 +341,7 @@ async def run_once(
     """Run an agent without streaming (for background helpers like the summarizer)."""
     hooks = TurnHooks(router, {agent.name: model_name}, budget)
     result = await Runner.run(
-        agent, input_items, context=context, hooks=hooks, max_turns=MAX_TURNS
+        agent, input_items, context=context, hooks=hooks, max_turns=20 if agent.name == "browser_agent" else MAX_TURNS
     )
     text = result.final_output if isinstance(result.final_output, str) else ""
     return TurnResult(text=text, usage=context.usage, output=result.final_output)

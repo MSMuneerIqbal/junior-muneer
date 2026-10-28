@@ -10,7 +10,7 @@ type Mode = "rules" | "ask_all" | "plan";
 
 // Like Claude's permission modes.
 const MODES: { value: Mode; label: string; hint: string }[] = [
-  { value: "rules", label: "Auto", hint: "Follows your rules: safe actions run, the rest wait for you" },
+  { value: "rules", label: "Auto", hint: "User-directed browser actions run; other actions follow your rules" },
   { value: "ask_all", label: "Manual", hint: "Always asks before doing anything" },
   { value: "plan", label: "Plan", hint: "Shows a plan first and does nothing until you switch" },
 ];

@@ -731,6 +731,24 @@ with its links arrives in the chat you asked from, WhatsApp included.
 
 ## Phase 11: Controlled PC/browser actions, learning and updates
 
+- [~] **Browser Auto workflow 2026-10-28:** Muneer wants Auto to complete requested browser tasks without repeated
+  approvals and Manual to ask. User-directed browser actions now execute in Auto with the original user message and
+  requested origin rechecked; Manual asks. Other action types still follow their existing rules/locks. Website text
+  remains untrusted; profile/name and user words bound form values, unsafe targets blocked, submit attempted once.
+  WhatsApp has a separate Manual-by-default setting. Synthetic native form/real-model checks passed, including one
+  local submission and response (37.2s/$0.066935). Focused UI and WhatsApp mode tests passed; full backend regression
+  1,246 passed / 3 failed, all three passed on targeted rerun. Full UI 131 passed / 14 skipped / 1 phone Skills failed;
+  a targeted phone rerun of Skills, Browser and WhatsApp passed all 7 tests.
+  The old automatic WhatsApp file-delivery test now explicitly selects rules mode and passes with the new Manual default.
+  Global Auto for non-browser actions and automatic continuation after a Manual approval remain unfinished.
+  User-requested live 7star contact test: opened page, filled required fields and clicked Send Message once; site
+  confirmation was not captured, so delivery is unconfirmed. Never retry automatically (50.7s/$0.1261774).
+- [~] **Separate Browser Agent 2026-10-28:** Owner requested a Browser Agent separate from Computer Agent. Added
+  dedicated agent, tool group, delegation and fake-AI routing; PC tools no longer grant browser actions. Focused
+  browser/computer backend and six desktop/phone browser E2E checks passed. Real-model simulated page read passed
+  in 20.4 seconds for $0.0698692. Owner app restarted; full regression results are recorded above.
+  The Auto workflow and separate WhatsApp mode are tracked above; full verification remains in progress.
+
 - [x] **Browser status clarification 2026-10-28:** Show a ready/no-page status and explain that the local debugging
   connection is optional; provide an actionable error when its port is unavailable. Focused browser/connection and
   WhatsApp backend checks passed; six desktop/phone browser checks passed. WhatsApp API connection check succeeded,

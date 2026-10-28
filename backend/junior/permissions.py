@@ -22,6 +22,7 @@ On top of the rules:
 """
 
 import re
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Literal
 
@@ -135,8 +136,8 @@ CATALOG: dict[str, ActionType] = {
            "One reviewed action per fresh snapshot; foreground and control identity are checked again. No terminal/browser/security UI."),
         _t("computer.browser.observe", "Read the isolated browser page", "Your computer", "auto",
            note="Only after browser opt-in and exact website scope; page data is untrusted."),
-        _t("computer.browser.input", "Navigate, click, fill or download in the browser", "Your computer", "ask", True,
-           "One reviewed action per fresh page snapshot. No passwords, payments or private networks."),
+        _t("computer.browser.input", "Navigate, click, fill or download in the browser", "Your computer", "auto",
+           note="Auto runs user-directed actions; Manual asks. Website text is untrusted; protected actions remain blocked."),
         _t("files.archive_whatsapp", "Upload a prepared ZIP privately to Drive and send its link to your WhatsApp", "Files", "ask",
            note="Shows the folder, archive size and destination. Drive-save and WhatsApp-to-self rules also apply."),
         _t("system.delete", "Delete anything", "Never", "deny", True),
@@ -156,7 +157,13 @@ def _check_type(action_type: str) -> None:
         raise RuleChangeError(f"{action_type!r} isn't an action type; use dotted names like gmail.send.")
 
 
-def get_mode() -> Mode:
+ACTION_CHANNEL = ContextVar("junior_action_channel", default="dashboard")
+
+
+def get_mode(channel: str | None = None) -> Mode:
+    if (channel or ACTION_CHANNEL.get()) == "whatsapp":
+        mode = get_setting("whatsapp_action_mode")
+        return mode if mode in ("rules", "ask_all") else "ask_all"
     mode = get_setting("permission_mode")
     return mode if mode in MODES else "rules"
 
@@ -211,7 +218,7 @@ class Decision:
     held: bool = False
 
 
-def decide(action_type: str, *, from_outside: bool) -> Decision:
+def decide(action_type: str, *, from_outside: bool, channel: str | None = None, browser_directed: bool = False) -> Decision:
     """What happens to one action. Deny wins; outside content and "Ask everything" turn Auto into Ask."""
     rule = rule_for(action_type)
     known = CATALOG.get(action_type)
@@ -221,10 +228,12 @@ def decide(action_type: str, *, from_outside: bool) -> Decision:
     if rule == "deny":
         why = "it's locked to Deny" if locked else "your rule is Deny"
         return Decision("deny", f"Never runs: {why}.")
+    if action_type == "computer.browser.input" and not browser_directed:
+        return Decision("ask", "This browser action needs your review because its target or content was not established by your request.", False, held)
     can_always_allow = not locked and not from_outside
-    if from_outside:
+    if from_outside and not (action_type == "computer.browser.input" and browser_directed):
         return Decision("ask", "It comes from outside content, so it always waits for you.", False, held)
-    if rule == "auto" and get_mode() in ("ask_all", "plan"):
+    if rule == "auto" and get_mode(channel) in ("ask_all", "plan"):
         return Decision("ask", "Manual mode: everything waits for you.", can_always_allow, held)
     if rule == "auto":
         return Decision("auto", "Your rule is Auto.", False, held)

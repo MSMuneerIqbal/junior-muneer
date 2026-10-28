@@ -1423,12 +1423,46 @@ TOOL_FACTORIES["computer_read"] = _computer_read_tools
 def _computer_tools() -> list[Tool]:
     from junior.computer.tools import READ_TOOLS, RUN_TOOLS, WRITE_TOOLS
     from junior.computer.desktop import TOOLS as DESKTOP_TOOLS
-    from junior.browser.tools import TOOLS as BROWSER_TOOLS
-
-    return [*READ_TOOLS, *WRITE_TOOLS, *RUN_TOOLS, *DESKTOP_TOOLS, *BROWSER_TOOLS]
+    return [*READ_TOOLS, *WRITE_TOOLS, *RUN_TOOLS, *DESKTOP_TOOLS]
 
 
 TOOL_FACTORIES["computer"] = _computer_tools
+
+
+def _browser_tools():
+    from junior.browser.tools import TOOLS
+    return TOOLS
+
+
+TOOL_FACTORIES["browser"] = _browser_tools
+
+
+@function_tool
+async def ask_browser_agent(ctx: Ctx, task: str) -> str:
+    """Delegate a website task to the Browser Agent. Preserve the complete user request and exact URL/message.
+    Browser actions follow the owner's mode and browser settings. Never claim a pending action happened."""
+    context = ctx.context
+    from junior.settings_store import get_setting
+    if context.helpers is None:
+        return "NOT available: the Browser Agent cannot be reached."
+    if not get_setting("computer_enabled") or not get_setting("browser_enabled"):
+        return "NOT done: enable browser controls in Settings → Computer first."
+    from junior.costs import BudgetExceeded
+    context.emit({"type": "step", "id": getattr(ctx, "tool_call_id", "browser-agent"), "kind": "tool",
+                  "name": "ask_browser_agent", "label": "Asking the Browser Agent", "status": "running"})
+    try:
+        profile = context.settings.get("profile") or {}
+        email = str(profile.get("email") or "") if re.search(r"\b(send|message|contact|form|submit|bhej|bhejo)\b|بھیج|پیغام", context.user_text, re.I) else ""
+        prompt = f"## Task from {context.settings['user_name']}\n{task.strip()}"
+        if email:
+            prompt += f"\n\nThe owner's profile email for an explicitly requested contact form: {email}"
+        report = await context.helpers.run("browser_agent", prompt, context)
+    except BudgetExceeded as e:
+        return f"NOT done: {e}"
+    return report + "\n\n(The Browser Agent's report; its cards appear in this chat.)"
+
+
+TOOL_FACTORIES["browser_agent"] = lambda: [ask_browser_agent]
 
 
 # ---- the Computer Agent (Phase 9) -----------------------------------------------------------

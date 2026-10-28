@@ -278,6 +278,8 @@ async def queue_action(context: TurnContext, action_type: str, item_type: str, t
             return f"NOT done: {e} The card shows it. Tell them why in one line."
         context.pending_events.append({"type": "approval", "item": item.model_dump(mode="json")})
         if item.status == "posted":
+            if action_type == "computer.browser.input":
+                return f"Done automatically: {item.meta.get('result', '')} Continue the user's requested task; observe the page again before the next action."
             return f"Done (their rule is Auto): {item.meta.get('result', '')} Tell them in one line."
         return f"It didn't work: {item.meta.get('last_error', '')} Tell them in one line."
     context.pending_events.append({"type": "approval", "item": item.model_dump(mode="json")})

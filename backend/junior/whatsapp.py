@@ -278,6 +278,8 @@ async def send_drafts(to: str, items: list[dict]) -> None:
             body = f"Email {item['title']}\n\n{text}{attached}\n\nApprove sends it from your Gmail."
         if item.get("platform") == "computer":
             if item.get("status") == "posted":  # your rule was Auto: already done, nothing to tap
+                if item.get("meta", {}).get("op") == "browser":
+                    continue  # The final reply summarizes an automatic multi-step browser job.
                 await client().send_text(to, f"Done on your PC: {pc_result(item)}")
                 continue
             body = pc_card(item, text)
@@ -310,13 +312,18 @@ async def answer(app: Any, text: str, audio_id: str | None = None, audio_seconds
     owner = get_settings().whatsapp_owner_number
     convo = whatsapp_chat()
     drafts, reply, problem, message_id = [], "", "", None
-    async for event in app.state.chat.reply(convo, text, audio_id, audio_seconds):
-        if event["type"] == "approval":
-            drafts.append(event["item"])
-        elif event["type"] == "done":
-            reply, message_id = event["text"], event["message_id"]
-        elif event["type"] == "error":
-            problem = event["message"]
+    from junior.permissions import ACTION_CHANNEL
+    channel_token = ACTION_CHANNEL.set("whatsapp")
+    try:
+        async for event in app.state.chat.reply(convo, text, audio_id, audio_seconds):
+            if event["type"] == "approval":
+                drafts.append(event["item"])
+            elif event["type"] == "done":
+                reply, message_id = event["text"], event["message_id"]
+            elif event["type"] == "error":
+                problem = event["message"]
+    finally:
+        ACTION_CHANNEL.reset(channel_token)
     spoken = False
     if (audio_id or wants_voice(text)) and reply and message_id is not None:
         try:

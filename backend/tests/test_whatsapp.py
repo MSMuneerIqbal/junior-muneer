@@ -98,6 +98,21 @@ def test_only_your_number_is_answered(wa):
         assert ignored and ignored[0]["detail"]["from_last4"] == "1111"
 
 
+def test_automatic_browser_steps_do_not_spam_whatsapp(wa):
+    import asyncio
+    with app(ScriptedModel([])):
+        asyncio.run(whatsapp.send_drafts(OWNER, [{"text": "internal browser action", "platform_label": "Your PC",
+            "platform": "computer", "item_type": "browser action", "status": "posted", "meta": {"op": "browser"}}]))
+    assert wa == []
+
+
+def test_whatsapp_action_setting_is_manual_by_default_and_validated(wa):
+    with app(ScriptedModel([])) as client:
+        assert client.get("/api/settings").json()["whatsapp_action_mode"] == "ask_all"
+        assert client.patch("/api/settings", json={"whatsapp_action_mode": "rules"}).json()["whatsapp_action_mode"] == "rules"
+        assert client.patch("/api/settings", json={"whatsapp_action_mode": "unsafe"}).status_code == 422
+
+
 def test_only_messages_signed_by_meta_are_accepted(wa):
     with app(ScriptedModel([])) as c:
         assert signed(c, text("hi"), secret="someone-else").status_code == 403

@@ -22,6 +22,11 @@ have not been decided. Do not infer those requirements from the word "product".
 
 ## Where we are (update this at the end of every session)
 
+- **Active 2026-10-28 browser work:** separate Browser Agent and user-directed browser Auto / Manual built; WhatsApp
+  has its own Manual-by-default mode. Focused native, real-model and UI checks passed; full regression completed
+  with failures recorded in PROJECT_CONTEXT. The owner app restarted and healthy. The user-requested 7star contact form was clicked once;
+  website confirmation was not captured. Delivery is unconfirmed; do not automatically resend. See PROJECT_CONTEXT.
+
 - **2026-10-28 browser/WhatsApp follow-up:** browser debugging port 9222 not listening; optional connection is not
   needed for isolated browsing. Settings status and connection error clarified; focused backend/UI checks passed.
   WhatsApp API check connected; ngrok process absent. Automatic approval review blocked starting the tunnel due to

@@ -219,6 +219,7 @@ export type Settings = {
   briefing_time: string;
   whatsapp_session_hours: number;
   whatsapp_carry_summary: boolean;
+  whatsapp_action_mode: "ask_all" | "rules";
 };
 
 export type ChatSummary = {

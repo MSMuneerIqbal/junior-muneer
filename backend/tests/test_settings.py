@@ -72,6 +72,7 @@ def test_defaults(client):
         "email_notify_whatsapp": True,
         "whatsapp_session_hours": 12,
         "whatsapp_carry_summary": True,
+        "whatsapp_action_mode": "ask_all",
         "drive_share_default": "private",
     }
 

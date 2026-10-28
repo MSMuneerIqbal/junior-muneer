@@ -670,8 +670,9 @@ Build one acceptance-sized task at a time, with safety tests and regression chec
    navigation and subresources. An authenticated local proxy resolves all addresses, rejects nonpublic answers and
    connects to the validated numeric IP, preventing DNS rebinding. Disable service workers, websocket/QUIC channels
    and non-proxied WebRTC. No personal profiles/cookies. Snapshots hold exact DOM element handles with navigation
-   epoch, attributes, form destination and stale/single-use checks. Every navigation/click/fill/download is locked
-   Ask; sensitive fields/pages are refused. One temporary 15-minute session; six snapshots/message and bounded
+   epoch, attributes, form destination and stale/single-use checks. Since 2026-10-28 the separate Browser Agent can
+   execute user-directed actions in Auto, bound to the user's named origin and verified input; Manual asks. Other
+   action types retain their rules/locks. Sensitive fields/pages are refused. One temporary 15-minute session; twelve snapshots/message and bounded
    requests/transfers/text. Downloads become managed gallery files without opening or executing them.
 4. **P11-04 — Authorized browser sessions and remote adapter.** Add explicit browser-session connection only
    after isolated browsing works; display connection/site status, disconnect and stop controls. PC Helper transport
@@ -781,6 +782,10 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 - **Terminal access** is powerful. It stays limited to one folder and an allowed-commands list, every command needs your OK, and dangerous commands are always denied.
 
 ## 18. Change log
+
+- **v10.4 (2026-10-28):** separate Browser Agent; user-directed Auto browser actions and Manual approvals;
+  WhatsApp requests use a separate Manual-by-default action mode in Settings. Preserve user-source/origin checks,
+  private-network protections and no automatic resubmission after a form attempt.
 
 - **v10.3 (2026-10-28):** browser scope can opt in to all public websites while preserving network and action
   protections. Pending approvals log correctly; navigation results and agent guidance distinguish opening a

@@ -58,6 +58,7 @@ class SettingsUpdate(BaseModel):
     memory_tidy_enabled: bool | None = None
     whatsapp_session_hours: Literal[0, 6, 12, 24] | None = None
     whatsapp_carry_summary: bool | None = None
+    whatsapp_action_mode: Literal["ask_all", "rules"] | None = None
     computer_enabled: bool | None = None
     briefing_time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
 

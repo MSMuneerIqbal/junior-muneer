@@ -80,6 +80,7 @@ DEFAULTS: dict[str, Any] = {
     # and the new chat can start with a summary of the previous one.
     "whatsapp_session_hours": 12,
     "whatsapp_carry_summary": True,
+    "whatsapp_action_mode": "ask_all",  # WhatsApp requests default to Manual independently of dashboard.
     # Phase 7: when your own feeds were last read (every 3 hours).
     "feeds_read_at": "",
     # Permission rules (/api/permissions): ask_all · rules, and your rule per action type.

@@ -51,7 +51,7 @@ export default function BrowserSettings() {
 
   return <section aria-label="Browser controls" className="flex min-w-0 flex-col gap-3">
     <h3 className="text-sm font-semibold">Browser controls</h3>
-    <p className="text-xs text-muted">Junior opens pages in a background browser with a temporary profile, separate from your signed-in browser. Choose allowed websites, ask Junior to open a page and approve it. Then ask: “Read the current browser page.” Every navigation, click, text entry and download waits for your approval.</p>
+    <p className="text-xs text-muted">Junior opens pages in a background browser with a temporary profile, separate from your signed-in browser. In Auto, user-directed browser actions run as part of the task; in Manual, each action waits for your approval. If approval is needed, ask Junior to continue afterward.</p>
     <p className="text-xs text-muted">Sessions close after 15 minutes, Pause, Plan mode or Computer off. No passwords, payments or private networks. Page snapshots use no vision calls. Downloads up to 20 MB appear in the Downloads gallery.</p>
       {(error || loadError) && <p role="alert" className="text-xs text-danger">{error || "Couldn't load browser settings."}</p>}
     {!data && !loadError && <p className="text-xs text-muted">Loading browser settings…</p>}
@@ -74,7 +74,7 @@ export default function BrowserSettings() {
       <p role="status" className="break-words text-xs">{data.connected ? `Connected · ${data.url} · ${Math.ceil(data.expires_seconds / 60)} min remaining`
         : data.transport_connected ? `Debugging browser attached · 127.0.0.1:${data.peer_port}` : !data.enabled ? "Browser controls off"
         : !data.sites.length ? "Choose allowed websites to get ready." : "Ready — no page open yet. Ask Junior to open a website and approve the card."}</p>
-      {data.adapter === "cdp" && data.transport_connected && <p className="text-xs text-muted">Attached to running browser on 127.0.0.1:{data.peer_port}. {data.connected ? "Junior is using its own temporary session." : "Ask Junior to open an allowed website; navigation still needs approval."}</p>}
+      {data.adapter === "cdp" && data.transport_connected && <p className="text-xs text-muted">Attached to running browser on 127.0.0.1:{data.peer_port}. {data.connected ? "Junior is using its own temporary session." : "Ask Junior to open an allowed website."}</p>}
       {(data.connected || data.transport_connected) && <div className="flex flex-wrap gap-2">
         {data.connected && <button type="button" disabled={busy} onClick={() => void act("snapshot")} className="rounded-md border border-line px-3 py-1.5 text-xs">Preview page</button>}
         <button type="button" disabled={busy} onClick={() => void act("disconnect")} className="rounded-md border border-line px-3 py-1.5 text-xs">Disconnect browser</button>

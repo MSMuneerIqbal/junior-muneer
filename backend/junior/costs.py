@@ -20,6 +20,7 @@ router = APIRouter()
 @router.get("/api/usage/limits")
 def runtime_limits():
     from junior.chat.service import TURN_SECONDS
+    from junior.browser.tools import MAX_SNAPSHOTS as MAX_BROWSER_SNAPSHOTS
     from junior.computer.desktop import MAX_SNAPSHOTS
     from junior.computer.jobs import MAX_RUNNING, MAX_SECONDS
     from junior.maintenance.supervisor import TOTAL_SECONDS
@@ -32,7 +33,7 @@ def runtime_limits():
             "background": {"budget_usd": settings["task_budget_usd"], "seconds": settings["task_timeout_seconds"],
                            "retries": settings["task_max_retries"], "model_calls": 12, "searches": 4},
             "computer": {"jobs": MAX_RUNNING, "job_seconds": MAX_SECONDS, "retries": 0,
-                         "desktop_snapshots": MAX_SNAPSHOTS, "browser_snapshots": 6, "browser_session_seconds": 900},
+                         "desktop_snapshots": MAX_SNAPSHOTS, "browser_snapshots": MAX_BROWSER_SNAPSHOTS, "browser_session_seconds": 900},
             "maintenance": {"update_seconds": TOTAL_SECONDS, "code_test_seconds": TEST_SECONDS, "retries": 0},
             "local_commands": ["/clear", "cls", "/skills", "/reload-skills", "/memory", "/learn", "/update"]}
 

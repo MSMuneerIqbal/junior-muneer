@@ -40,6 +40,7 @@ class TurnContext:
     computer_actions: int = 0  # computer cards made this turn (Phase 9)
     desktop_snapshots: int = 0
     browser_snapshots: int = 0
+    browser_submit_attempted: bool = False  # Never repeat an uncertain form submission in this turn.
     skill_drafts: int = 0
     code_session: dict | None = None
     last_pc_file: Any = None  # the PC file just checked for attaching (its real path)

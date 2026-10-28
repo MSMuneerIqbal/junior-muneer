@@ -66,6 +66,35 @@ def test_a_rule_can_be_switched_to_auto(client):
     assert decide("linkedin.post", from_outside=False).rule == "deny"
 
 
+def test_whatsapp_mode_is_separate_and_persisted_on_cards(client):
+    from junior.approvals import create_item
+    from junior.db import ApprovalItem, session_scope
+    from junior.permissions import ACTION_CHANNEL
+    from junior.senders.guard import check
+    from junior.settings_store import set_setting
+    set_mode("rules")
+    set_rule("computer.write", "auto")
+    token = ACTION_CHANNEL.set("whatsapp")
+    try:
+        item = create_item(kind="api", platform="computer", item_type="file", text="example",
+                           action_type="computer.write")
+        assert item.status == "waiting" and item.meta["origin_channel"] == "whatsapp"
+    finally:
+        ACTION_CHANNEL.reset(token)
+    assert decide("computer.write", from_outside=False).rule == "auto"
+    set_setting("whatsapp_action_mode", "rules")
+    token = ACTION_CHANNEL.set("whatsapp")
+    try:
+        auto = create_item(kind="api", platform="computer", item_type="file", text="example",
+                           action_type="computer.write")
+        assert auto.status == "approved"
+    finally:
+        ACTION_CHANNEL.reset(token)
+    set_setting("whatsapp_action_mode", "ask_all")
+    with session_scope() as session:
+        assert any("needs your OK" in reason for reason in check(session.get(ApprovalItem, auto.id), "example"))
+
+
 @pytest.mark.parametrize(
     "action_type",
     [t.key for t in CATALOG.values() if t.locked],

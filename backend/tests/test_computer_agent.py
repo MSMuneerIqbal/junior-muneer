@@ -85,10 +85,35 @@ def test_computer_changes_are_scoped_and_junior_has_only_bounded_transfer_tools(
     registry = load_registry()
     agent = registry.get("computer_agent")
     assert agent.tools == ("computer", "transfers", "skills")
-    assert set(agent.action_types) == {"computer.write", "computer.move", "computer.delete", "computer.run", "computer.job.stop", "computer.desktop.input", "computer.browser.input", "google.drive.save", "google.drive.share", "files.archive_whatsapp"}
+    assert set(agent.action_types) == {"computer.write", "computer.move", "computer.delete", "computer.run", "computer.job.stop", "computer.desktop.input", "google.drive.save", "google.drive.share", "files.archive_whatsapp"}
+    browser = registry.get("browser_agent")
+    assert "browser" in browser.tools and "computer" not in browser.tools
+    assert "browser_agent" in registry.get("junior_muneer").tools
     junior = registry.get("junior_muneer")
     assert "computer_read" in junior.tools and "computer_agent" in junior.tools and "computer" not in junior.tools
     assert "transfers" in junior.tools
     for name in registry.names():
         if name != "computer_agent":
             assert "computer" not in registry.get(name).tools, name  # least power: nobody else changes your PC
+
+
+def test_junior_delegates_browser_to_separate_agent(monkeypatch):
+    monkeypatch.setenv("FAKE_AI", "true")
+    from junior.config import get_settings
+    get_settings.cache_clear()
+    model = ScriptedModel([
+        step(function_call("ask_browser_agent", {"task": "Open https://example.com"}, call_id="b1")),
+        step(function_call("browser_action", {"kind": "navigate", "url": "https://example.com"}, call_id="b2")),
+        step(assistant_message("Navigation is waiting for approval.")),
+        chunked_answer("Approve the browser card to open it."),
+    ])
+    with TestClient(create_app(model_provider=lambda: (lambda _n: model))) as client:
+        client.put("/api/computer/browser", json={"enabled": True, "sites": ["https://example.com"]})
+        from junior.permissions import set_mode
+        set_mode("ask_all")
+        events = chat(client, "Open https://example.com")
+        assert events[-1]["type"] == "done", events[-1]
+        cards = [e["item"] for e in events if e["type"] == "approval"]
+        assert len(cards) == 1 and cards[0]["action_type"] == "computer.browser.input"
+        assert cards[0]["status"] == "waiting"
+        assert any(e.get("label") == "Asking the Browser Agent" for e in events if e["type"] == "step")

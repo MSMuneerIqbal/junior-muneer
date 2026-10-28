@@ -292,7 +292,7 @@ class BrowserManager:
         data = snap.controls[spec.element]
         target_allowed(data, spec)
         return {"target_label": data["name"] or data["tag"], "page_url": snap.url,
-                "form": data["form"], "target_href": data["href"]}
+                "form": data["form"], "target_href": data["href"], "element_type": data["type"]}
 
     async def execute(self, spec, conversation_id=None, *, expected_generation=None):
         from playwright.async_api import Error as PlaywrightError
@@ -309,8 +309,8 @@ class BrowserManager:
                     attempted = True
                     await self.page.goto(spec.url, wait_until="domcontentloaded")
                     checked_url(self.page.url, self.sites)
-                    return (f"Opened {redact(self.page.url)} in Junior's background browser. It is separate from your signed-in browser. "
-                            "The page has not been read yet. Ask Junior: 'Read the current browser page.'")
+                    return (f"Opened {redact(self.page.url)} in Junior's background browser, separate from the signed-in browser. "
+                            "The page has not been read yet. Take a browser snapshot to continue.")
                 snap = self.snapshots[spec.snapshot_id]
                 handle = snap.handles[spec.element]
                 current = await handle.evaluate(DESCRIBE)

@@ -4,6 +4,24 @@ Last reviewed: **2026-10-27**, after cost/workflow acceptance (P11-08).
 
 ## Active continuation (2026-10-27)
 
+2026-10-28: owner says Auto should perform requested browser tasks without repeated approval and Manual should ask;
+WhatsApp defaults to its own Manual mode with a setting to change it. Browser actions in Auto require a verified
+user message, an explicitly named origin and exact user/profile text, with a sender-side recheck and one submit attempt.
+Other action types retain their existing rules/locks. Manual approvals do not automatically resume a paused task.
+Full regression: backend 1,246 passed / 3 failed; all three passed on targeted rerun after correcting the WhatsApp
+test for its new Manual default. UI 131 passed / 14 skipped / 1 phone Skills test failed; a focused phone rerun
+of Skills, Browser and WhatsApp passed all 7 tests.
+User-authorized 7star live test opened the form,
+filled required fields and clicked Send once; confirmation was not captured. Do not automatically retry: delivery
+is unconfirmed (50.7s, $0.1261774). Real-model disposable form succeeded once (37.2s/$0.066935).
+Owner also requested separate Browser Agent. Added agents/browser_agent.md and browser/browser_agent tool groups;
+Junior delegates to ask_browser_agent, Computer Agent no longer has browser tools. Focused browser/computer backend,
+scripted delegation and six browser UI tests passed. Real-model simulated-page read passed, 20.4s/$0.0698692.
+Changes remain uncommitted. The owner app was restarted with the latest code: backend healthy, dashboard HTTP 200,
+supervisor active and WhatsApp mode ask_all. WhatsApp tunnel was preserved. The full backend run reported failures,
+including an old automatic WhatsApp delivery test adjusted for the new default, and these passed targeted reruns.
+The wider global Auto behavior and automatic continuation after manual browser approval remain unfinished.
+
 2026-10-28: user reported browser debugging error and WhatsApp failure. Port 9222 had no listener; ordinary isolated
 browser works without it. UI now labels the optional debugging connection and shows ready/no-page state. Focused
 browser/WhatsApp backend and six desktop/phone UI checks passed. WhatsApp token metadata check succeeded; no ngrok
