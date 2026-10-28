@@ -1,5 +1,9 @@
 # Junior Muneer: notes for Claude
 
+For the shared development instructions and current handover, read [AGENTS.md](AGENTS.md) and
+[PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) first. The status notes below predate the 2026-10-22 context review;
+use TASK.md and the shared handover to resolve stale status entries.
+
 Muneer's personal AI assistant and friend (English + Urdu): chat, voice messages, live calls, and a
 team of subagents that draft posts, proposals and replies. **PLAN.md** is the design (v9), **TASK.md**
 is the task list with ticks. Read the relevant TASK.md entry before starting a task.
