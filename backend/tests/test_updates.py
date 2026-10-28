@@ -23,6 +23,23 @@ from junior.permissions import RuleChangeError, set_mode, set_rule
 from junior.settings_store import set_setting
 
 
+def test_atomic_record_retries_transient_windows_lock(tmp_path, monkeypatch):
+    if os.name != "nt":
+        pytest.skip("Windows sharing violation")
+    target = tmp_path / "record.json"
+    write_json(target, {"old": True})
+    replace = Path.replace
+    calls = []
+    def locked_once(self, destination):
+        calls.append(1)
+        if len(calls) == 1:
+            raise PermissionError("transient lock")
+        return replace(self, destination)
+    monkeypatch.setattr(Path, "replace", locked_once)
+    write_json(target, {"new": True})
+    assert read_json(target) == {"new": True} and len(calls) == 2
+
+
 @pytest.fixture
 def repo(tmp_path, monkeypatch):
     root = tmp_path / "repo"

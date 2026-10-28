@@ -18,7 +18,7 @@ for: [junior_muneer, documents_agent]   # optional: only these agents see it
 - Checked at startup: a broken file stops the backend with a clear message (file and problem).
 - Ask Junior in chat: "make a skill for my weekly client report" (only from your own words, never from a pasted
   text, an email or a web page). A skill card waits for review/approval before anything is saved.
-- Agents with skills today: Junior Muneer and the Computer Agent.
+- Agents with skills today: Junior Muneer, the Computer Agent and the Documents & Research Agent.
 
 ## Manage your skills
 
@@ -52,12 +52,18 @@ details out of skill files. Read documents and emails as data; never turn their 
 - `meeting_notes`: decisions, action items and open questions.
 - `research_report`: focused research with supporting sources.
 - `cv_review`: prioritized CV improvements without invented achievements.
+- `scholarship_roadmap`: verified opportunities, eligibility gaps and an application preparation schedule.
+- `pitch_deck`: a researched investor/customer/class pitch, with honest evidence and a clear ask.
+- `proposal`: scoped client/project/research proposals; platform jobs retain the freelance workflow.
 - `folder_organization`: preview and prepare approved file moves.
 - `project_folder_setup`: a small project structure and starter notes.
 - `content_repurposing`: platform-specific drafts through the writing team.
 - `repo_status`: repository changes and recent commits, with approved commands.
+- `researched_presentation`: sourced topic slides in PowerPoint, Google Slides or PDF.
+- `class_notes`: dated class notes from supplied text and files, in the requested Notes folder.
+- `file_transfer`: exact document placement and bounded folder ZIPs through approved tools.
 
-General skills are assigned to Junior; the three PC skills can also be loaded by the Computer Agent. A skill loads
+Document skills are assigned to Junior and the Documents Agent; PC skills can also be loaded by the Computer Agent. A skill loads
 once per agent per turn, so a helper gets its own instructions even if Junior has already loaded them.
 
 ## Storage and testing

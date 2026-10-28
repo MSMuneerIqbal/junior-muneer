@@ -256,9 +256,16 @@ def test_real_agent_tool_uses_current_edited_skill_and_rejects_other_agent_scope
         assert "not assigned" in str(model.last_call.input)
 
 
-def test_starter_library_is_valid_and_has_ten_focused_skills():
+def test_starter_library_is_valid_and_document_skills_are_scoped():
     from junior.config import REPO_DIR
     library = load_skills(REPO_DIR / "skills")
     assert set(library) >= {"daily_priorities", "weekly_review", "client_update", "meeting_notes", "research_report",
                            "cv_review", "folder_organization", "project_folder_setup", "content_repurposing", "repo_status"}
     assert all("## Steps" in s.instructions for s in library.values())
+    for name in ("cv_review", "scholarship_roadmap", "research_report", "pitch_deck", "proposal"):
+        skill = library[name]
+        assert skill.for_agent("junior_muneer") and skill.for_agent("documents_agent")
+        assert not skill.for_agent("computer_agent")
+        context = said("Prepare a document draft")
+        assert "# Skill: " + name in use_skill_for(context, name, "documents_agent")
+        assert "not assigned" in use_skill_for(context, name, "computer_agent")

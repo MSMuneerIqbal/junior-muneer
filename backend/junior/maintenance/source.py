@@ -7,6 +7,7 @@ import re
 import subprocess
 import tarfile
 import tempfile
+import time
 from pathlib import Path, PurePosixPath
 
 SHA = re.compile(r"^[0-9a-f]{40}$")
@@ -102,7 +103,16 @@ def write_json(path, value):
             json.dump(value, file, ensure_ascii=False)
             file.flush()
             os.fsync(file.fileno())
-        temp.replace(path)
+        # Windows readers and security scanners can briefly hold the destination
+        # without delete sharing. Keep atomic replacement, but tolerate that race.
+        for attempt in range(10):
+            try:
+                temp.replace(path)
+                break
+            except PermissionError:
+                if os.name != "nt" or attempt == 9:
+                    raise
+                time.sleep(.05)
     finally:
         temp.unlink(missing_ok=True)
 

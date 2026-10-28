@@ -14,6 +14,10 @@ test("Skills in Settings: create, use in chat, edit, preserve unsaved work and d
   await expect(section).toBeVisible();
   await expect(page).toHaveURL(/#skills$/);
   await expect(section.getByRole("heading", { name: "Daily priorities" })).toBeVisible();
+  for (const name of ["Scholarship roadmap", "Pitch deck", "Proposal"]) {
+    await expect(section.getByRole("heading", { name, exact: true })).toBeVisible();
+    await expect(section.getByRole("button", { name: `Edit ${name}`, exact: true })).toBeVisible();
+  }
   await page.screenshot({ path: `test-results/skills-${info.project.name}.png`, fullPage: true });
   await section.getByRole("button", { name: "Add skill" }).click();
   await section.getByLabel("Skill name", { exact: true }).fill(name);

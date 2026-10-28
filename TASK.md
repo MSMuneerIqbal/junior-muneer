@@ -719,7 +719,14 @@ with its links arrives in the chat you asked from, WhatsApp included.
   - Real-model throwaway-data NLP check: five PDF pages, 80.9 seconds, estimated $0.0925705. No owner chat or
     live Google write used. Real Google Slides creation/API enablement and current OAuth freshness remain unverified;
     enable Slides API/reconnect Google if required. Phase acceptance and push remain separate (P10-07).
-- [ ] **P10-06** First skills: CV review, scholarship roadmap, research report, pitch deck, proposal
+- [x] **P10-06** First skills: CV review, scholarship roadmap, research report, pitch deck, proposal
+  - New scholarship, pitch and proposal skills added; CV review improved for confidential source material.
+    Settings desktop/phone Skills checks 4 passed; focused skill/update backend checks passed. Full UI 128 passed,
+    14 skips. Full backend 1,240 passed and one timing-sensitive long-tool-call test failed under load; the
+    unchanged test passed on its isolated rerun. Real-model matching of the three new skills was not checked.
+  - Supervisor transient Windows file-lock retry added and covered in focused tests after a startup failure;
+    backend restarted and reported healthy/supervised. A real-model code-helper test on a throwaway repo proposed
+    the correct fix, waiting for TEST approval, without execution or application: 8.4s, estimated $0.004656.
 - [ ] **P10-07** Your acceptance test + push
 
 ## Phase 11: Controlled PC/browser actions, learning and updates

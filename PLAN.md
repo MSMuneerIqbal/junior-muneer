@@ -785,6 +785,9 @@ Run it on **one PC at a time**. Two copies running at once could do the same wor
 - **v10.1 (2026-10-27):** researched Google Slides with readable approval previews and pinned partial creations;
   local offline PDF reports/decks with owned workers, citation links and exact slide counts (section 14d).
 
+- **v10.2 (2026-10-28):** scholarship roadmap, pitch deck and proposal skills with evidence, privacy and approval
+  boundaries; reviewed CV skill and resilience against transient Windows maintenance-record file locks.
+
 - **v10.0 (2026-10-26):** authorized staged PC/browser/learning/update work (section 14h), preserving approvals
   and existing API configuration. All new WhatsApp integration work deferred by Muneer. Each step is tracked in
   Phase 11 of TASK.md and is not considered built until its checks pass.
