@@ -17,10 +17,11 @@ Real standalone Chromium probe played the exact requested video with audio. A la
 unusual-traffic verification and could not confirm playback: player now leaves challenge visible for the owner.
 Never automatically retry or bypass verification. Focused backend/UI and WhatsApp checks passed. Full backend during
 edits: 1,263 passed/2 timing failures, both passed on targeted rerun. Full UI 138 passed/14 skipped; latest focused
-play/stop UI 4 passed; TypeScript/ESLint passed. Commit and final restart/revision check pending. The previous running
-revision 824afc3 was stale against checkout 06102ff, which explains the self-improvement mismatch; do not reset/pull
-the checkout. Generic
-Manual browser-task resumption remains unfinished. User asks for a recommendation on signed-in browsing afterwards.
+play/stop UI 4 passed; TypeScript/ESLint passed. Supervised owner app restarted healthy at commit dfd8ae1; the previous
+running revision 824afc3 was stale against checkout 06102ff, which explains the self-improvement mismatch. Generic
+Manual browser-task resumption remains unfinished. User asked for a recommendation on signed-in browsing: an optional
+Chrome/Edge extension with explicitly granted site access can operate in the existing signed-in browser, while the
+temporary browser remains available for anonymous work. It is not implemented yet; no personal session was accessed.
 
 2026-10-28: Muneer additionally requested closing a song player and broad system access with an option to retain
 specific folders. Implementing opt-in all-local-drives and other-app-windows scopes with existing protected paths/

@@ -737,7 +737,8 @@ with its links arrives in the chat you asked from, WhatsApp included.
   checks playback and leaves Google verification for the owner. General browser Manual task resumption remains open.
   Full backend during edits 1,263 passed/2 timing failures; both passed isolated reruns. Full UI 138 passed/14 skipped;
   latest focused play/stop UI 4 passed. Real YouTube browser probe played the requested video; subsequent isolated
-  integration test met a Google unusual-traffic verification and did not verify playback. Final commit/restart pending.
+  integration test met a Google unusual-traffic verification and did not verify playback. Owner app restarted healthy
+  at dfd8ae1; the separate signed-in-browser integration remains a future design discussion.
 
 - [~] **Wider PC scope and close player 2026-10-28:** Add opt-in all-local-drives and other-app-windows scopes,
   preserve selected folders/apps, and support normal window close for supported/allowed apps. Protected paths,
