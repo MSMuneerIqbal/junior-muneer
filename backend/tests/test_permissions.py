@@ -49,10 +49,10 @@ def test_defaults(client, action_type, rule):
     assert rule_for(action_type) == rule
 
 
-def test_every_deny_default_is_locked():
-    for t in CATALOG.values():
-        if t.default == "deny":
-            assert t.locked, t.key
+def test_payment_remains_locked_and_denied(client):
+    with pytest.raises(RuleChangeError, match="locked"):
+        set_rule("system.payment", "auto")
+    assert rule_for("system.payment") == "deny"
 
 
 # --- Changing rules ---------------------------------------------------------
@@ -97,23 +97,27 @@ def test_whatsapp_mode_is_separate_and_persisted_on_cards(client):
 
 @pytest.mark.parametrize(
     "action_type",
-    [t.key for t in CATALOG.values() if t.locked],
+    [t.key for t in CATALOG.values() if t.locked and t.key != "system.payment"],
 )
 @pytest.mark.parametrize("rule", ["auto", "ask", "deny"])
-def test_locked_types_cant_be_changed(client, action_type, rule):
-    before = rule_for(action_type)
-    with pytest.raises(RuleChangeError, match="locked"):
-        set_rule(action_type, rule)
-    assert rule_for(action_type) == before
+def test_previously_locked_types_can_be_changed(client, action_type, rule):
+    set_rule(action_type, rule)
+    assert rule_for(action_type) == rule
+    assert decide(action_type, from_outside=False).rule == rule
 
 
-def test_a_locked_rule_ignores_a_tampered_setting(client):
+def test_legacy_locked_values_do_not_activate_on_upgrade(client):
     from junior.settings_store import set_setting
 
     set_setting("permission_rules", {"github.repo.delete": "auto", "github.merge": "auto", "gmail.reply": "auto"})
     assert decide("github.repo.delete", from_outside=False).rule == "deny"
     assert decide("github.merge", from_outside=False).rule == "ask"
     assert decide("gmail.reply", from_outside=False).rule == "ask"
+    set_rule("github.merge", "auto")
+    assert decide("github.merge", from_outside=False).rule == "auto"
+    assert decide("github.repo.delete", from_outside=False).rule == "deny"
+    set_setting("permission_unlocked_rules", {"system.payment": "auto"})
+    assert rule_for("system.payment") == "deny"
 
 
 def test_bad_rules_and_types_are_refused(client):
@@ -150,9 +154,9 @@ def test_outside_content_never_unlocks_a_deny(client):
 def test_always_allow_offered_only_for_changeable_own_actions(client):
     assert decide("linkedin.post", from_outside=False).can_always_allow
     assert not decide("linkedin.post", from_outside=True).can_always_allow
-    assert not decide("github.merge", from_outside=False).can_always_allow  # locked
-    assert not decide("computer.run", from_outside=False).can_always_allow  # locked
-    assert not decide("gmail.reply", from_outside=False).can_always_allow  # locked
+    assert decide("github.merge", from_outside=False).can_always_allow
+    assert decide("computer.run", from_outside=False).can_always_allow
+    assert decide("gmail.reply", from_outside=False).can_always_allow
 
 
 # --- Global mode and pause ----------------------------------------------------
@@ -202,13 +206,16 @@ def test_api_lists_and_changes_rules(client):
     data = client.get("/api/permissions").json()
     assert data["mode"] == "rules" and data["paused"] is False
     types = {t["type"]: t for t in data["types"]}
-    assert types["github.merge"]["locked"] and types["linkedin.post"]["rule"] == "ask"
+    assert not types["github.merge"]["locked"] and types["linkedin.post"]["rule"] == "ask"
+    assert types["system.payment"]["locked"] and types["system.payment"]["rule"] == "deny"
 
     data = client.put("/api/permissions/rules/linkedin.post", json={"rule": "auto"}).json()
     assert {t["type"]: t for t in data["types"]}["linkedin.post"]["rule"] == "auto"
 
     r = client.put("/api/permissions/rules/github.merge", json={"rule": "auto"})
-    assert r.status_code == 400 and "locked" in r.json()["detail"]
+    assert r.status_code == 200
+    assert {t["type"]: t for t in r.json()["types"]}["github.merge"]["rule"] == "auto"
+    assert client.put("/api/permissions/rules/system.payment", json={"rule": "auto"}).status_code == 400
     assert client.put("/api/permissions/rules/linkedin.post", json={"rule": "maybe"}).status_code == 422
 
     assert client.put("/api/permissions/mode", json={"mode": "ask_all"}).json()["mode"] == "ask_all"
@@ -216,6 +223,7 @@ def test_api_lists_and_changes_rules(client):
     names = [a["name"] for a in client.get("/api/activity?kind=setting").json()]
     assert "permission_rule" in names and "permission_mode" in names
     assert "permission_rules" not in client.get("/api/settings").json()
+    assert "permission_unlocked_rules" not in client.get("/api/settings").json()
 
 
 def test_plan_mode_shows_a_plan_and_queues_nothing(client):

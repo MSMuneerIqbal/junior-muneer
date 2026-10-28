@@ -4,6 +4,22 @@ Last reviewed: **2026-10-27**, after cost/workflow acceptance (P11-08).
 
 ## Active continuation (2026-10-27)
 
+2026-10-28: Muneer additionally requested closing a song player and broad system access with an option to retain
+specific folders. Implementing opt-in all-local-drives and other-app-windows scopes with existing protected paths/
+security/browser/terminal restrictions; lists remain saved. Desktop close uses normal WM_CLOSE, not forced termination;
+uncertain results need inspection. Auto close is bound to a matching owner request and needs desktop-input Auto;
+Manual asks. Focused simulated tests passed and a disposable native Windows window closed. Two isolated real-model
+checks each closed the simulated VLC once (24.3s/$0.0426854; 30.0s/$0.0806121); the second correctly reported that
+playback was unverified. The owner app restarted healthy; both broad options remain off. No owner media player was closed.
+
+2026-10-28: Muneer requested editable permissions, explicitly excluding payments. Formerly locked rules are editable
+without changing defaults; a separate settings key prevents ignored legacy overrides from becoming active. Payments
+remain locked Deny. Existing tool limits and outside-content checks remain; GitHub write and system actions without
+senders are labelled unavailable. For skills.learn and maintenance.update, Auto creates an approved card but the
+user must press Post now; the UI and chat say so. Full backend during ongoing changes: 1,245 passed/5 failed;
+all five passed after corrections on targeted rerun. Full UI 131 passed/14 skipped/1 timeout; final focused
+desktop/phone UI 8 passed/2 skipped. TypeScript and ESLint passed.
+
 2026-10-28: owner says Auto should perform requested browser tasks without repeated approval and Manual should ask;
 WhatsApp defaults to its own Manual mode with a setting to change it. Browser actions in Auto require a verified
 user message, an explicitly named origin and exact user/profile text, with a sender-side recheck and one submit attempt.

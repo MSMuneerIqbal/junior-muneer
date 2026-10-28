@@ -39,6 +39,8 @@ def propose(context, name, description, instructions, your_words):
     context.approval_ids.append(item.id)
     context.emit({"type": "approval", "item": item.model_dump(mode="json")})
     audit("action", "skill_proposed", detail={"skill": name}, conversation_id=context.conversation_id)
+    if item.status == "approved":
+        return f"NOT saved yet: skill {name!r} is approved on card {item.id}; use Post now on the card to save it."
     return f"NOT saved yet: skill {name!r} is ready on card {item.id}, waiting for approval. You can edit its steps before approving."
 
 

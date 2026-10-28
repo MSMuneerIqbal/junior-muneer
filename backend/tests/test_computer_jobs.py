@@ -164,10 +164,8 @@ def test_path_dangerous_edit_and_plan_checks(pc_home):
     result = c.post(f"/api/approvals/{card['id']}/approve", json={}).json()
     assert result["status"] == "approved" and "never run" in result["meta"]["last_error"]
     assert c.get("/api/computer/jobs").json()["jobs"] == []
-    with pytest.raises(RuleChangeError, match="locked"):
-        set_rule("computer.run", "auto")
-    with pytest.raises(RuleChangeError, match="locked"):
-        set_rule("computer.job.stop", "auto")
+    set_rule("computer.run", "auto")
+    set_rule("computer.job.stop", "auto")
 
 
 def test_live_output_is_bounded_and_known_secrets_redacted(pc_home):

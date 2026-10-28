@@ -57,15 +57,23 @@ def check(item: ApprovalItem, text: str) -> list[str]:
         return ["This is a copy-and-paste item: you send it yourself."]
     if item.status != "approved":
         return [f"It isn't approved (it's {item.status.replace('_', ' ')})."]
+    if item.platform == "computer" and item.meta.get("requires_all_files") and not get_setting("computer_all_files"):
+        problems.append("All-local-drives access was turned off. Request this path again or allow its folder.")
 
     browser_directed = False
     if item.action_type == "computer.browser.input" and item.meta.get("browser_directed"):
         from junior.browser.intent import persisted_authorizes
         browser_directed = persisted_authorizes(item)
+    desktop_directed = False
+    if item.action_type == "computer.desktop.input" and item.meta.get("desktop_close_directed"):
+        from junior.computer.desktop import close_persisted_authorizes
+        desktop_directed = close_persisted_authorizes(item)
     decision = decide(item.action_type, from_outside=item.from_outside, channel=item.meta.get("origin_channel"),
-                      browser_directed=browser_directed)
+                      browser_directed=browser_directed, desktop_directed=desktop_directed)
     if item.action_type == "computer.browser.input" and item.meta.get("approved_by") == "auto rule" and not browser_directed:
         problems.append("The original user request no longer authorizes this browser action.")
+    if item.action_type == "computer.desktop.input" and item.meta.get("desktop_close_requires_request") and item.meta.get("approved_by") == "auto rule" and not desktop_directed:
+        problems.append("The original user request no longer authorizes closing this window.")
     if decision.rule == "deny":
         problems.append(decision.reason)
     elif decision.held:

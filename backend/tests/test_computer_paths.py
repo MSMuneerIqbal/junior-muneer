@@ -67,6 +67,19 @@ def test_anything_else_is_refused(pc):
     user, _ = pc
     with pytest.raises(PathRefused, match="outside the allowed folders"):
         check(str(user / "Other" / "diary.txt"))
+
+
+def test_all_local_drives_scope_preserves_folder_list_and_protected_paths(pc):
+    user, client = pc
+    before = client.get("/api/computer").json()["folders"]
+    assert client.patch("/api/settings", json={"computer_all_files": True}).status_code == 200
+    assert check(str(user / "Other" / "diary.txt")) == user / "Other" / "diary.txt"
+    with pytest.raises(PathRefused):
+        check(str(user / "Desktop" / ".env"))
+    assert client.get("/api/computer").json()["folders"] == before
+    client.patch("/api/settings", json={"computer_all_files": False})
+    with pytest.raises(PathRefused, match="outside the allowed folders"):
+        check(str(user / "Other" / "diary.txt"))
     with pytest.raises(PathRefused, match="outside the allowed folders"):
         check(str(user))
 
@@ -218,7 +231,7 @@ def test_on_off_is_a_normal_setting(pc):
 def test_the_computer_rules(pc):
     assert rule_for("computer.read") == "auto"
     assert rule_for("computer.write") == rule_for("computer.move") == rule_for("computer.delete") == "ask"
-    assert CATALOG["computer.run"].locked and rule_for("computer.run") == "ask"
+    assert rule_for("computer.run") == "ask"
     assert decide("computer.write", from_outside=True).rule == "ask"  # outside text: always ask
     assert "terminal.run" not in CATALOG and CATALOG["system.delete"].default == "deny"  # deleting for good: never
 

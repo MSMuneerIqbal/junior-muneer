@@ -39,7 +39,8 @@ def handle(context, text, paste=None):
                         item = propose(review.get("id"), context.conversation_id)
                         context.approval_ids.append(item.id)
                         context.emit({"type": "approval", "item": item.model_dump(mode="json")})
-                        reply = "Update card prepared. Nothing installs until you approve it."
+                        reply = ("Update card approved by your rule. Use Post now on the card to start it."
+                                 if item.status == "approved" else "Update card prepared. Nothing installs until you approve it.")
                     elif argument == "--status":
                         state = status()
                         reply = str((state.get("progress") or {}).get("step") or "No update has run.")

@@ -7,6 +7,14 @@ test("Settings → Computer: on/off, allowed folders, add and remove, the blocke
   await page.goto("/settings#computer");
   await expect(page.getByRole("heading", { name: "Computer" })).toBeVisible();
   await expect(page.getByRole("switch", { name: "Computer tools" })).toHaveAttribute("aria-checked", "true");
+  const allDrives = page.getByRole("switch", { name: "Allow all local drives" });
+  await expect(allDrives).toHaveAttribute("aria-checked", "false");
+  await allDrives.click();
+  await expect(allDrives).toHaveAttribute("aria-checked", "true");
+  await page.reload();
+  await expect(allDrives).toHaveAttribute("aria-checked", "true");
+  await allDrives.click();
+  await expect(allDrives).toHaveAttribute("aria-checked", "false");
   const folders = page.getByRole("list", { name: "Allowed folders" });
   await expect(folders.getByRole("listitem")).toHaveCount(3); // Desktop, Documents, Downloads
   await expect(page.getByText(/\.env, keys and certificates/)).toBeVisible();
@@ -32,7 +40,7 @@ test("Junior hands a PC job to the Computer Agent; the file card waits for you a
   await box.fill(`pc write Desktop/${name}: hello from the e2e test`);
   await box.press("Enter");
   const card = page.getByRole("article", { name: new RegExp(`Your PC file: Create .*${name.replace(".", "\\.")}`) });
-  await expect(card.getByTestId("approval-status")).toHaveText("Waiting for you");
+  await expect(card.getByTestId("approval-status")).toHaveText("Waiting for you", { timeout: 30_000 });
   await expect(card.getByText("hello from the e2e test")).toBeVisible();
   await card.getByRole("button", { name: "Reject" }).click();
   await expect(card.getByTestId("approval-status")).toHaveText("Rejected");

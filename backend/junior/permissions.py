@@ -7,7 +7,8 @@ Every action has a type such as `linkedin.post` or `gmail.send`, and each type h
     deny   it never runs
 
 On top of the rules:
-    - Locked types keep their default; you can't change them (merges, deletes, terminal...).
+    - Previously locked types retain their defaults until explicitly changed in Permissions;
+      payments remain locked to Deny.
     - Anything caused by outside content (emails, comments, pastes, web pages) is at
       least Ask, and "Always allow" is never offered for it.
     - The global mode: "Ask everything" turns every Auto into Ask; "Pause everything"
@@ -18,7 +19,7 @@ On top of the rules:
 
     GET /api/permissions                   mode and every action type with its rule
     PUT /api/permissions/mode   {"mode"}   rules (Auto) · ask_all (Manual) · plan
-    PUT /api/permissions/rules/{type}  {"rule"}   change one rule (refused when locked)
+    PUT /api/permissions/rules/{type}  {"rule"}   change one rule
 """
 
 import re
@@ -71,15 +72,15 @@ CATALOG: dict[str, ActionType] = {
         _t("facebook.page.post", "Post on your Facebook Page", "Social", "ask"),
         _t("instagram.post", "Post on Instagram", "Social", "ask"),
         _t("facebook.comment.reply", "Reply to a Facebook comment", "Social", "ask", True,
-           "Replies answer outside content, so they always wait for you."),
+           "Replies caused by outside content still wait for you."),
         _t("instagram.comment.reply", "Reply to an Instagram comment", "Social", "ask", True,
-           "Replies answer outside content, so they always wait for you."),
+           "Replies caused by outside content still wait for you."),
         _t("gmail.draft", "Make a Gmail draft (it waits for your OK to send)", "Email", "auto",
            note="Only a draft in your Gmail Drafts; sending is the next rule."),
         _t("gmail.send", "Send a new email", "Email", "ask",
            note="Auto: he sends it as soon as you ask, no card to approve. Ask: a draft waits for your Approve."),
         _t("gmail.reply", "Reply to an email", "Email", "ask", True,
-           "Replies answer outside content, so they always wait for you."),
+           "Replies caused by outside content still wait for you."),
         _t("gmail.to_self", "Email yourself what you ask for (news, drafts, notes)", "Email", "auto",
            note="Only ever to your own Gmail address, and only when you ask. Ask or Deny stops it."),
         _t("whatsapp.to_self", "WhatsApp yourself what you ask for (text, documents)", "WhatsApp", "auto",
@@ -99,7 +100,7 @@ CATALOG: dict[str, ActionType] = {
         _t("google.calendar.create", "Add an event to your Google Calendar", "Google", "auto",
            note="Only when you ask, on your own calendar; nobody is invited."),
         _t("maintenance.update", "Install a reviewed Junior update and restart", "Maintenance", "ask", True,
-           "Exact revision, clean source, isolated checks, database backup and rollback. Calls/jobs are interrupted."),
+           "Exact revision, clean source, checks, backup and rollback. Auto approves the card; use Post now to start the update. Calls/jobs are interrupted."),
         _t("maintenance.code.test", "Run tests on reviewed generated source", "Maintenance", "ask", True,
            "Native tests can do anything your account can. Review the full diff; clean environment and separate source are not a sandbox."),
         _t("maintenance.code.apply", "Apply a tested local source proposal", "Maintenance", "ask", True,
@@ -107,7 +108,7 @@ CATALOG: dict[str, ActionType] = {
         _t("maintenance.code.rollback", "Restore a proposal's saved original source", "Maintenance", "ask", True,
            "Refuses if an applied file has changed since. No automatic rollback of your later work."),
         _t("skills.learn", "Save a learned workflow as a reusable skill", "Skills", "ask", True,
-           "Review its steps before saving. Skills never grant tool permissions or run scripts by themselves."),
+           "Auto approves the card; use Post now to save it. Skills never grant tool permissions or run scripts by themselves."),
         _t("github.issue.create", "Create a GitHub issue", "GitHub", "ask"),
         _t("github.comment", "Comment on GitHub", "GitHub", "ask"),
         _t("github.pr.open", "Open a pull request", "GitHub", "ask"),
@@ -127,13 +128,13 @@ CATALOG: dict[str, ActionType] = {
         _t("computer.delete", "Delete a file or folder (to the Recycle Bin)", "Your computer", "ask",
            note="Always to the Recycle Bin, so you can restore it. Deleting for good is never allowed."),
         _t("computer.run", "Run a terminal command on your PC", "Your computer", "ask", True,
-           "A command can do anything your account can, so you check every one. Dangerous ones are refused anyway."),
+           "A command can do anything your account can. Dangerous commands are still refused."),
         _t("computer.job.stop", "Stop a PC command job", "Your computer", "ask", True,
-           "Chat requests wait for your OK. You can also press Stop beside an owned job in Settings → Computer."),
+           "You can also press Stop beside an owned job in Settings → Computer."),
         _t("computer.desktop.observe", "Observe allowed app windows and screenshots", "Your computer", "auto",
            note="Only after desktop opt-in and app selection in Settings → Computer; at most four captures per message."),
         _t("computer.desktop.input", "Focus, click or type in an observed app window", "Your computer", "ask", True,
-           "One reviewed action per fresh snapshot; foreground and control identity are checked again. No terminal/browser/security UI."),
+           "One action per fresh snapshot; foreground and control identity are checked again. No terminal/browser/security UI."),
         _t("computer.browser.observe", "Read the isolated browser page", "Your computer", "auto",
            note="Only after browser opt-in and exact website scope; page data is untrusted."),
         _t("computer.browser.input", "Navigate, click, fill or download in the browser", "Your computer", "auto",
@@ -181,12 +182,22 @@ def _saved_rules() -> dict[str, str]:
     return rules if isinstance(rules, dict) else {}
 
 
+def _unlocked_rules() -> dict[str, str]:
+    rules = get_setting("permission_unlocked_rules")
+    return rules if isinstance(rules, dict) else {}
+
+
 def rule_for(action_type: str) -> Rule:
     """Your rule for a type (before the mode and outside-content checks)."""
     _check_type(action_type)
     known = CATALOG.get(action_type)
     if known and known.locked:
-        return known.default
+        if action_type == "system.payment":
+            return known.default
+        # Old values in permission_rules were ignored while these types were locked.
+        # Do not suddenly activate them after an upgrade.
+        saved = _unlocked_rules().get(action_type)
+        return saved if saved in RULES else known.default
     saved = _saved_rules().get(action_type)
     if saved in RULES:
         return saved  # type: ignore[return-value]
@@ -198,12 +209,13 @@ def set_rule(action_type: str, rule: str) -> None:
     if rule not in RULES:
         raise RuleChangeError(f"Rule must be one of {list(RULES)}.")
     known = CATALOG.get(action_type)
-    if known and known.locked:
-        raise RuleChangeError(f"{known.label} is locked to {known.default.capitalize()}; it can't be changed.")
+    if action_type == "system.payment":
+        raise RuleChangeError("Payments are locked to Deny.")
     before = rule_for(action_type)
-    rules = _saved_rules()
+    setting = "permission_unlocked_rules" if known and known.locked else "permission_rules"
+    rules = _unlocked_rules() if setting == "permission_unlocked_rules" else _saved_rules()
     rules[action_type] = rule
-    set_setting("permission_rules", rules)
+    set_setting(setting, rules)
     if before != rule:
         audit("setting", "permission_rule", detail={"type": action_type, "from": before, "to": rule})
 
@@ -218,27 +230,24 @@ class Decision:
     held: bool = False
 
 
-def decide(action_type: str, *, from_outside: bool, channel: str | None = None, browser_directed: bool = False) -> Decision:
+def decide(action_type: str, *, from_outside: bool, channel: str | None = None, browser_directed: bool = False, desktop_directed: bool = False) -> Decision:
     """What happens to one action. Deny wins; outside content and "Ask everything" turn Auto into Ask."""
     rule = rule_for(action_type)
-    known = CATALOG.get(action_type)
-    locked = bool(known and known.locked)
     held = is_paused()
 
     if rule == "deny":
-        why = "it's locked to Deny" if locked else "your rule is Deny"
-        return Decision("deny", f"Never runs: {why}.")
+        return Decision("deny", "Never runs: " + ("payments are locked to Deny." if action_type == "system.payment" else "your rule is Deny."))
     if action_type == "computer.browser.input" and not browser_directed:
         return Decision("ask", "This browser action needs your review because its target or content was not established by your request.", False, held)
-    can_always_allow = not locked and not from_outside
-    if from_outside and not (action_type == "computer.browser.input" and browser_directed):
+    can_always_allow = not from_outside
+    if from_outside and not ((action_type == "computer.browser.input" and browser_directed) or
+                             (action_type == "computer.desktop.input" and desktop_directed)):
         return Decision("ask", "It comes from outside content, so it always waits for you.", False, held)
     if rule == "auto" and get_mode(channel) in ("ask_all", "plan"):
         return Decision("ask", "Manual mode: everything waits for you.", can_always_allow, held)
     if rule == "auto":
         return Decision("auto", "Your rule is Auto.", False, held)
-    why = "it's locked to Ask" if locked else "your rule is Ask"
-    return Decision("ask", f"Waits for you: {why}.", can_always_allow, held)
+    return Decision("ask", "Waits for you: your rule is Ask.", can_always_allow, held)
 
 
 def plan_mode_refusal() -> str | None:
@@ -298,11 +307,12 @@ def get_permissions() -> dict:
         {
             "type": t.key,
             "label": t.label,
-            "group": t.group,
+            "group": "Unavailable" if t.group == "Never" else t.group,
             "rule": rule_for(t.key),
             "default": t.default,
-            "locked": t.locked,
-            "note": t.note,
+            "locked": t.key == "system.payment",
+            "note": ("This action is not currently implemented; changing the rule does not add this capability."
+                     if t.group == "Never" or t.key.startswith("github.") else t.note),
         }
         for t in CATALOG.values()
     ] + [

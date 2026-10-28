@@ -1334,6 +1334,7 @@ function GoogleConnection() {
 
 type ComputerStatus = {
   enabled: boolean;
+  all_files: boolean;
   folders: { path: string; exists: boolean }[];
   using_defaults: boolean;
   defaults: string[];
@@ -1356,6 +1357,16 @@ function ComputerSection({ enabled, onEnabled }: { enabled: boolean; onEnabled: 
     }
   }
 
+  async function changeScope(allFiles: boolean) {
+    setError("");
+    try {
+      await send("PATCH", "/api/settings", { computer_all_files: allFiles });
+      await mutate();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't change file access");
+    }
+  }
+
   return (
     <Section
       id="computer"
@@ -1365,10 +1376,13 @@ function ComputerSection({ enabled, onEnabled }: { enabled: boolean; onEnabled: 
       <Row label="Computer tools" hint="Off: he can't look at or change anything on this PC.">
         <Toggle label="Computer tools" checked={enabled} onChange={onEnabled} />
       </Row>
+      <Row label="Allow all local drives" hint="Use files across local drives. Protected system and secret paths remain blocked. Your folder list is kept when you turn this off.">
+        <Toggle label="Allow all local drives" checked={data?.all_files ?? false} onChange={(value) => void changeScope(value)} />
+      </Row>
       <Row
         wide
         label="Allowed folders"
-        hint="He can look and work only inside these. A full path you type yourself in a message also works, that time."
+        hint="When all local drives is off, Junior can work inside these folders or a full path you type yourself."
       >
         <div className="flex max-w-2xl flex-col gap-2">
           <ul aria-label="Allowed folders" className="flex flex-col gap-1.5">
@@ -1534,7 +1548,8 @@ function PermissionsSection() {
           ))}
           <p className="px-6 py-4 text-xs leading-relaxed text-muted">
             Anything caused by outside content (emails, comments, pasted text, web pages) always waits for you,
-            whatever the rule. Copy-and-paste items (Upwork, Fiverr, LinkedIn comments, X) are never sent by him.
+            except browser actions verified against your request. Permissions do not add unavailable capabilities or
+            bypass Computer and Browser restrictions. Copy-and-paste items (Upwork, Fiverr, LinkedIn comments, X) are never sent by him.
             {error && <span className="mt-1 block text-danger">{error}</span>}
           </p>
         </>

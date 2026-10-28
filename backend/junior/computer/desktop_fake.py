@@ -49,6 +49,9 @@ class FakeDesktop:
     def focus(self, hwnd):
         self.window(hwnd)
 
+    def close_window(self, hwnd, check):
+        check()
+
     def focused(self, hwnd):
         return self.observe(hwnd)["focused"]
 

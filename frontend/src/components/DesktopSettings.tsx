@@ -4,7 +4,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { BACKEND_URL, fetcher, send } from "@/lib/api";
 
-type Desktop = { enabled: boolean; apps: string[]; supported: Record<string, string>; available: boolean; simulation: boolean };
+type Desktop = { enabled: boolean; apps: string[]; all_apps: boolean; supported: Record<string, string>; available: boolean; simulation: boolean };
 type WindowInfo = { handle: number; app: string; title: string; foreground: boolean; minimized: boolean };
 type Snapshot = { id: string; image_url: string; window: WindowInfo; controls: { index: number; name: string; type: string }[] };
 
@@ -15,11 +15,11 @@ export default function DesktopSettings() {
   const [windows, setWindows] = useState<WindowInfo[] | null>(null);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
 
-  async function update(enabled: boolean, apps: string[]) {
+  async function update(enabled: boolean, apps: string[], allApps = data?.all_apps ?? false) {
     setBusy(true); setError("");
     try {
-      await mutate(send<Desktop>("PUT", "/api/computer/desktop", { enabled, apps }), {
-        optimisticData: data ? { ...data, enabled, apps } : undefined,
+      await mutate(send<Desktop>("PUT", "/api/computer/desktop", { enabled, apps, all_apps: allApps }), {
+        optimisticData: data ? { ...data, enabled, apps, all_apps: allApps } : undefined,
         rollbackOnError: true,
         revalidate: false,
       });
@@ -40,7 +40,7 @@ export default function DesktopSettings() {
   return (
     <section aria-label="Desktop controls" className="flex min-w-0 flex-col gap-3">
       <h3 className="text-sm font-semibold">Desktop controls</h3>
-      <p className="text-xs text-muted">Opt in for the apps below. Junior can observe an app and prepare a focus, click or typing card. Approval can bring that exact app/control into focus. Every input waits for approval.</p>
+      <p className="text-xs text-muted">Opt in for the apps below. Junior can observe, focus, click, type or close a selected window. Actions follow your permission rules; choose your music player here to let Junior close it.</p>
       <p className="text-xs text-muted">No browsers, terminals, passwords, payments or security screens. Use file tools for saving. Your PC must be on and unlocked.</p>
       <p className="text-xs text-muted">Previews include content visible in the selected app. Choose only apps you want Junior to inspect.</p>
       {(error || loadError) && <p role="alert" className="text-xs text-danger">{error || "Couldn't load desktop settings."}</p>}
@@ -53,6 +53,12 @@ export default function DesktopSettings() {
             onChange={(e) => void update(e.target.checked, data.apps)} />
           Enable desktop controls
         </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={data.all_apps} disabled={busy || !data.available}
+            onChange={(e) => void update(data.enabled, data.apps, e.target.checked)} />
+          Allow other app windows
+        </label>
+        <p className="text-xs text-muted">Allows other local app windows; browsers, terminals, security tools and protected dialogs remain blocked. The selected app list is kept.</p>
         <fieldset disabled={busy} className="grid gap-2 sm:grid-cols-2">
           <legend className="mb-2 text-xs font-medium">Allowed desktop apps</legend>
           {Object.entries(data.supported).map(([app, label]) => (
@@ -68,7 +74,7 @@ export default function DesktopSettings() {
             className="self-start rounded-md border border-line px-3 py-1.5 text-xs disabled:opacity-50">Refresh app windows</button>
           {windows?.length === 0 && <p className="text-xs text-muted">No allowed app windows are open. Open an allowed app, then refresh.</p>}
           {windows?.map((window) => <div key={window.handle} className="flex flex-wrap items-center gap-2 rounded-lg border border-line p-2 text-xs">
-            <span className="min-w-0 flex-1 break-words">{window.title} · {data.supported[window.app]}</span>
+            <span className="min-w-0 flex-1 break-words">{window.title} · {data.supported[window.app] ?? window.app}</span>
             <button type="button" disabled={busy} onClick={() => void observe(window.handle)}
               className="rounded-md border border-line px-2 py-1">Preview {window.title}</button>
           </div>)}

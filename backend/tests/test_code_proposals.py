@@ -115,11 +115,10 @@ def test_failed_native_check_does_not_allow_apply_or_touch_source(checkout):
     assert checkout[1].read_text() == OLD
 
 
-def test_pause_plan_locked_rules_and_recovery_never_replay(checkout):
+def test_pause_plan_rules_and_recovery_never_replay(checkout):
     _, record = staged()
     for action in ("test", "apply", "rollback"):
-        with pytest.raises(RuleChangeError):
-            set_rule(f"maintenance.code.{action}", "auto")
+        set_rule(f"maintenance.code.{action}", "auto")
     set_mode("plan")
     with pytest.raises(MaintenanceError, match="Plan mode"):
         code.propose(record["id"], "test")

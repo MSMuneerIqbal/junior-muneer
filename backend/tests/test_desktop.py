@@ -62,6 +62,9 @@ def screen(pc_home, monkeypatch):
         def press(self, hwnd, key, check):
             check()
             self.inputs.append(("key", key))
+        def close_window(self, hwnd, check):
+            check()
+            self.inputs.append(("close", hwnd))
     # Base's observe uses self.window; it needs metadata before Screen initializes its controls.
     instance = Screen()
     monkeypatch.setattr(desktop, "NATIVE", lambda: instance)
@@ -102,6 +105,70 @@ def test_typing_waits_for_review_and_the_snapshot_cannot_be_replayed(screen):
     result = approve(c, replay)
     assert result["status"] == "approved" and "cannot be replayed" in result["meta"]["last_error"]
     assert len(native.inputs) == 1
+
+
+def test_close_window_manual_and_user_directed_auto(screen):
+    c, native = screen
+    native.meta["app"] = "vlc.exe"
+    native.meta["title"] = "VLC media player"
+    set_setting("desktop_apps", ["vlc.exe"])
+    set_rule("computer.desktop.input", "auto")
+    set_mode("ask_all")
+    snap = capture(c)
+    ctx = context_with("close the music")
+    ctx.user_text = "close the music"
+    ctx.mark_outside()
+    result = asyncio.run(desktop.propose(ctx, DesktopAction(kind="close", snapshot_id=snap["id"])))
+    assert "waiting for their OK" in result and native.inputs == []
+    assert approve(c, c.get(f"/api/approvals/{ctx.approval_ids[-1]}").json())["status"] == "posted"
+    assert native.inputs == [("close", 8001)]
+    set_mode("rules")
+    snap = capture(c)
+    ctx = context_with("close the music")
+    ctx.user_text = "close the music"
+    ctx.mark_outside()
+    result = asyncio.run(desktop.propose(ctx, DesktopAction(kind="close", snapshot_id=snap["id"])))
+    assert "Done" in result and native.inputs == [("close", 8001), ("close", 8001)]
+
+
+def test_outside_request_cannot_auto_close_a_window(screen):
+    c, native = screen
+    set_rule("computer.desktop.input", "auto")
+    snap = capture(c)
+    ctx = context_with("tell me about this app")
+    ctx.user_text = "close Notepad"
+    ctx.mark_outside()
+    result = asyncio.run(desktop.propose(ctx, DesktopAction(kind="close", snapshot_id=snap["id"])))
+    assert "waiting for their OK" in result and native.inputs == []
+
+
+def test_all_apps_scope_retains_selection_and_blocks_terminal(screen):
+    c, native = screen
+    native.meta["app"] = "custom-player.exe"
+    assert c.post("/api/computer/desktop/snapshot", json={"handle": 8001}).status_code == 409
+    result = c.put("/api/computer/desktop", json={"enabled": True, "apps": ["notepad.exe"], "all_apps": True})
+    assert result.status_code == 200 and result.json()["apps"] == ["notepad.exe"]
+    assert c.post("/api/computer/desktop/snapshot", json={"handle": 8001}).status_code == 200
+    native.meta["app"] = "powershell.exe"
+    assert c.post("/api/computer/desktop/snapshot", json={"handle": 8001}).status_code == 409
+    c.put("/api/computer/desktop", json={"enabled": True, "apps": ["notepad.exe"], "all_apps": False})
+    native.meta["app"] = "custom-player.exe"
+    assert c.post("/api/computer/desktop/snapshot", json={"handle": 8001}).status_code == 409
+
+
+def test_close_with_unconfirmed_window_is_not_retried(screen):
+    from junior.computer.desktop_native import DesktopUncertain
+    c, native = screen
+    def uncertain(hwnd, check):
+        check()
+        native.inputs.append(("close", hwnd))
+        raise DesktopUncertain("The window remains open")
+    native.close_window = uncertain
+    item = card(c, capture(c), kind="close", element=-1, text="")
+    result = approve(c, item)
+    assert result["status"] == "check_manually"
+    assert native.inputs == [("close", 8001)]
+    assert c.post(f"/api/approvals/{item['id']}/approve", json={}).status_code == 409
 
 
 @pytest.mark.parametrize("change", ["title", "pid", "started", "rect", "app", "class", "control", "focus"])
@@ -198,8 +265,7 @@ def test_outside_observation_does_not_grant_authority_or_memory(screen):
     assert "waiting for their OK" in asyncio.run(desktop.propose(ctx, DesktopAction(kind="type", snapshot_id=snap["id"], element=0, text="hello")))
     item = c.get(f"/api/approvals/{ctx.approval_ids[-1]}").json()
     assert item["from_outside"] and not item["can_always_allow"] and native.inputs == []
-    with pytest.raises(RuleChangeError):
-        set_rule("computer.desktop.input", "auto")
+    set_rule("computer.desktop.input", "auto")
 
 
 def test_expiry_read_deny_and_unknown_capture_paths(screen):

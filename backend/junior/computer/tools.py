@@ -17,6 +17,7 @@ from junior.agent.context import TurnContext
 from junior.audit import audit
 from junior.computer.paths import PathRefused, blocked_reason, check
 from junior.permissions import decide
+from junior.settings_store import get_setting
 
 Ctx = RunContextWrapper[TurnContext]
 
@@ -259,10 +260,21 @@ async def queue_action(context: TurnContext, action_type: str, item_type: str, t
     if context.computer_actions >= MAX_ACTIONS_PER_TURN:
         return f"NOT done: at most {MAX_ACTIONS_PER_TURN} computer actions per message. Ask them to continue in a new message."
     context.computer_actions += 1
+    if get_setting("computer_all_files"):
+        from junior.computer.paths import allowed_folders, in_your_words
+        for value in (meta.get("path"), meta.get("to")):
+            if not isinstance(value, str) or not value:
+                continue
+            path = Path(value)
+            if not any(path == folder or path.is_relative_to(folder) for folder in allowed_folders()) and not in_your_words(path, path, context):
+                meta = {**meta, "requires_all_files": True}
+                break
     try:
         item = create_item(
             kind="api", platform="computer", item_type=item_type, action_type=action_type, text=text, title=title[:200],
-            from_outside=context.outside_content_seen, conversation_id=context.conversation_id, meta=meta,
+            from_outside=(context.outside_content_seen or
+                          bool(meta.get("desktop_close_requires_request") and not meta.get("desktop_close_directed"))),
+            conversation_id=context.conversation_id, meta=meta,
         )
     except ApprovalError as e:
         return f"NOT done: {e}"
@@ -545,7 +557,7 @@ async def stop_job_for(context: TurnContext, job_id: str) -> str:
 
 @function_tool
 async def pc_run_background(ctx: Ctx, command: str, folder: str, seconds: int = 600) -> str:
-    """Propose a long-running PowerShell command as a managed PC job. Always waits for approval.
+    """Start or propose a long-running PowerShell command as a managed PC job, following its permission rule.
     Use for tests, builds or a local process that needs progress/stop controls. Default 600s, max 3600s;
     at most 3 concurrent jobs. Poll pc_job_status only when asked, never in a loop. Settings → Computer
     shows live output and Stop without AI calls. Partial changes can remain after stopping. Prefer pc_run
@@ -569,7 +581,7 @@ def pc_job_status(ctx: Ctx, job_id: str = "") -> str:
 
 @function_tool
 async def pc_stop_job(ctx: Ctx, job_id: str) -> str:
-    """Propose stopping a managed PC job. Waits for approval; only Junior-owned job IDs work, never arbitrary PIDs.
+    """Stop or propose stopping a managed PC job, following its permission rule; only Junior-owned job IDs work.
     The owner may instead press Stop directly in Settings → Computer, even while paused.
     """
     return await stop_job_for(ctx.context, job_id)

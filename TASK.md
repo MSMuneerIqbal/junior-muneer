@@ -731,6 +731,21 @@ with its links arrives in the chat you asked from, WhatsApp included.
 
 ## Phase 11: Controlled PC/browser actions, learning and updates
 
+- [~] **Wider PC scope and close player 2026-10-28:** Add opt-in all-local-drives and other-app-windows scopes,
+  preserve selected folders/apps, and support normal window close for supported/allowed apps. Protected paths,
+  browsers, terminals, security UI and payments remain blocked. Manual asks; Auto close requires a matching
+  user request and desktop-input Auto. Other desktop input can still ask after outside observation. Focused tests,
+  a disposable native close, isolated real-model simulated VLC checks and desktop/phone UI checks passed. Owner app
+  restarted healthy. Protected areas remain outside the requested full-system scope.
+
+- [x] **Editable permissions 2026-10-28:** Muneer requested unlocking permission controls except payments. Other
+  rules are editable with original defaults preserved; previously ignored locked values do not activate on upgrade.
+  Payments remain locked Deny. Outside-content, browser, PC and unsupported-action restrictions continue to apply.
+  Skills learning and updates do not auto-dispatch: Auto approves the card, and Post now starts the action.
+  A harmless terminal command ran in Auto and waited in Manual. Full backend run during ongoing edits: 1,245 passed,
+  5 failed (outdated test expectations/slow timeout); all 5 passed after corrections on targeted rerun. Full UI run
+  131 passed/14 skipped/1 timeout; focused final desktop/phone checks 8 passed/2 skipped. TypeScript/ESLint passed.
+
 - [~] **Browser Auto workflow 2026-10-28:** Muneer wants Auto to complete requested browser tasks without repeated
   approvals and Manual to ask. User-directed browser actions now execute in Auto with the original user message and
   requested origin rechecked; Manual asks. Other action types still follow their existing rules/locks. Website text

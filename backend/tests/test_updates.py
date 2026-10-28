@@ -79,7 +79,7 @@ def test_review_then_approval_queues_once_without_installing(repo, monkeypatch):
     value = review(repo)
     with TestClient(create_app()) as client:
         item = client.post("/api/updates/propose", json={"review_id": value["id"]}).json()
-        assert item["status"] == "waiting" and not item["can_always_allow"]
+        assert item["status"] == "waiting" and item["can_always_allow"]
         assert not (updates.folder() / "request.json").exists()
         assert client.patch(f"/api/approvals/{item['id']}", json={"text": "different update"}).status_code == 409
         response = client.post(f"/api/approvals/{item['id']}/approve")
@@ -93,12 +93,12 @@ def test_review_then_approval_queues_once_without_installing(repo, monkeypatch):
 def test_dirty_expired_unsupervised_plan_pause_and_locked_rule(repo, monkeypatch):
     ready(monkeypatch)
     value = review(repo)
-    with pytest.raises(RuleChangeError):
-        set_rule("maintenance.update", "auto")
+    set_rule("maintenance.update", "auto")
     set_mode("plan")
     with pytest.raises(MaintenanceError, match="Plan mode"):
         updates.propose(value["id"])
     set_mode("rules")
+    set_rule("maintenance.update", "ask")
     (repo[0] / "local.txt").write_text("keep me")
     with pytest.raises(MaintenanceError, match="Local edits"):
         updates.propose(value["id"])

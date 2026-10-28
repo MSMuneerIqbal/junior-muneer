@@ -1489,6 +1489,7 @@ async def ask_computer_agent_for(context: TurnContext, task: str, call_id: str |
         f"## Task from {context.settings['user_name']}\n{task.strip()}\n\n"
         f"Their user folder on this PC: {home()}\n"
         f"Allowed folders:\n{folders}\n"
+        + ("All local drives are enabled; protected paths remain blocked.\n" if get_setting("computer_all_files") else "") +
         "Short paths like Desktop\\notes.txt work as they are. Use the paths exactly as given; never invent a user name.\n"
     )
     try:
@@ -1501,8 +1502,8 @@ async def ask_computer_agent_for(context: TurnContext, task: str, call_id: str |
 @function_tool
 async def ask_computer_agent(ctx: Ctx, task: str) -> str:
     """Ask the Computer Agent to do a job on the user's PC: find, read, create, change, move or delete files and
-    folders, run terminal commands (git, python, npm...), observe opted-in app windows, or use an opted-in isolated
-    browser (navigate, page text, reviewed clicks/forms/downloads). Changes become cards they approve. Use it for anything
+    folders, run terminal commands (git, python, npm...), or observe and control allowed app windows. Actions follow
+    the user's permission rules. Use the separate Browser Agent for websites. Use this agent for anything
     beyond a quick look (for a quick look use pc_list / pc_find / pc_read yourself).
 
     Args:

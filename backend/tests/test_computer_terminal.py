@@ -65,9 +65,10 @@ def test_the_environment_has_no_keys(monkeypatch):
     assert "PATH" in {k.upper() for k in env}
 
 
-def test_terminal_is_locked_to_ask(pc_home):
-    with pytest.raises(RuleChangeError, match="locked"):
-        set_rule("computer.run", "auto")
+def test_terminal_rule_can_be_changed(pc_home):
+    from junior.permissions import rule_for
+    set_rule("computer.run", "auto")
+    assert rule_for("computer.run") == "auto"
 
 
 def card(c, ctx):
@@ -76,6 +77,21 @@ def card(c, ctx):
 
 def run(ctx, command, folder="Desktop"):
     return asyncio.run(pc.run_command_for(ctx, command, folder))
+
+
+def test_unlocked_terminal_auto_runs_and_manual_asks(pc_home):
+    from junior.permissions import set_mode
+    _, c = pc_home
+    set_rule("computer.run", "auto")
+    ctx = context_with("run a harmless command")
+    result = run(ctx, "Write-Output 'permission check'")
+    assert card(c, ctx)["status"] == "posted"
+    assert "permission check" in result
+    assert "never run" in run(context_with("run it"), "shutdown /s")
+    set_mode("ask_all")
+    ctx = context_with("run another harmless command")
+    assert "waiting for their OK" in run(ctx, "Write-Output 'manual check'")
+    assert card(c, ctx)["status"] == "waiting"
 
 
 def test_a_command_waits_for_approve_then_its_output_shows(pc_home):

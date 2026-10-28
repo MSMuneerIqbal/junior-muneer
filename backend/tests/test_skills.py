@@ -108,6 +108,20 @@ def test_you_can_make_a_skill_from_chat(folder):
     assert "weekly_client_report" in load_skills()
 
 
+def test_auto_skill_is_approved_but_reports_that_it_needs_post_now(folder):
+    from junior.permissions import set_rule
+    words = "make a skill for my weekly client report"
+    with TestClient(create_app()) as client:
+        set_rule("skills.learn", "auto")
+        context = said(words)
+        out = save_skill_for(context, "weekly_client_report", "My weekly report for a client: done, next, blockers.",
+                             "## Steps\n1. List what was done this week.\n2. What's next.\n3. Blockers and questions.", words)
+        assert "NOT saved yet" in out and "Post now" in out
+        assert "weekly_client_report" not in load_skills()
+        assert client.post(f"/api/approvals/{context.approval_ids[-1]}/send").json()["status"] == "posted"
+        assert "weekly_client_report" in load_skills()
+
+
 def test_a_skill_is_never_made_from_outside_text_or_without_your_words(folder):
     with TestClient(create_app()):
         context = said("make a skill for replying to emails")

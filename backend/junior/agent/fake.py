@@ -215,7 +215,7 @@ class FakeModel(Model):
             return [assistant_message(f"(fake AI) All {len(parts)} parts done.")], False
         if text.startswith("## Task from") and "pc_desktop_snapshot" in tool_names:
             task = text.split("\n", 2)[1].strip()
-            if task.lower().startswith("desktop type "):
+            if task.lower().startswith(("desktop type ", "desktop close ")):
                 outputs = [i for i in input if isinstance(i, dict) and i.get("type") == "function_call_output"]
                 if not outputs:
                     return [function_call("pc_windows", {}, call_id="fake-desktop-windows")], False
@@ -230,6 +230,9 @@ class FakeModel(Model):
                         if not data:
                             return [assistant_message("Open an allowed app first.")], False
                         return [function_call("pc_desktop_snapshot", {"handle": data[0]["handle"], "question": ""}, call_id="fake-desktop-snapshot")], False
+                    if task.lower().startswith("desktop close "):
+                        return [function_call("pc_desktop_action", {"snapshot_id": data["id"], "kind": "close", "element": -1,
+                                              "text": "", "key": ""}, call_id="fake-desktop-action")], False
                     return [function_call("pc_desktop_action", {"snapshot_id": data["id"], "kind": "type", "element": 0,
                                           "text": task[len("desktop type "):], "key": ""}, call_id="fake-desktop-action")], False
         if text.startswith("## Task from") and "browser_snapshot" in tool_names:

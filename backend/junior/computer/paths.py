@@ -163,7 +163,7 @@ def check(text: str, context=None) -> Path:
     for candidate in (written, path):
         if reason := blocked_reason(candidate):
             raise PathRefused(reason)
-    if any(path == folder or path.is_relative_to(folder) for folder in allowed_folders()):
+    if get_setting("computer_all_files") or any(path == folder or path.is_relative_to(folder) for folder in allowed_folders()):
         return path
     if context is not None and in_your_words(path, written, context):
         return path

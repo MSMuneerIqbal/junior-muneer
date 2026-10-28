@@ -1,5 +1,13 @@
 # Junior Muneer: Project Plan (v10: controlled PC/browser actions and reusable skills)
 
+> **Permission change 2026-10-28:** At Muneer's request, all Settings permission rules are editable except payments,
+> which remain locked to Deny. Existing Ask/Deny defaults are retained until explicitly changed. A separate rule
+> store prevents previously ignored locked values from becoming active. Outside content remains untrusted; existing
+> tool restrictions and unsupported integrations are unchanged. Older locked-rule descriptions below are historical.
+> **Computer scope request 2026-10-28:** Add opt-in access across local drives and an opt-in broader window scope,
+> retaining the selected-folder/app lists. Protected system/secret paths and browser/terminal/security UI restrictions
+> remain. A close-window action sends a normal close request to an identified window and reports uncertainty if it remains.
+
 > Status (2026-10-20): Phases 0, 1, 2, 2b, 4, 5 and 7 built; Phase 9 (your computer) built locally, the PC Helper
 > waits for the VPS; Phase 10 (Documents Agent + skills) in progress; Phase 8 (WhatsApp works; server waits for the
 > VPS); 3 and 6 paused. See TASK.md.

@@ -1,4 +1,4 @@
-"""Terminal commands on your PC (P9-05): always Ask (locked), PowerShell, in an allowed folder, 2 minutes at most.
+"""Terminal commands on your PC: rule-controlled PowerShell in an allowed folder, 2 minutes at most.
 
 `refusal(command)` says why a command is never run, whatever the rule: it's checked before the card is made and again
 right before it runs (you can edit a card's command). The command runs without your keys in its environment.

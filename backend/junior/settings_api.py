@@ -60,6 +60,7 @@ class SettingsUpdate(BaseModel):
     whatsapp_carry_summary: bool | None = None
     whatsapp_action_mode: Literal["ask_all", "rules"] | None = None
     computer_enabled: bool | None = None
+    computer_all_files: bool | None = None
     briefing_time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
 
     @field_validator("main_model", "helper_model")
@@ -97,7 +98,7 @@ class SettingsUpdate(BaseModel):
 
 
 # Edited through their own pages and endpoints (/api/profile, /api/permissions).
-NOT_HERE = {"profile", "permission_mode", "permission_rules", "memory_tidied_at", "feeds_read_at", "news_emailed_on",
+NOT_HERE = {"profile", "permission_mode", "permission_rules", "permission_unlocked_rules", "memory_tidied_at", "feeds_read_at", "news_emailed_on",
             "email_checked_at", "email_watch_since", "email_alerts_waiting", "computer_folders"}
 
 

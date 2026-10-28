@@ -32,7 +32,9 @@ DEFAULTS: dict[str, Any] = {
     "call_quality": "natural",
     # Which engine runs live calls: OpenAI Realtime (above), or Google Gemini Live (needs GEMINI_API_KEY).
     "computer_enabled": True,  # Phase 9: the computer tools (Settings -> Computer)
+    "computer_all_files": False,  # broad local-file scope; protected paths still apply
     "desktop_enabled": False,  # opt-in, local productivity-app windows only
+    "desktop_all_apps": False,
     "desktop_apps": ["notepad.exe"],
     "browser_enabled": False,  # temporary isolated browser; opt in and choose exact origins first
     "browser_sites": [],
@@ -86,6 +88,7 @@ DEFAULTS: dict[str, Any] = {
     # Permission rules (/api/permissions): ask_all · rules, and your rule per action type.
     "permission_mode": "rules",
     "permission_rules": {},
+    "permission_unlocked_rules": {},
 }
 # Voices that work both for spoken replies and in live calls. Marin and Cedar are
 # OpenAI's newest, most natural voices, so they come first.

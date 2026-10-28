@@ -105,12 +105,11 @@ def test_ask_everything_holds_auto_items(client):
     assert api_item().status == "waiting"
 
 
-def test_locked_items_never_offer_always_allow(client):
+def test_formerly_locked_items_offer_always_allow(client):
     item = create_item(kind="api", platform="github", item_type="merge", text="Merge PR 4", action_type="github.merge")
-    assert item.status == "waiting" and not item.can_always_allow
-    with pytest.raises(ApprovalError):
-        approve_item(item.id, always_allow=True)
-    assert rule_for("github.merge") == "ask"
+    assert item.status == "waiting" and item.can_always_allow
+    approve_item(item.id, always_allow=True)
+    assert rule_for("github.merge") == "auto"
 
 
 def test_deny_refuses_the_item(client):

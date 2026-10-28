@@ -25,6 +25,7 @@ class FolderBody(BaseModel):
 def status() -> dict:
     return {
         "enabled": bool(get_setting("computer_enabled")),
+        "all_files": bool(get_setting("computer_all_files")),
         "folders": [{"path": str(f), "exists": f.is_dir()} for f in allowed_folders()],
         "using_defaults": get_setting("computer_folders") is None,
         "defaults": [str(f) for f in default_folders()],

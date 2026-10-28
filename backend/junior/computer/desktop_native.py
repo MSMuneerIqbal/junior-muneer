@@ -24,6 +24,8 @@ APPS = {
     "notepad.exe": "Notepad", "winword.exe": "Microsoft Word", "excel.exe": "Microsoft Excel",
     "powerpnt.exe": "Microsoft PowerPoint", "mspaint.exe": "Paint", "calc.exe": "Calculator",
     "calculatorapp.exe": "Calculator", "vlc.exe": "VLC media player",
+    "wmplayer.exe": "Windows Media Player", "music.ui.exe": "Windows Music",
+    "mediaplayer.exe": "Media Player", "spotify.exe": "Spotify", "itunes.exe": "iTunes",
 }
 KEYS = {"ctrl+a": [17, 65], "ctrl+z": [17, 90], "ctrl+y": [17, 89], "ctrl+b": [17, 66],
         "ctrl+i": [17, 73], "ctrl+u": [17, 85], "left": [37], "right": [39], "up": [38],
@@ -205,6 +207,13 @@ class WindowsDesktop:
         self.gui.ShowWindow(hwnd, 9)  # restore only the explicitly approved window
         self.auto.ControlFromHandle(hwnd).SetFocus()
         self.foreground(hwnd)
+
+    def close_window(self, hwnd: int, check):
+        check()
+        self.gui.PostMessage(hwnd, 0x0010, 0, 0)  # WM_CLOSE: let the app handle unsaved work
+        time.sleep(0.5)
+        if self.gui.IsWindow(hwnd):
+            raise DesktopUncertain("The close request was sent, but the window remains open. It may need confirmation; check it before trying again.")
 
     def focused(self, hwnd: int) -> dict | None:
         self.foreground(hwnd)

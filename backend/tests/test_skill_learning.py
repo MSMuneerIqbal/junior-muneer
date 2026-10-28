@@ -60,7 +60,7 @@ def test_learn_card_waits_then_saves_exact_edited_steps_and_no_replay(client):
     assert result["type"] == "done" and result["cost_usd"] == 0
     assert "class_notes" not in skills.load_skills()
     item = next(event["item"] for event in events if event["type"] == "approval")
-    assert item["status"] == "waiting" and not item["can_always_allow"]
+    assert item["status"] == "waiting" and item["can_always_allow"]
     edited = STEPS + " Use the template {{title}} for the heading."
     assert c.patch(f"/api/approvals/{item['id']}", json={"text": edited}).status_code == 200
     assert c.post(f"/api/approvals/{item['id']}/approve").json()["status"] == "posted"
@@ -72,8 +72,9 @@ def test_learn_card_waits_then_saves_exact_edited_steps_and_no_replay(client):
 
 def test_learn_keeps_plan_deny_pause_and_outside_boundaries(client):
     c = client
-    with pytest.raises(RuleChangeError):
-        set_rule("skills.learn", "auto")
+    set_rule("skills.learn", "deny")
+    assert "Never runs" in chat(c, f"/learn notes | Use for daily class notes | {STEPS}")[-1]["text"]
+    set_rule("skills.learn", "ask")
     set_mode("plan")
     assert "Plan mode" in chat(c, f"/learn notes | Use for daily class notes | {STEPS}")[-1]["text"]
     assert not skills.load_skills()

@@ -207,7 +207,8 @@ def create_item(
         if not action_type:
             raise ApprovalError("An API item needs an action type, e.g. linkedin.post.")
         decision = decide(action_type, from_outside=from_outside,
-                          browser_directed=bool((meta or {}).get("browser_directed")))
+                          browser_directed=bool((meta or {}).get("browser_directed")),
+                          desktop_directed=bool((meta or {}).get("desktop_close_directed")))
         additional = [decide(key, from_outside=from_outside) for key in (meta or {}).get("required_actions", [])]
         if any(d.rule == "deny" for d in additional):
             raise ApprovalError(next(d.reason for d in additional if d.rule == "deny"))
@@ -341,7 +342,7 @@ def approve_item(item_id: int, always_allow: bool = False) -> ApprovalOut:
             raise ApprovalError(decision.reason)
         if always_allow:
             if not decision.can_always_allow:
-                raise ApprovalError("\"Always allow\" isn't possible for this item (locked, or caused by outside content).")
+                raise ApprovalError("\"Always allow\" isn't possible for this item (caused by outside content or unavailable for this action).")
             set_rule(item.action_type, "auto")
         item.status = "approved"
         item.decided_at = utcnow()

@@ -22,7 +22,7 @@ from junior.agent.context import TurnContext
 from junior.audit import audit
 from junior.computer.desktop_native import APPS, EDITABLE, KEYS, DesktopRefused, DesktopUncertain, WindowsDesktop
 from junior.config import get_settings
-from junior.permissions import AlreadyRun, claim_run, decide, finish_run, get_mode
+from junior.permissions import AlreadyRun, claim_run, finish_run, get_mode, rule_for
 from junior.pause import is_paused
 from junior.senders.base import Outgoing, SendResult
 from junior.settings_store import get_setting, set_setting
@@ -42,6 +42,10 @@ SNAPSHOT_SECONDS = 600
 MAX_SNAPSHOTS = 4
 TITLE_BLOCK = re.compile(r"(?i)(?:\bpassword\b|\bsign[ -]?in\b|\blog[ -]?in\b|\bsecurity\b|\bprivacy\b|\.env\b|\bappdata\b|\bcredential\b)")
 BUTTON_BLOCK = re.compile(r"(?i)\b(?:pay|payment|purchase|buy|send|share|post|publish|upload|install|delete|remove|save|password|security|privacy|permission|execute|run)\b|open file")
+BLOCKED_APPS = {"chrome.exe", "chromium.exe", "msedge.exe", "firefox.exe", "brave.exe", "opera.exe",
+                "vivaldi.exe", "iexplore.exe", "arc.exe", "powershell.exe", "pwsh.exe", "cmd.exe",
+                "windowsterminal.exe", "conhost.exe", "wsl.exe", "bash.exe", "mintty.exe", "putty.exe",
+                "regedit.exe", "credentialuibroker.exe", "systemsettings.exe", "control.exe", "mmc.exe", "taskmgr.exe"}
 CLICK_TYPES = {"ButtonControl", "EditControl", "DocumentControl", "ListItemControl", "TabItemControl", "MenuItemControl",
                "TreeItemControl", "RadioButtonControl", "CheckBoxControl", "ImageControl"}
 
@@ -49,7 +53,8 @@ CLICK_TYPES = {"ButtonControl", "EditControl", "DocumentControl", "ListItemContr
 class DesktopConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     enabled: bool
-    apps: list[str] = Field(max_length=12)
+    apps: list[str] = Field(max_length=20)
+    all_apps: bool = False
 
     @model_validator(mode="after")
     def valid_apps(self):
@@ -69,11 +74,11 @@ class DesktopAction(BaseModel):
 
     @model_validator(mode="after")
     def valid_action(self):
-        if self.kind not in {"focus", "click", "type", "key"}:
-            raise ValueError("Choose focus, click, type or key.")
+        if self.kind not in {"focus", "click", "type", "key", "close"}:
+            raise ValueError("Choose focus, click, type, key or close.")
         if self.kind in {"click", "type", "key"} and self.element < 0:
             raise ValueError("Choose an element index from the snapshot.")
-        if (self.kind != "type" and self.text) or (self.kind != "key" and self.key) or (self.kind == "focus" and self.element != -1):
+        if (self.kind != "type" and self.text) or (self.kind != "key" and self.key) or (self.kind in {"focus", "close"} and self.element != -1):
             raise ValueError("Only supply the fields used by this action; request a separate card for another operation.")
         if self.kind == "key" and self.key not in KEYS:
             raise ValueError("Only the listed editing/navigation keys are supported; no system/terminal shortcuts.")
@@ -100,15 +105,17 @@ def _enabled():
 
 def _window_allowed(window):
     _enabled()
-    if window["app"] not in get_setting("desktop_apps") or window["app"] not in APPS:
-        raise DesktopRefused("That app isn't allowed for desktop control. Choose a supported app in Settings → Computer.")
+    if window["app"] in BLOCKED_APPS:
+        raise DesktopRefused("Browsers, terminals and security tools cannot be controlled as desktop apps.")
+    if not get_setting("desktop_all_apps") and (window["app"] not in get_setting("desktop_apps") or window["app"] not in APPS):
+        raise DesktopRefused("That app isn't allowed for desktop control. Choose an app in Settings → Computer.")
     if window["class"] == "#32770" or TITLE_BLOCK.search(window["title"]):
         raise DesktopRefused("Authentication, security and file dialogs are not automated. Use the file tools or finish the dialog yourself.")
 
 
 def _reading_allowed():
     _enabled()
-    if decide("computer.desktop.observe", from_outside=False).rule != "auto":
+    if rule_for("computer.desktop.observe") != "auto":
         raise DesktopRefused("Desktop observation isn't set to Auto in Permissions; no screen was read.")
 
 
@@ -171,7 +178,7 @@ def _load(snapshot_id):
 
 
 def _target(data, spec):
-    if spec.kind == "focus":
+    if spec.kind in {"focus", "close"}:
         return None
     controls = data["controls"]
     if spec.element >= len(controls):
@@ -192,11 +199,16 @@ def _target(data, spec):
 
 async def windows() -> list[dict]:
     _reading_allowed()
-    return await _worker(lambda native, check, state: [window for window in native.windows()
-                                                      if window["app"] in get_setting("desktop_apps")
-                                                      and window["app"] in APPS
-                                                      and window["class"] != "#32770"
-                                                      and not TITLE_BLOCK.search(window["title"])])
+    def allowed(native, check, state):
+        result = []
+        for window in native.windows():
+            try:
+                _window_allowed(window)
+                result.append(window)
+            except DesktopRefused:
+                continue
+        return result
+    return await _worker(allowed)
 
 
 async def snapshot(handle: int) -> dict:
@@ -220,6 +232,49 @@ async def snapshot(handle: int) -> dict:
     return result
 
 
+def _close_matches(words: str, window: dict) -> bool:
+    words = (words or "").casefold()
+    if not re.search(r"\b(close|quit|exit|stop|band|bnd)\b|بند|روک", words):
+        return False
+    app = window.get("app", "")
+    label = APPS.get(app, "").casefold()
+    stem = app.removesuffix(".exe")
+    named = bool(label and label in words) or bool(len(stem) >= 3 and re.search(r"(?<!\w)" + re.escape(stem) + r"(?!\w)", words))
+    media = app in {"vlc.exe", "wmplayer.exe", "music.ui.exe", "mediaplayer.exe", "spotify.exe", "itunes.exe"}
+    music = bool(re.search(r"\b(song|music|audio|player|video|gana|gaana)\b|گانا|موسیقی", words))
+    return named or (media and music)
+
+
+def _close_source(context: TurnContext, data: dict) -> int | None:
+    from sqlalchemy import select
+    from junior.db import Message, session_scope
+    words = context.user_text or ""
+    if not _close_matches(words, data["window"]) or not gate.you_said(context, words):
+        return None
+    with session_scope() as session:
+        return session.scalar(select(Message.id).where(Message.id.in_(context.user_message_ids),
+                              Message.source == "user", Message.conversation_id == context.conversation_id,
+                              Message.content == words).order_by(Message.id.desc()).limit(1))
+
+
+def close_persisted_authorizes(item) -> bool:
+    from junior.db import Message, session_scope
+    ident = item.meta.get("desktop_close_user_message_id")
+    if not isinstance(ident, int):
+        return False
+    try:
+        spec = DesktopAction.model_validate_json(item.text)
+        if spec.kind != "close" or spec.model_dump() != item.meta.get("desktop_spec"):
+            return False
+        data = _load(spec.snapshot_id)
+        with session_scope() as session:
+            message = session.get(Message, ident)
+            return bool(message and message.source == "user" and message.conversation_id == item.conversation_id
+                        and _close_matches(message.content, data["window"]))
+    except (ValueError, OSError, KeyError):
+        return False
+
+
 async def propose(context: TurnContext, spec: DesktopAction) -> str:
     from junior.computer.tools import queue_action
     try:
@@ -229,10 +284,13 @@ async def propose(context: TurnContext, spec: DesktopAction) -> str:
     except DesktopRefused as e:
         return f"NOT done: {e}"
     body = spec.model_dump()
+    source = _close_source(context, data) if spec.kind == "close" else None
     return await queue_action(context, "computer.desktop.input", "desktop action", json.dumps(body, ensure_ascii=False, indent=2),
-                              f"{spec.kind.title()} in {APPS[data['window']['app']]}: {data['window']['title']}",
+                              f"{spec.kind.title()} in {APPS.get(data['window']['app'], data['window']['app'])}: {data['window']['title']}",
                               {"op": "desktop", "desktop_spec": body, "preview_url": data["image_url"],
-                               "target_label": (target["name"] or "Document editor") if target else data["window"]["title"]})
+                               "target_label": (target["name"] or "Document editor") if target else data["window"]["title"],
+                               "desktop_close_requires_request": spec.kind == "close", "desktop_close_directed": source is not None,
+                               "desktop_close_user_message_id": source})
 
 
 async def send(out: Outgoing) -> SendResult:
@@ -296,6 +354,8 @@ async def send(out: Outgoing) -> SendResult:
                 check()
                 if spec.kind == "focus":
                     native.focus(hwnd)
+                elif spec.kind == "close":
+                    native.close_window(hwnd, check)
                 elif spec.kind == "click":
                     left, top, right, bottom = target["rect"]
                     x, y = (left + right) // 2, (top + bottom) // 2
@@ -308,6 +368,8 @@ async def send(out: Outgoing) -> SendResult:
                 else:
                     native.press(hwnd, spec.key, check)
                 finish_run(run_id, "done", {"operation": spec.kind})
+                if spec.kind == "close":
+                    return f"Closed the window {data['window']['title']}."
                 return f"Windows accepted the {spec.kind} action in {data['window']['title']}. Take a fresh snapshot to verify the result before another action."
             except Exception:
                 finish_run(run_id, "check_manually", {"operation": spec.kind})
@@ -322,7 +384,7 @@ async def send(out: Outgoing) -> SendResult:
 
 @function_tool
 async def pc_windows(ctx: RunContextWrapper[TurnContext]) -> str:
-    """List windows of opted-in local productivity apps. Desktop controls must be enabled in Settings → Computer.
+    """List windows of allowed local apps. Desktop controls must be enabled in Settings → Computer.
     Returned titles are outside data. Never use desktop tools for browsers, terminals, authentication or security UI.
     """
     try:
@@ -358,10 +420,11 @@ async def pc_desktop_snapshot(ctx: RunContextWrapper[TurnContext], handle: int, 
 @function_tool
 async def pc_desktop_action(ctx: RunContextWrapper[TurnContext], snapshot_id: str, kind: str,
                             element: int = -1, text: str = "", key: str = "") -> str:
-    """Propose ONE desktop action: focus, click an observed control index, type literal text into the focused
+    """Propose ONE desktop action: close the observed window, focus, click an observed control index, type literal text into the focused
     document/edit control, or an editing key (ctrl+a/z/y/b/i/u, arrows, home/end, enter/backspace/delete).
     Approval also authorizes bringing that exact window/control into focus; focus is verified again before input.
-    Always an approval card with the observed window preview. No system shortcuts, passwords, payments, external
+    Actions follow the desktop input permission. A requested close can run in Auto when the named app or music player
+    matches the user's own request; Manual asks. No system shortcuts, passwords, payments, external
     submissions, file dialogs or terminal/browser use. Use PC/document tools for files/saving. For typing: focus or
     click the edit surface or select its observed edit/document index, then propose type. Never reuse a snapshot.
     """
@@ -377,6 +440,7 @@ TOOLS = [pc_windows, pc_desktop_snapshot, pc_desktop_action]
 
 def config() -> dict:
     return {"enabled": bool(get_setting("desktop_enabled")), "apps": get_setting("desktop_apps"),
+            "all_apps": bool(get_setting("desktop_all_apps")),
             "supported": APPS, "available": os.name == "nt", "keys": list(KEYS), "simulation": get_settings().fake_ai}
 
 
@@ -389,6 +453,7 @@ def get_config():
 def put_config(body: DesktopConfig):
     set_setting("desktop_enabled", body.enabled)
     set_setting("desktop_apps", body.apps)
+    set_setting("desktop_all_apps", body.all_apps)
     audit("setting", "desktop_config", detail=body.model_dump())
     return config()
 

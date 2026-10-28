@@ -53,6 +53,20 @@ def test_auto_writes_at_once(pc_home, bin_):
     assert out.startswith("Done (their rule is Auto)") and (user / "Documents" / "todo.md").read_text() == "- gym\n"
 
 
+def test_disabling_all_drives_blocks_pending_out_of_scope_write(pc_home):
+    user, c = pc_home
+    set_setting("computer_all_files", True)
+    ctx = context_with("make a note")
+    destination = user / "Other" / "note.txt"
+    write(ctx, str(destination), "hello")
+    item = card(c, ctx)
+    assert item["meta"]["requires_all_files"]
+    set_setting("computer_all_files", False)
+    result = c.post(f"/api/approvals/{item['id']}/approve", json={}).json()
+    assert result["status"] != "posted" and not destination.exists()
+    assert "turned off" in " ".join(result["meta"].get("blocked", []))
+
+
 def test_outside_text_makes_it_ask_even_on_auto(pc_home, bin_):
     user, _ = pc_home
     set_rule("computer.write", "auto")
