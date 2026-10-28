@@ -45,6 +45,16 @@ without being opened. In individual-site mode, required resource origins must al
 WhatsApp requests use their own action mode in Settings → WhatsApp, defaulting to Manual independently of the dashboard.
 Manual approval does not currently resume a multi-step browser task automatically: ask Junior to continue after approval.
 
+**Music:** ask, for example, “play the song Blue Eyes by Yo Yo Honey Singh”. Junior searches YouTube and starts one
+matching video in a separate visible temporary Chromium player. The browser action rule and the YouTube playback
+rule both apply: Auto starts it; Manual needs one approval for the whole playback. YouTube may show ads or require
+you to complete verification in the visible window. The player reports playback only after the video advances; it
+cannot verify your speaker volume. Say “stop the song” to close Junior's player, close the window yourself, or use
+Pause/Plan/Computer off. A Manual stop asks once; an old stop card cannot close a newer player. The player stops after
+15 minutes or when it navigates to another video. It uses its own browser networking, with HTTPS host restrictions
+and public-DNS checks for YouTube and its media dependencies; unlike the general browser it does not use the
+numeric-IP-pinning proxy. It has no personal browser cookies or arbitrary browser-action tools.
+
 Install the matching browser once after Python dependencies: from `backend/`, run
 `.venv\Scripts\python -m playwright install chromium` (Linux: `python -m playwright install --with-deps chromium`).
 The Docker image includes it. Browser DOM snapshots and Settings polling use no model calls.

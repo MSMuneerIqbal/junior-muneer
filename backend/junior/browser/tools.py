@@ -142,9 +142,15 @@ def get_config(request: Request):
     return config(request.app.state.browser)
 
 
+@router.get("/api/computer/media")
+def media_status(request: Request):
+    return {"active": bool(request.app.state.media_player.session)}
+
+
 @router.put("/api/computer/browser")
 async def put_config(body: BrowserConfig, request: Request):
     await request.app.state.browser.disconnect()
+    await request.app.state.media_player.close()
     set_setting("browser_enabled", body.enabled)
     set_setting("browser_sites", body.sites)
     audit("setting", "browser_config", detail=body.model_dump())
@@ -154,6 +160,7 @@ async def put_config(body: BrowserConfig, request: Request):
 @router.post("/api/computer/browser/disconnect")
 async def disconnect(request: Request):
     await request.app.state.browser.disconnect()
+    await request.app.state.media_player.close()
     return config(request.app.state.browser)
 
 

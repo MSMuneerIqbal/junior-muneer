@@ -51,6 +51,7 @@ export default function BrowserSettings() {
 
   return <section aria-label="Browser controls" className="flex min-w-0 flex-col gap-3">
     <h3 className="text-sm font-semibold">Browser controls</h3>
+    <p className="text-xs text-muted">Requested YouTube music uses a separate visible temporary player. Auto starts it; Manual asks once. YouTube may require you to complete verification in that window.</p>
     <p className="text-xs text-muted">Junior opens pages in a background browser with a temporary profile, separate from your signed-in browser. In Auto, user-directed browser actions run as part of the task; in Manual, each action waits for your approval. If approval is needed, ask Junior to continue afterward.</p>
     <p className="text-xs text-muted">Sessions close after 15 minutes, Pause, Plan mode or Computer off. No passwords, payments or private networks. Page snapshots use no vision calls. Downloads up to 20 MB appear in the Downloads gallery.</p>
       {(error || loadError) && <p role="alert" className="text-xs text-danger">{error || "Couldn't load browser settings."}</p>}
@@ -73,7 +74,7 @@ export default function BrowserSettings() {
       </>}
       <p role="status" className="break-words text-xs">{data.connected ? `Connected · ${data.url} · ${Math.ceil(data.expires_seconds / 60)} min remaining`
         : data.transport_connected ? `Debugging browser attached · 127.0.0.1:${data.peer_port}` : !data.enabled ? "Browser controls off"
-        : !data.sites.length ? "Choose allowed websites to get ready." : "Ready — no page open yet. Ask Junior to open a website and approve the card."}</p>
+        : !data.sites.length ? "Choose allowed websites to get ready." : "Ready — no page open yet. Ask Junior to open an allowed website."}</p>
       {data.adapter === "cdp" && data.transport_connected && <p className="text-xs text-muted">Attached to running browser on 127.0.0.1:{data.peer_port}. {data.connected ? "Junior is using its own temporary session." : "Ask Junior to open an allowed website."}</p>}
       {(data.connected || data.transport_connected) && <div className="flex flex-wrap gap-2">
         {data.connected && <button type="button" disabled={busy} onClick={() => void act("snapshot")} className="rounded-md border border-line px-3 py-1.5 text-xs">Preview page</button>}
@@ -81,7 +82,7 @@ export default function BrowserSettings() {
       </div>}
       <details className="rounded-lg border border-line p-3 text-xs">
         <summary className="cursor-pointer font-medium">Optional: connect a separate debugging browser</summary>
-        <p className="mt-2 text-muted">Not needed for ordinary browsing. Junior starts its own background browser when you approve a navigation. This connection does not use your signed-in tabs.</p>
+        <p className="mt-2 text-muted">Not needed for ordinary browsing. Junior starts its own background browser according to your permission rules. This connection does not use your signed-in tabs.</p>
         <p className="mt-2 text-muted">Requires a dedicated debugging profile with Junior&apos;s network protections (see README → Browser connection setup). Junior creates a temporary context in that browser. Existing personal pages and cookies stay separate. Disconnect closes Junior&apos;s context and leaves your browser open.</p>
         <p className="mt-2 text-muted">The debugging port must stay on this computer. Remote/cloud browser connections and the VPS PC Helper require separate setup.</p>
         <div className="mt-3 flex flex-wrap items-end gap-2">

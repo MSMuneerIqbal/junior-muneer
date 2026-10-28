@@ -251,6 +251,35 @@ class ChatService:
         )
         from junior.chat.commands import handle as local_command
         context.user_message_ids = [user_message_id]
+        from junior.browser.media import (active_player, continuation as music_continuation, is_request as is_music_request,
+                                          is_stop_request as is_music_stop, prepare as prepare_music, prepare_stop)
+        resumed_music = music_continuation(context, text) if saved_paste is None else None
+        stop_music = bool(saved_paste is None and is_music_stop(text) and not is_music_request(text) and active_player())
+        if saved_paste is None and (is_music_request(text) or resumed_music or stop_music):
+            label = "Stopping the YouTube player" if stop_music else "Finding and playing the song"
+            yield {"type": "step", "id": "music-play", "kind": "tool", "label": label, "status": "running"}
+            if resumed_music and resumed_music.get("reply"):
+                result_text = resumed_music["reply"]
+            else:
+                if resumed_music:
+                    context.user_message_ids = [resumed_music["id"]]
+                result_text = await prepare_stop(context, text) if stop_music else await prepare_music(context, resumed_music["text"] if resumed_music else text)
+            yield {"type": "step", "id": "music-play", "kind": "tool", "label": label, "status": "done"}
+            for event in context.pending_events:
+                yield event
+            if result_text.startswith("Done (their rule is Auto): "):
+                result_text = result_text.removeprefix("Done (their rule is Auto): ").removesuffix(" Tell them in one line.")
+            elif result_text.startswith("NOT done yet - waiting for their OK"):
+                result_text = ("The stop action is ready on the approval card. Approve it once to close Junior's player."
+                               if stop_music else "The song is ready on the approval card. Approve it once and Junior will start the player.")
+            elif result_text.startswith("It didn't work: "):
+                result_text = result_text.removesuffix(" Tell them in one line.")
+            result = TurnResult(text=result_text, usage=[], steps=[])
+            message_id = self._finish(conversation_id, result)
+            attach_to_message(context.approval_ids, message_id)
+            yield {"type": "done", "conversation_id": conversation_id, "message_id": message_id,
+                   "text": result_text, "steps": [], "cost_usd": 0.0}
+            return
         # Git fetch can take up to 30 seconds; keep the event loop responsive to Pause/Stop.
         if local_result := await asyncio.to_thread(local_command, context, text, saved_paste):
             for event in context.pending_events:

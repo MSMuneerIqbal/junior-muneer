@@ -1,5 +1,11 @@
 # Junior Muneer: Project Plan (v10: controlled PC/browser actions and reusable skills)
 
+> **Music playback 2026-10-29:** A direct song request becomes one YouTube playback action, not a chain of navigation
+> cards. Dashboard Auto respects browser and playback rules; Manual and WhatsApp ask once. Playback uses a separate
+> visible temporary browser with restricted YouTube/media hosts and public-DNS checks, without the general browser's
+> IP-pinning proxy. It checks player progress, can stop the exact owned player, stops on Pause/Plan/off and never bypasses a verification challenge.
+> Generic browser-task continuation after Manual approval remains separate work.
+
 > **Permission change 2026-10-28:** At Muneer's request, all Settings permission rules are editable except payments,
 > which remain locked to Deny. Existing Ask/Deny defaults are retained until explicitly changed. A separate rule
 > store prevents previously ignored locked values from becoming active. Outside content remains untrusted; existing

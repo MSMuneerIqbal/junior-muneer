@@ -112,17 +112,18 @@ function SendState({
   const blocked = Array.isArray(item.meta.blocked) ? (item.meta.blocked as string[]) : [];
   const error = typeof item.meta.last_error === "string" ? item.meta.last_error : "";
   if (item.status === "check_manually") {
+    const media = item.action_type === "computer.media.play";
     return (
       <div role="alert" className="mx-4 mb-3 rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn">
-        <p className="font-medium">{item.platform === "maintenance" ? "This operation needs manual inspection." : "We couldn't tell if it was posted."}</p>
+        <p className="font-medium">{media ? "Playback could not be confirmed." : item.platform === "maintenance" ? "This operation needs manual inspection." : "We couldn't tell if it was posted."}</p>
         {error && <p className="mt-0.5">{error}</p>}
-        <p className="mt-1">{item.platform === "maintenance" ? "Inspect the proposal and files in Settings → Advanced, then record the result:" : `Check ${item.platform_label}, then tell us:`}</p>
+        <p className="mt-1">{media ? "Check the visible player, then record what happened:" : item.platform === "maintenance" ? "Inspect the proposal and files in Settings → Advanced, then record the result:" : `Check ${item.platform_label}, then tell us:`}</p>
         <div className="mt-1.5 flex flex-wrap gap-2">
           <button type="button" disabled={busy} onClick={() => onResolve(true)} className="rounded-md bg-warn px-2.5 py-1 font-medium text-white">
-            {item.platform === "maintenance" ? "Completed" : "It's posted"}
+            {media ? "It played" : item.platform === "maintenance" ? "Completed" : "It's posted"}
           </button>
           <button type="button" disabled={busy} onClick={() => onResolve(false)} className="rounded-md border border-warn/50 px-2.5 py-1 font-medium">
-            {item.platform === "maintenance" ? "Not completed" : "It didn't post"}
+            {media ? "It didn't play" : item.platform === "maintenance" ? "Not completed" : "It didn't post"}
           </button>
         </div>
       </div>

@@ -69,7 +69,7 @@ from junior.voice import router as voice_router
 log = logging.getLogger(__name__)
 
 
-def default_senders(settings, pc_jobs=None, browser=None) -> SenderRegistry:
+def default_senders(settings, pc_jobs=None, browser=None, media=None) -> SenderRegistry:
     """The connected API senders. FAKE_AI: a fake Facebook Page, so posting can be tried safely."""
     registry = SenderRegistry()
     if settings.meta_page_id and settings.meta_page_token:
@@ -86,6 +86,9 @@ def default_senders(settings, pc_jobs=None, browser=None) -> SenderRegistry:
     from junior.computer.sender import ComputerSender
 
     registry.add(ComputerSender(pc_jobs, browser))  # approved local actions (Phase 9/11)
+    if media is not None:
+        from junior.browser.media import MediaSender
+        registry.add(MediaSender(media))
     from junior.skill_learning import SkillSender
     registry.add(SkillSender())
     from junior.maintenance.updates import UpdateSender
@@ -137,7 +140,9 @@ def create_app(
         from junior.browser.runtime import BrowserManager
         from junior.browser.fake import FakeBrowserManager
         app.state.browser = FakeBrowserManager() if settings.fake_ai else BrowserManager()
-        app.state.senders = senders() if senders is not None else default_senders(settings, app.state.pc_jobs, app.state.browser)
+        from junior.browser.media import Player
+        app.state.media_player = Player(fake=settings.fake_ai)
+        app.state.senders = senders() if senders is not None else default_senders(settings, app.state.pc_jobs, app.state.browser, app.state.media_player)
         recover_interrupted_sends()
         recover_background()
         from junior.maintenance.code import recover as recover_code
@@ -191,6 +196,7 @@ def create_app(
             with contextlib.suppress(asyncio.CancelledError):
                 await maintenance_reports
             await app.state.browser.close()
+            await app.state.media_player.close()
             await app.state.pc_jobs.close()
             if scheduler:
                 scheduler.cancel()

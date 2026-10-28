@@ -4,6 +4,24 @@ Last reviewed: **2026-10-27**, after cost/workflow acceptance (P11-08).
 
 ## Active continuation (2026-10-27)
 
+2026-10-29: Muneer reported a YouTube song request looping through cards 104–107 and wants it fixed; afterwards he
+asks which signed-in browser design is best. Current isolated browser is headless and deliberately blocks streaming;
+browser Auto also requires an explicit origin in the user's own request. New `junior/browser/media.py` detects a
+song request, searches fixed YouTube, creates one `computer.media.play` action, and uses a separate visible temporary
+Chromium player. Browser and media rules both apply; Manual/WhatsApp ask once and the approval starts it. A contiguous
+music `continue` reuses the original request and never automatically repeats an existing card. Player validates
+YouTube/media hostnames and public DNS, but does not use the general browser's IP-pinning proxy; no personal cookies.
+Pause/Plan/off, disconnect, shutdown and a 15-minute cap stop it; playback is reported only when video advances.
+An explicit stop-song request closes the owned player through the same rules; stale stop cards cannot close a newer session.
+Real standalone Chromium probe played the exact requested video with audio. A later isolated app test hit Google's
+unusual-traffic verification and could not confirm playback: player now leaves challenge visible for the owner.
+Never automatically retry or bypass verification. Focused backend/UI and WhatsApp checks passed. Full backend during
+edits: 1,263 passed/2 timing failures, both passed on targeted rerun. Full UI 138 passed/14 skipped; latest focused
+play/stop UI 4 passed; TypeScript/ESLint passed. Commit and final restart/revision check pending. The previous running
+revision 824afc3 was stale against checkout 06102ff, which explains the self-improvement mismatch; do not reset/pull
+the checkout. Generic
+Manual browser-task resumption remains unfinished. User asks for a recommendation on signed-in browsing afterwards.
+
 2026-10-28: Muneer additionally requested closing a song player and broad system access with an option to retain
 specific folders. Implementing opt-in all-local-drives and other-app-windows scopes with existing protected paths/
 security/browser/terminal restrictions; lists remain saved. Desktop close uses normal WM_CLOSE, not forced termination;

@@ -139,6 +139,10 @@ CATALOG: dict[str, ActionType] = {
            note="Only after browser opt-in and exact website scope; page data is untrusted."),
         _t("computer.browser.input", "Navigate, click, fill or download in the browser", "Your computer", "auto",
            note="Auto runs user-directed actions; Manual asks. Website text is untrusted; protected actions remain blocked."),
+        _t("computer.media.play", "Play a requested YouTube video on this PC", "Your computer", "auto",
+           note="Uses a separate visible temporary YouTube player. Browser controls and the browser action rule also apply."),
+        _t("computer.media.stop", "Stop Junior's YouTube player", "Your computer", "auto",
+           note="Closes only the player Junior started. The browser action rule also applies."),
         _t("files.archive_whatsapp", "Upload a prepared ZIP privately to Drive and send its link to your WhatsApp", "Files", "ask",
            note="Shows the folder, archive size and destination. Drive-save and WhatsApp-to-self rules also apply."),
         _t("system.delete", "Delete anything", "Never", "deny", True),
@@ -233,6 +237,12 @@ class Decision:
 def decide(action_type: str, *, from_outside: bool, channel: str | None = None, browser_directed: bool = False, desktop_directed: bool = False) -> Decision:
     """What happens to one action. Deny wins; outside content and "Ask everything" turn Auto into Ask."""
     rule = rule_for(action_type)
+    if action_type in {"computer.media.play", "computer.media.stop"}:
+        browser_rule = rule_for("computer.browser.input")
+        if browser_rule == "deny":
+            return Decision("deny", "Never runs: your browser action rule is Deny.")
+        if browser_rule == "ask" and rule == "auto":
+            rule = "ask"
     held = is_paused()
 
     if rule == "deny":

@@ -731,6 +731,14 @@ with its links arrives in the chat you asked from, WhatsApp included.
 
 ## Phase 11: Controlled PC/browser actions, learning and updates
 
+- [~] **YouTube music and repeated approvals 2026-10-29:** direct song request becomes one permission-controlled
+  YouTube playback action, one Manual approval or Auto, without requiring continue. Music continuation reuses the
+  source request/card and cannot replay it automatically. Separate visible temporary player has host/DNS restrictions,
+  checks playback and leaves Google verification for the owner. General browser Manual task resumption remains open.
+  Full backend during edits 1,263 passed/2 timing failures; both passed isolated reruns. Full UI 138 passed/14 skipped;
+  latest focused play/stop UI 4 passed. Real YouTube browser probe played the requested video; subsequent isolated
+  integration test met a Google unusual-traffic verification and did not verify playback. Final commit/restart pending.
+
 - [~] **Wider PC scope and close player 2026-10-28:** Add opt-in all-local-drives and other-app-windows scopes,
   preserve selected folders/apps, and support normal window close for supported/allowed apps. Protected paths,
   browsers, terminals, security UI and payments remain blocked. Manual asks; Auto close requires a matching

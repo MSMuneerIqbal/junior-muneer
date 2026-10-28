@@ -168,6 +168,20 @@ def test_send_me_a_file_from_my_pc(wa):
         assert document["document"]["filename"] == "CV.pdf"
 
 
+def test_song_from_whatsapp_asks_once_and_starts_on_approval(wa, monkeypatch):
+    sent, _ = wa
+    monkeypatch.setenv("FAKE_AI", "true")
+    get_settings.cache_clear()
+    with app(ScriptedModel()) as c:
+        c.put("/api/computer/browser", json={"enabled": True, "sites": ["*"]})
+        signed(c, text("song play kro yr blue eyes yo yo honey sing wala"))
+        got = wait_for(sent, 2)
+        card = next(message for message in got if message.get("type") == "interactive")
+        button = card["interactive"]["action"]["buttons"][0]["reply"]["id"]
+        tap(c, button, "wamid.music-approve")
+        assert any("Simulated playback" in message.get("text", {}).get("body", "") for message in wait_for(sent, 3))
+
+
 def test_a_secret_or_outside_file_is_never_sent(wa):
     sent, user = wa
     (user / "Desktop" / ".env").write_text("KEY=1")

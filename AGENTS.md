@@ -22,6 +22,13 @@ have not been decided. Do not infer those requirements from the word "product".
 
 ## Where we are (update this at the end of every session)
 
+- **Active 2026-10-29 music fix:** Muneer reported repeated YouTube approval/continue cards for a song. A direct
+  one-action YouTube player, music continuation deduplication, Auto/Manual and WhatsApp checks are in progress.
+  The general browser blocks media and remains unchanged. Real browser probe played the requested video once;
+  a later isolated integration test encountered Google's unusual-traffic verification. Do not bypass or
+  automatically retry the challenge. Full backend 1,263 passed/2 failed; both passed on isolated rerun. Full UI
+  138 passed/14 skipped; latest focused play/stop UI 4 passed. See PROJECT_CONTEXT for remaining work.
+
 - **2026-10-28 computer/permissions:** Muneer requested editable permissions except payments and wider computer access plus
   closing a song player. Implemented opt-in all-local-drives/other-app-windows scopes and close-window; old folder/
   app selections retained. Payments remain locked Deny. Focused tests and disposable native-window close passed;
