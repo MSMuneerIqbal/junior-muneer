@@ -42,7 +42,7 @@ async def endpoint(port: int) -> str:
             raise ValueError
         return validate_peer(value, port)
     except (httpx.HTTPError, ValueError, OSError):
-        raise BrowserRefused("Couldn't validate that local debugging port. Start a compatible Chrome/Edge debugging session using the documented setup.") from None
+        raise BrowserRefused("No compatible debugging browser was found on that port. This connection is optional: ask Junior to open a website and approve it, or start the dedicated debugging profile described in README.") from None
 
 
 def validate_launch(arguments: list[str]):

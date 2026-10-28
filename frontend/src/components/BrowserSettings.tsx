@@ -53,7 +53,7 @@ export default function BrowserSettings() {
     <h3 className="text-sm font-semibold">Browser controls</h3>
     <p className="text-xs text-muted">Junior opens pages in a background browser with a temporary profile, separate from your signed-in browser. Choose allowed websites, ask Junior to open a page and approve it. Then ask: “Read the current browser page.” Every navigation, click, text entry and download waits for your approval.</p>
     <p className="text-xs text-muted">Sessions close after 15 minutes, Pause, Plan mode or Computer off. No passwords, payments or private networks. Page snapshots use no vision calls. Downloads up to 20 MB appear in the Downloads gallery.</p>
-    {(error || loadError) && <p role="alert" className="text-xs text-danger">{error || "Couldn't load browser settings."}</p>}
+      {(error || loadError) && <p role="alert" className="text-xs text-danger">{error || "Couldn't load browser settings."}</p>}
     {!data && !loadError && <p className="text-xs text-muted">Loading browser settings…</p>}
     {data && <>
       {data.simulation && <p className="text-xs text-warn">Fake AI uses a simulated browser. No websites are contacted.</p>}
@@ -72,14 +72,16 @@ export default function BrowserSettings() {
         className="self-start rounded-md border border-line px-3 py-1.5 text-xs disabled:opacity-50">Save websites</button>
       </>}
       <p role="status" className="break-words text-xs">{data.connected ? `Connected · ${data.url} · ${Math.ceil(data.expires_seconds / 60)} min remaining`
-        : data.transport_connected ? `Debugging browser attached · 127.0.0.1:${data.peer_port}` : "Browser disconnected"}</p>
+        : data.transport_connected ? `Debugging browser attached · 127.0.0.1:${data.peer_port}` : !data.enabled ? "Browser controls off"
+        : !data.sites.length ? "Choose allowed websites to get ready." : "Ready — no page open yet. Ask Junior to open a website and approve the card."}</p>
       {data.adapter === "cdp" && data.transport_connected && <p className="text-xs text-muted">Attached to running browser on 127.0.0.1:{data.peer_port}. {data.connected ? "Junior is using its own temporary session." : "Ask Junior to open an allowed website; navigation still needs approval."}</p>}
       {(data.connected || data.transport_connected) && <div className="flex flex-wrap gap-2">
         {data.connected && <button type="button" disabled={busy} onClick={() => void act("snapshot")} className="rounded-md border border-line px-3 py-1.5 text-xs">Preview page</button>}
         <button type="button" disabled={busy} onClick={() => void act("disconnect")} className="rounded-md border border-line px-3 py-1.5 text-xs">Disconnect browser</button>
       </div>}
       <details className="rounded-lg border border-line p-3 text-xs">
-        <summary className="cursor-pointer font-medium">Connect a running Chrome or Edge browser</summary>
+        <summary className="cursor-pointer font-medium">Optional: connect a separate debugging browser</summary>
+        <p className="mt-2 text-muted">Not needed for ordinary browsing. Junior starts its own background browser when you approve a navigation. This connection does not use your signed-in tabs.</p>
         <p className="mt-2 text-muted">Requires a dedicated debugging profile with Junior&apos;s network protections (see README → Browser connection setup). Junior creates a temporary context in that browser. Existing personal pages and cookies stay separate. Disconnect closes Junior&apos;s context and leaves your browser open.</p>
         <p className="mt-2 text-muted">The debugging port must stay on this computer. Remote/cloud browser connections and the VPS PC Helper require separate setup.</p>
         <div className="mt-3 flex flex-wrap items-end gap-2">

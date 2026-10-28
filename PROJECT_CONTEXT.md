@@ -4,6 +4,12 @@ Last reviewed: **2026-10-27**, after cost/workflow acceptance (P11-08).
 
 ## Active continuation (2026-10-27)
 
+2026-10-28: user reported browser debugging error and WhatsApp failure. Port 9222 had no listener; ordinary isolated
+browser works without it. UI now labels the optional debugging connection and shows ready/no-page state. Focused
+browser/WhatsApp backend and six desktop/phone UI checks passed. WhatsApp token metadata check succeeded; no ngrok
+process or local 4040 listener. Auto approval review blocked starting tunnel due to policy; asked owner to open
+start.bat. End-to-end incoming/outgoing remains unverified. App restart pending for backend error-message change.
+
 2026-10-28 browser follow-up: logs showed four pending approvals mislabeled refused, one outside scope and one
 browser-off request; a real isolated session opened a page. Added opt-in `browser_sites=["*"]` for all public
 websites, preserving private-network/proxy guards and locked approvals; Settings exposes the toggle. Pending

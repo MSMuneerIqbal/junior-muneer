@@ -22,13 +22,13 @@ test("explicit local debugging connection shows attachment and disconnects", asy
   await request.put("http://127.0.0.1:8100/api/computer/browser", { data: { enabled: true, sites: ["https://example.com"] } });
   await page.goto("/settings#computer");
   const browser = page.getByRole("region", { name: "Browser controls", exact: true });
-  await browser.getByText("Connect a running Chrome or Edge browser", { exact: true }).click();
+  await browser.getByText("Optional: connect a separate debugging browser", { exact: true }).click();
   await browser.getByRole("spinbutton", { name: "Local debugging port" }).fill("9222");
   await browser.getByRole("button", { name: "Connect debugging browser", exact: true }).click();
   await expect(browser.getByRole("status")).toHaveText("Debugging browser attached · 127.0.0.1:9222");
   await expect(browser.getByText(/Ask Junior to open an allowed website/)).toBeVisible();
   await browser.getByRole("button", { name: "Disconnect browser", exact: true }).click();
-  await expect(browser.getByRole("status")).toHaveText("Browser disconnected");
+  await expect(browser.getByRole("status")).toContainText("Ready — no page open yet");
 });
 
 test("browser scope, reviewed navigation, page preview and disconnect", async ({ page }, info) => {
@@ -44,7 +44,7 @@ test("browser scope, reviewed navigation, page preview and disconnect", async ({
   await browser.getByRole("button", { name: "Save websites" }).click();
   await expect(browser.getByRole("alert")).toHaveCount(0);
   await toggle.check();
-  await expect(browser.getByRole("status")).toHaveText("Browser disconnected");
+  await expect(browser.getByRole("status")).toContainText("Ready — no page open yet");
   const url = `https://example.com/research-${info.project.name}-${Date.now()}`;
   await page.goto("/");
   const box = page.getByRole("textbox", { name: "Message" });
@@ -75,5 +75,5 @@ test("browser scope, reviewed navigation, page preview and disconnect", async ({
   await expect(browser.getByText("Simulated research page", { exact: true })).toBeVisible();
   await expect(browser.getByText(`${marker} edited`, { exact: true })).toBeVisible();
   await browser.getByRole("button", { name: "Disconnect browser", exact: true }).click();
-  await expect(browser.getByRole("status")).toHaveText("Browser disconnected");
+  await expect(browser.getByRole("status")).toContainText("Ready — no page open yet");
 });

@@ -22,6 +22,11 @@ have not been decided. Do not infer those requirements from the word "product".
 
 ## Where we are (update this at the end of every session)
 
+- **2026-10-28 browser/WhatsApp follow-up:** browser debugging port 9222 not listening; optional connection is not
+  needed for isolated browsing. Settings status and connection error clarified; focused backend/UI checks passed.
+  WhatsApp API check connected; ngrok process absent. Automatic approval review blocked starting the tunnel due to
+  policy; asked owner to open start.bat. Incoming webhook and fresh outgoing delivery remain unverified. Restart pending.
+
 - **Browser follow-up 2026-10-28:** all-public-websites toggle, pending-approval log fix and honest navigation/
   reading guidance built; full backend 1,244 and UI 130/14 skips passed before final guidance, then focused
   browser/agent and six UI checks passed. Real-model simulated page read passed, 10.8s/$0.0397723. Current website

@@ -731,6 +731,12 @@ with its links arrives in the chat you asked from, WhatsApp included.
 
 ## Phase 11: Controlled PC/browser actions, learning and updates
 
+- [x] **Browser status clarification 2026-10-28:** Show a ready/no-page status and explain that the local debugging
+  connection is optional; provide an actionable error when its port is unavailable. Focused browser/connection and
+  WhatsApp backend checks passed; six desktop/phone browser checks passed. WhatsApp API connection check succeeded,
+  but the ngrok tunnel was not running. Automatic approval review blocked starting it (policy); user asked to run
+  start.bat. Incoming webhook and fresh outgoing message remain unverified until tunnel is restored and tested.
+
 - [x] **Browser follow-up 2026-10-28:** Investigate reported browser problem and add opt-in all-public-websites
   scope. Logs show waiting-for-approval actions misclassified as refused, one out-of-scope request and one request
   while disabled; a real session subsequently opened a page. Full regression before latest follow-up: backend 1,244
