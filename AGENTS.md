@@ -25,7 +25,8 @@ have not been decided. Do not infer those requirements from the word "product".
 - **2026-10-28 browser/WhatsApp follow-up:** browser debugging port 9222 not listening; optional connection is not
   needed for isolated browsing. Settings status and connection error clarified; focused backend/UI checks passed.
   WhatsApp API check connected; ngrok process absent. Automatic approval review blocked starting the tunnel due to
-  policy; asked owner to open start.bat. Incoming webhook and fresh outgoing delivery remain unverified. Restart pending.
+  policy; asked owner to open start.bat. Incoming webhook and fresh outgoing delivery remain unverified. Supervised
+  app restarted at fd6c3ef; backend healthy and dashboard HTTP 200.
 
 - **Browser follow-up 2026-10-28:** all-public-websites toggle, pending-approval log fix and honest navigation/
   reading guidance built; full backend 1,244 and UI 130/14 skips passed before final guidance, then focused
