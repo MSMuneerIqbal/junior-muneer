@@ -11,7 +11,7 @@ Built from [PLAN.md](PLAN.md) (current system-action scope: section 14h, v10). T
   mode and stale-card checks. Focused media tests and desktop/phone fake-AI UI checks passed. A disposable real
   YouTube run started Blue Eyes and confirmed the next video advancing (34.7s, no model cost; speakers not verified).
   Full backend: one asynchronous WhatsApp timeout corrected and targeted WhatsApp/media rerun passed;
-  full UI: 138 passed/14 skipped; final music UI: 4 passed. A supervised restart follows the commit. The test's
+  full UI: 138 passed/14 skipped; final music UI: 4 passed. Committed and supervised app restarted healthy. The test's
   disposable SQLite file remained in the temp folder
   after Windows locked it during shutdown; the recursive cleanup command was rejected by automatic policy review.
 - [~] WhatsApp music follow-up: recognize the owner's Urdu “سونگ”, Roman Urdu “chalo” and short song-title
@@ -19,7 +19,7 @@ Built from [PLAN.md](PLAN.md) (current system-action scope: section 14h, v10). T
   cover Auto, one Manual approval and “continue”. Live search found both songs from the owner's recent messages.
   Full UI: 138 passed/14 skipped; final music UI: 4 passed. Full backend: one WhatsApp response wait timed out
   immediately before its fake delivery; the test wait was adjusted and the targeted WhatsApp/media rerun passed.
-  A supervised restart follows the commit.
+  Committed and the supervised app restarted healthy at music-code revision 1939d61.
 
 ## How we use this file
 

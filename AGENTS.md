@@ -25,7 +25,8 @@ have not been decided. Do not infer those requirements from the word "product".
 - **2026-10-29 browser/music follow-up in progress:** Muneer wants a Settings → Computer choice between his
   signed-in browser and Junior's separate browser. The signed-in choice is not implemented; the existing CDP
   adapter is isolated. Next-song support and WhatsApp request routing have focused tests; a real YouTube
-  play/advance and two live searches passed. See TASK.md for regression, deployment and temporary-file status.
+  play/advance and two live searches passed. Music-code commit 1939d61 was restarted healthy; see TASK.md for
+  regression and temporary-file status. Continue the signed-in browser integration; it remains unimplemented.
 
 - **Live music test 2026-10-29:** At Muneer's request, Junior received the actual Blue Eyes request through a
   temporary database, found the matching YouTube video and reported one posted media action. Video advanced with

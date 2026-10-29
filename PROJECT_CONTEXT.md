@@ -18,7 +18,7 @@ Recent repeated approval cards were general browser navigations; recent music ac
 The owner's actual Urdu request used “سونگ” and other requests used “chalo” or a bare song title, which the old
 music recognizer did not route to the music player. Local changes extend recognition, and WhatsApp no longer sends
 an Approve button for a non-waiting computer action. Simulated WhatsApp webhook checks cover Auto, Manual and a
-subsequent continue. Tests and the planned supervised restart are recorded in TASK.md; signed-in browser
+subsequent continue. The supervised app restarted healthy at music-code revision 1939d61; tests are in TASK.md. Signed-in browser
 integration remains unimplemented.
 
 2026-10-29 live follow-up: Muneer explicitly requested another YouTube test. Using the live-check workflow and a
