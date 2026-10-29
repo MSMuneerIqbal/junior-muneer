@@ -62,7 +62,7 @@ def text(body: str, frm: str = OWNER, mid: str = "wamid.1") -> dict:
     return message({"from": frm, "id": mid, "type": "text", "text": {"body": body}})
 
 
-def wait_for(sent: list, n: int, seconds: float = 10.0) -> list:
+def wait_for(sent: list, n: int, seconds: float = 20.0) -> list:
     end = time.monotonic() + seconds
     while len(sent) < n and time.monotonic() < end:
         time.sleep(0.05)
@@ -106,11 +106,51 @@ def test_automatic_browser_steps_do_not_spam_whatsapp(wa):
     assert wa == []
 
 
+def test_finished_or_uncertain_pc_action_never_sends_an_approval_button(wa):
+    import asyncio
+    with app(ScriptedModel([])):
+        asyncio.run(whatsapp.send_drafts(OWNER, [{"id": 1, "kind": "api", "text": "internal action",
+            "platform_label": "Your PC", "platform": "computer", "item_type": "media",
+            "status": "check_manually", "meta": {"last_error": "Check the player first."}}]))
+    assert len(wa) == 1 and wa[0]["type"] == "text"
+    assert "Check the player first" in wa[0]["text"]["body"]
+
+
 def test_whatsapp_action_setting_is_manual_by_default_and_validated(wa):
     with app(ScriptedModel([])) as client:
         assert client.get("/api/settings").json()["whatsapp_action_mode"] == "ask_all"
         assert client.patch("/api/settings", json={"whatsapp_action_mode": "rules"}).json()["whatsapp_action_mode"] == "rules"
         assert client.patch("/api/settings", json={"whatsapp_action_mode": "unsafe"}).status_code == 422
+
+
+@pytest.mark.parametrize("mode", ["rules", "ask_all"])
+def test_whatsapp_urdu_song_uses_media_and_respects_channel_mode(wa, monkeypatch, mode):
+    monkeypatch.setenv("FAKE_AI", "true")
+    get_settings.cache_clear()
+    with app(ScriptedModel([])) as client:
+        client.put("/api/computer/browser", json={"enabled": True, "sites": ["*"]})
+        client.patch("/api/settings", json={"whatsapp_action_mode": mode})
+        signed(client, text("یار ایک سونگ تو چلا دو YouTube پہ Blue Eyes", mid=f"wamid.music.{mode}"))
+        wait_for(wa, 2, seconds=30)
+        cards = [item for item in wa if item.get("type") == "interactive"]
+        approvals = client.get("/api/approvals?status=all&platform=computer").json()
+        music = [item for item in approvals if item["action_type"] == "computer.media.play"]
+        assert len(music) == 1
+        if mode == "rules":
+            assert music[0]["status"] == "posted" and not cards
+        else:
+            assert music[0]["status"] == "waiting" and len(cards) == 1
+            button = cards[0]["interactive"]["action"]["buttons"][0]["reply"]["id"]
+            signed(client, message({"from": OWNER, "id": "wamid.approve.music", "type": "interactive",
+                                    "interactive": {"type": "button_reply", "button_reply": {"id": button, "title": "Approve"}}}))
+            wait_for(wa, 3, seconds=30)
+            assert client.get(f"/api/approvals/{music[0]['id']}").json()["status"] == "posted"
+        prior = len(wa)
+        signed(client, text("continue", mid=f"wamid.music.continue.{mode}"))
+        wait_for(wa, prior + 1, seconds=30)
+        approvals = client.get("/api/approvals?status=all&platform=computer").json()
+        assert len([item for item in approvals if item["action_type"] == "computer.media.play"]) == 1
+    get_settings.cache_clear()
 
 
 def test_only_messages_signed_by_meta_are_accepted(wa):

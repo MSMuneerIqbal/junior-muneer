@@ -4,6 +4,23 @@ Last reviewed: **2026-10-27**, after cost/workflow acceptance (P11-08).
 
 ## Active continuation (2026-10-27)
 
+2026-10-29 follow-up in progress: Muneer wants Settings → Computer to choose his signed-in browser or Junior's
+separate browser, and wants requests like “song change kro” to change the song. The signed-in browser choice is
+NOT implemented: the CDP connection deliberately creates an isolated context, and ordinary Chrome 136+ does not
+expose its default profile through remote debugging. An opt-in, explicitly paired Chrome/Edge extension is the
+proposed approach; preserve browser scope, action approvals, payment denial, and untrusted-page boundaries. Do not
+describe a switch as working until its integration and real signed-in browser tests are complete. The separate
+YouTube player has a new next-song action; a real disposable YouTube run played and advanced to the next video.
+Its remaining regression and deployment status are recorded in TASK.md.
+
+2026-10-29 WhatsApp follow-up: live settings showed WhatsApp `rules` and both music and browser input Auto.
+Recent repeated approval cards were general browser navigations; recent music actions had already run under Auto.
+The owner's actual Urdu request used “سونگ” and other requests used “chalo” or a bare song title, which the old
+music recognizer did not route to the music player. Local changes extend recognition, and WhatsApp no longer sends
+an Approve button for a non-waiting computer action. Simulated WhatsApp webhook checks cover Auto, Manual and a
+subsequent continue. Tests and the planned supervised restart are recorded in TASK.md; signed-in browser
+integration remains unimplemented.
+
 2026-10-29 live follow-up: Muneer explicitly requested another YouTube test. Using the live-check workflow and a
 temporary database, the exact Blue Eyes song request returned one posted `computer.media.play` card and a player
 confirmed advancing with audio unmuted; 12.0 seconds and $0 model cost. The disposable player and DB were closed.

@@ -57,7 +57,7 @@ def check(item: ApprovalItem, text: str) -> list[str]:
         return ["This is a copy-and-paste item: you send it yourself."]
     if item.status != "approved":
         return [f"It isn't approved (it's {item.status.replace('_', ' ')})."]
-    if item.action_type in {"computer.media.play", "computer.media.stop"}:
+    if item.action_type in {"computer.media.play", "computer.media.stop", "computer.media.change"}:
         from junior.browser.media import authorized, enabled
         if not authorized(item):
             problems.append("The original user request no longer authorizes this video.")

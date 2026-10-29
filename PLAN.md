@@ -662,6 +662,14 @@ step-by-step implementation. **Skip new WhatsApp integrations and changes for no
 Use the app's existing API configuration; do not import credentials, model IDs, paths or commands from the example.
 This section supersedes v7's blanket browser prohibition only for the controlled workflows below.
 
+**2026-10-29 owner request (not yet implemented):** Settings → Computer should let Muneer select his
+signed-in Chrome/Edge browser or Junior's separate browser. Investigate an explicitly paired browser extension
+for the signed-in profile; the existing CDP adapter intentionally creates an isolated context and is not this
+feature. Preserve the independent dashboard/WhatsApp modes, user-directed action checks, payment denial and
+untrusted-page boundaries. Account for the different network-protection model before enabling site actions;
+do not imply that the existing isolated proxy protects personal browser traffic. Show connection state, fail
+clearly if disconnected, and test actual signed-in operations and the switch without touching unrelated tabs.
+
 Build one acceptance-sized task at a time, with safety tests and regression checks before moving on:
 
 1. **P11-01 — Managed local PC jobs.** Approved PowerShell commands can run in the background, retain bounded

@@ -282,6 +282,10 @@ async def send_drafts(to: str, items: list[dict]) -> None:
                     continue  # The final reply summarizes an automatic multi-step browser job.
                 await client().send_text(to, f"Done on your PC: {pc_result(item)}")
                 continue
+            if item.get("status") != "waiting":
+                reason = str(item.get("meta", {}).get("last_error") or "Check the action on the dashboard.")
+                await client().send_text(to, f"Your PC action did not complete: {reason}")
+                continue
             body = pc_card(item, text)
         await client().send_buttons(to, body, _buttons(item))
 

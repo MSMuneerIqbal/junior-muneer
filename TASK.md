@@ -2,6 +2,25 @@
 
 Built from [PLAN.md](PLAN.md) (current system-action scope: section 14h, v10). This is the working checklist: we build in this order, one task at a time.
 
+## Current follow-up: browser and music (2026-10-29)
+
+- [ ] Add a Settings → Computer choice for the signed-in Chrome/Edge browser or Junior's separate browser.
+  The existing debugging connection is isolated and does not implement this choice. A signed-in integration must
+  enforce the existing action modes and payment restrictions, and be tested in a real signed-in profile.
+- [~] Support “next song” / “change it” for the player started by this chat, with Auto/Manual, WhatsApp's independent
+  mode and stale-card checks. Focused media tests and desktop/phone fake-AI UI checks passed. A disposable real
+  YouTube run started Blue Eyes and confirmed the next video advancing (34.7s, no model cost; speakers not verified).
+  Full backend: one asynchronous WhatsApp timeout corrected and targeted WhatsApp/media rerun passed;
+  full UI: 138 passed/14 skipped; final music UI: 4 passed. A supervised restart follows the commit. The test's
+  disposable SQLite file remained in the temp folder
+  after Windows locked it during shutdown; the recursive cleanup command was rejected by automatic policy review.
+- [~] WhatsApp music follow-up: recognize the owner's Urdu “سونگ”, Roman Urdu “chalo” and short song-title
+  requests, and do not send Approve buttons for computer cards that are not waiting. Fake Meta webhook checks
+  cover Auto, one Manual approval and “continue”. Live search found both songs from the owner's recent messages.
+  Full UI: 138 passed/14 skipped; final music UI: 4 passed. Full backend: one WhatsApp response wait timed out
+  immediately before its fake delivery; the test wait was adjusted and the targeted WhatsApp/media rerun passed.
+  A supervised restart follows the commit.
+
 ## How we use this file
 
 - **Status:** `[ ]` to do · `[~]` in progress · `[x]` done · `[-]` skipped (with a reason)

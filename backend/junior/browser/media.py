@@ -21,16 +21,17 @@ from junior.settings_store import get_setting
 
 HOSTS = ("youtube.com", "youtube-nocookie.com", "googlevideo.com", "ytimg.com", "google.com", "gstatic.com")
 VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
-PLAY = re.compile(r"\b(play|bajao|baja|chalao|chala|lagao|lgao|lagado|laga|lga|sunao)\b|چلاؤ|چلا|بجاؤ|لگاؤ", re.I)
-SONG = re.compile(r"\b(song|music|gaana|gana|geet|track|youtube)\b|گانا|گانے|موسیقی|یوٹیوب", re.I)
+PLAY = re.compile(r"\b(play|paly|bajao|baja|chalao|chalo|chala|lagao|lgao|lagado|laga|lga|sunao)\b|چلاؤ|چلا|بجاؤ|لگاؤ", re.I)
+SONG = re.compile(r"\b(song|music|gaana|gana|geet|track|youtube)\b|گانا|گانے|سونگ|موسیقی|یوٹیوب", re.I)
 STOP = re.compile(r"\b(stop|close|quit|band|rok|roko)\b|بند|روک", re.I)
-NEGATED = re.compile(r"\b(?:do\s+not|don['’]?t|never|not|mat|nahin|nahi)\b.{0,35}\b(?:play|bajao|baja|chalao|chala|lagao|lgao|lagado|laga|lga|sunao)\b|(?:نہ|مت).{0,35}(?:چلا|بجا|لگا)", re.I)
+CHANGE = re.compile(r"\b(change|next|skip|badal|badlo|badal[o]?)\b|بدل|اگلا", re.I)
+NEGATED = re.compile(r"\b(?:do\s+not|don['’]?t|dnt|never|not|mat|nahin|nahi)\b.{0,35}\b(?:play|paly|bajao|baja|chalao|chalo|chala|lagao|lgao|lagado|laga|lga|sunao)\b|(?:نہ|مت).{0,35}(?:چلا|بجا|لگا)", re.I)
 HOW_TO = re.compile(r"\b(?:how\s+(?:do|can|to)|why\s+(?:does|do|is)|kaise|kaisay|kyun)\b", re.I)
 ROLE_PLAY = re.compile(r"\bplay\s+(?:the\s+)?role\b", re.I)
-DISCUSSION = re.compile(r"^(?:please\s+)?(?:translate|summari[sz]e|explain|write|draft|describe|tell\s+me\s+about|what\s+is)\b", re.I)
+DISCUSSION = re.compile(r"^(?:please\s+)?(?:translate|summari[sz]e|explain|write|draft|describe|tell\s+me\s+about|what\s+is|where\b)\b", re.I)
 PERSONAL_BROWSER = re.compile(r"\b(?:signed[ -]?in|logged[ -]?in|personal browser|my browser|my chrome)\b", re.I)
 EXTRA_TASK = re.compile(r"\b(?:and|then|aur|phir)\b.{0,80}\b(?:send|email|write|create|save|download|upload|delete|message|search)\b", re.I)
-STOPWORDS = {"play", "song", "music", "youtube", "kro", "karo", "krdo", "kr", "do", "yr", "yaar", "bhai", "wala", "wali", "ka", "ki", "ko", "on", "the", "please", "bajao", "baja", "chalao", "chala", "lagao", "laga", "lagado", "lga", "sunao", "gana", "gaana", "geet", "track"}
+STOPWORDS = {"play", "paly", "song", "music", "youtube", "kro", "karo", "krdo", "kr", "do", "yr", "yaar", "bhai", "wala", "wali", "ka", "ki", "ko", "on", "to", "the", "please", "bajao", "baja", "chalao", "chalo", "chala", "lagao", "laga", "lagado", "lga", "sunao", "gana", "gaana", "geet", "track", "change", "ab", "pc", "mn", "mein", "یار", "ایک", "سونگ", "تو", "چلا", "دو", "یوٹیوب", "پہ"}
 
 
 class VerificationRequired(RuntimeError):
@@ -38,7 +39,11 @@ class VerificationRequired(RuntimeError):
 
 
 def is_request(text: str) -> bool:
-    return bool(PLAY.search(text or "") and SONG.search(text or "") and not NEGATED.search(text)
+    text = text or ""
+    short_title = (re.match(r"^\s*(?:song|gaana|gana|سونگ|گانا)\s+", text, re.I)
+                   and not re.search(r"\b(?:lyrics|meaning|translation|history|about|who|what|where|how|why)\b", text, re.I)
+                   and len(terms(text)) >= 2 and "?" not in text)
+    return bool((PLAY.search(text) or short_title) and SONG.search(text) and not NEGATED.search(text)
                 and not HOW_TO.search(text) and not ROLE_PLAY.search(text) and not DISCUSSION.search(text.strip())
                 and not PERSONAL_BROWSER.search(text) and not EXTRA_TASK.search(text))
 
@@ -46,6 +51,14 @@ def is_request(text: str) -> bool:
 def is_stop_request(text: str) -> bool:
     return bool(STOP.search(text or "") and SONG.search(text or "") and not DISCUSSION.search(text.strip())
                 and not re.search(r"\b(?:do\s+not|don['’]?t|never|mat|nahi|nahin)\b.{0,25}\b(?:stop|close|band|rok|roko)\b|(?:نہ|مت).{0,25}(?:بند|روک)", text, re.I))
+
+
+def is_change_request(text: str) -> bool:
+    text = (text or "").strip()
+    return bool(CHANGE.search(text) and not DISCUSSION.search(text) and not HOW_TO.search(text)
+                and not EXTRA_TASK.search(text)
+                and not re.search(r"\b(?:do\s+not|don't|never|mat|nahi|nahin)\b.{0,25}\b(?:change|skip|badal|badlo)\b|(?:نہ|مت).{0,25}بدل", text, re.I)
+                and (re.fullmatch(r"(?:please\s+)?(?:change\s+it|change|next|skip|badal\s+do|badlo|(?:change|next|skip)\s+(?:the\s+)?(?:song|music|track)|(?:song|music|gana|gaana)\s+(?:change|badal|badlo)(?:\s+(?:kro|karo|do|krdo))?)\s*[.!]?", text, re.I) or re.fullmatch(r"(?:گانا|گانے)\s+(?:بدل\s+دو|بدلو)|اگلا\s+گانا", text)))
 
 
 def is_continue(text: str) -> bool:
@@ -76,7 +89,8 @@ def continuation(context, text: str):
 
 
 def terms(text: str) -> list[str]:
-    return [word for word in re.findall(r"[^\W_]+", text.casefold()) if len(word) > 1 and word not in STOPWORDS]
+    words = re.findall(r"[^\W_]+", text.casefold())
+    return ["dont" if word == "dnt" else word for word in words if len(word) > 1 and word not in STOPWORDS]
 
 
 def matches_request(text: str, title: str) -> bool:
@@ -84,6 +98,8 @@ def matches_request(text: str, title: str) -> bool:
     if not wanted:
         return False
     matches = sum(any(a == w or (len(w) >= 4 and (a.startswith(w) or w.startswith(a))) for a in actual) for w in wanted)
+    if "dont" in wanted and "don" in actual and "dont" not in actual:
+        matches += 1  # YouTube commonly tokenizes “don't” as “don” and “t”.
     return matches >= max(1, (len(wanted) + 1) // 2)
 
 
@@ -145,6 +161,8 @@ def authorized(item) -> bool:
                 return False
             if item.action_type == "computer.media.stop":
                 return payload == {"stop": True} and is_stop_request(message.content) and bool(item.meta.get("media_session"))
+            if item.action_type == "computer.media.change":
+                return payload == {"next": True} and is_change_request(message.content) and bool(item.meta.get("media_session"))
             return bool(set(payload) == {"video_id", "title"} and VIDEO_ID.fullmatch(payload["video_id"])
                         and is_request(message.content) and matches_request(message.content, payload["title"]))
     except (ValueError, TypeError, KeyError):
@@ -206,6 +224,26 @@ async def prepare_stop(context, text: str) -> str:
         return f"NOT done: {error}"
 
 
+async def prepare_change(context, text: str) -> str:
+    from junior.computer.tools import queue_action
+    try:
+        enabled()
+        player = active_player()
+        if not player or player.conversation_id != context.conversation_id:
+            return "NOT done: There is no active YouTube player from this chat to change."
+        with session_scope() as session:
+            source = session.scalar(select(Message.id).where(Message.id.in_(context.user_message_ids),
+                                    Message.conversation_id == context.conversation_id, Message.source == "user",
+                                    Message.content == text).order_by(Message.id.desc()).limit(1))
+        if not source or not is_change_request(text):
+            raise BrowserRefused("I couldn't verify the request to change the song.")
+        return await queue_action(context, "computer.media.change", "media", json.dumps({"next": True}),
+                                  "Play the next YouTube video", {"op": "media_change",
+                                  "media_user_message_id": source, "media_session": player.session})
+    except BrowserRefused as error:
+        return f"NOT done: {error}"
+
+
 class Player:
     def __init__(self, fake=False):
         self.fake = fake
@@ -213,6 +251,8 @@ class Player:
         self.lock = asyncio.Lock()
         self.video_id = ""
         self.session = ""
+        self.conversation_id = None
+        self.changing = False
 
     async def close(self):
         watch, self.watch = self.watch, None
@@ -230,6 +270,7 @@ class Player:
         self.page = None
         self.video_id = ""
         self.session = ""
+        self.conversation_id = None
 
     async def _watch(self):
         deadline = time.monotonic() + 900
@@ -239,7 +280,7 @@ class Player:
                 if rule_for("computer.media.play") == "deny" or rule_for("computer.browser.input") == "deny":
                     break
                 url = urlsplit(self.page.url)
-                if url.path == "/watch" and parse_qs(url.query).get("v", [""])[0] != self.video_id:
+                if not self.changing and url.path == "/watch" and parse_qs(url.query).get("v", [""])[0] != self.video_id:
                     break  # do not automatically play a different video
                 await asyncio.sleep(1)
         except (BrowserRefused, asyncio.CancelledError):
@@ -301,10 +342,34 @@ class Player:
                 await self.close()
                 raise
 
+    async def next(self):
+        if self.fake:
+            self.session = uuid4().hex
+            return "Simulated changing to the next song."
+        if not self.page or self.page.is_closed():
+            raise BrowserRefused("The YouTube player is no longer open.")
+        href = await self.page.locator("a.ytp-next-button").first.get_attribute("href")
+        from urllib.parse import urljoin
+        target = urlsplit(urljoin("https://www.youtube.com", href or ""))
+        ident = parse_qs(target.query).get("v", [""])[0]
+        if target.scheme != "https" or target.hostname != "www.youtube.com" or target.path != "/watch" or not VIDEO_ID.fullmatch(ident) or ident == self.video_id:
+            raise BrowserRefused("YouTube did not provide a usable next video.")
+        self.changing = True
+        try:
+            # Invalidate other cards before navigation, including if its outcome is uncertain.
+            self.session = uuid4().hex
+            await self.page.goto("https://www.youtube.com/watch?v=" + ident, wait_until="commit", timeout=30000)
+            self.video_id = ident
+            await self.page.wait_for_function("""() => { const v = document.querySelector('video');
+                return v && !v.paused && !v.muted && v.volume > 0 && v.currentTime > 1; }""", timeout=30000)
+            return "Changed to the next YouTube video. An ad may play first."
+        finally:
+            self.changing = False
+
 
 class MediaSender:
     label = "YouTube player"
-    action_types = ("computer.media.play", "computer.media.stop")
+    action_types = ("computer.media.play", "computer.media.stop", "computer.media.change")
     def __init__(self, player):
         self.player = player
     def is_connected(self):
@@ -312,13 +377,27 @@ class MediaSender:
     async def send(self, out):
         try:
             enabled()
+            if out.action_type == "computer.media.change":
+                async with self.player.lock:
+                    if not self.player.session or self.player.session != out.meta.get("media_session"):
+                        return SendResult("failed", "The player changed since this card was created; nothing was changed.")
+                    try:
+                        return SendResult("sent", await self.player.next())
+                    except BrowserRefused as error:
+                        return SendResult("failed", str(error))
+                    except Exception:
+                        return SendResult("unclear", "The song change could not be confirmed. Check the player before trying again.")
             if out.action_type == "computer.media.stop":
                 async with self.player.lock:
                     if not self.player.session or self.player.session != out.meta.get("media_session"):
                         return SendResult("failed", "The player changed since this card was created; nothing was stopped.")
                     await self.player.close()
                 return SendResult("sent", "Stopped Junior's YouTube player.")
-            return SendResult("sent", await self.player.play(json.loads(out.text)))
+            result = await self.player.play(json.loads(out.text))
+            with session_scope() as session:
+                source = session.get(Message, out.meta.get("media_user_message_id"))
+                self.player.conversation_id = source.conversation_id if source and source.source == "user" else None
+            return SendResult("sent", result)
         except VerificationRequired as error:
             return SendResult("unclear", str(error))
         except Exception:

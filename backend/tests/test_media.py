@@ -35,12 +35,21 @@ def test_song_request_matching_is_specific():
     assert not matches_request(request, "A totally unrelated documentary")
     assert not is_request("write an essay about the history of music")
     assert not is_request("do not play the song blue eyes")
+    assert not is_request("dnt play the song blue eyes")
     assert not is_request("song mat chalao blue eyes")
+    assert not is_request("song mat chalo blue eyes")
     assert not is_request("how do I play a song on YouTube?")
     assert not is_request("play the role of a music critic")
     assert not is_request("translate this sentence: play the song Blue Eyes")
     assert not is_request("play the song Blue Eyes in my signed-in browser")
     assert not is_request("play the song Blue Eyes and send an email")
+    assert is_request("یار ایک سونگ تو چلا دو YouTube پہ Blue Eyes")
+    assert matches_request("یار ایک سونگ تو چلا دو YouTube پہ Blue Eyes", "Blue Eyes Full Video Song")
+    assert is_request("Ab change kro song chalo blue eyes")
+    assert matches_request("Ab change kro song chalo dnt tell your dream to everyone body around", "Don't Tell Your Dreams - LOVIXX, STOSLIV")
+    assert is_request("Song blue eyes yo yo honey Singh")
+    assert not is_request("song lyrics blue eyes honey singh")
+    assert not is_request("where r is song paly i dn see")
 
 
 def test_auto_song_request_runs_one_action_without_model_or_approval(client):
@@ -57,6 +66,79 @@ def test_auto_song_request_runs_one_action_without_model_or_approval(client):
     assert "Stopped Junior's YouTube player" in stop["text"]
     assert not client.app.state.media_player.session
     assert not client.get("/api/computer/media").json()["active"]
+
+
+def test_change_song_auto_and_manual_and_session_guard(client):
+    _, played = chat(client, "play the song blue eyes honey singh")
+    conversation = played["conversation_id"]
+    events, result = chat(client, "song change kro", conversation)
+    card = next(event["item"] for event in events if event["type"] == "approval")
+    assert card["action_type"] == "computer.media.change" and card["status"] == "posted"
+    assert "Simulated changing" in result["text"]
+    set_mode("ask_all")
+    events, _ = chat(client, "change it", conversation)
+    card = next(event["item"] for event in events if event["type"] == "approval")
+    assert card["status"] == "waiting"
+    set_mode("rules")
+    chat(client, "play the song blue eyes again", conversation)
+    result = client.post(f"/api/approvals/{card['id']}/approve", json={}).json()
+    assert result["status"] != "posted" and "player changed" in result["meta"]["last_error"]
+
+
+def test_change_request_does_not_guess_a_named_song():
+    from junior.browser.media import is_change_request
+    assert is_change_request("next song") and is_change_request("change it")
+    assert not is_change_request("do not change the song")
+    assert not is_change_request("change song to blue eyes")
+
+
+def test_change_song_uses_independent_whatsapp_manual_mode(client):
+    from junior.permissions import ACTION_CHANNEL, decide
+    from junior.settings_store import set_setting
+    set_mode("rules")
+    set_setting("whatsapp_action_mode", "ask_all")
+    token = ACTION_CHANNEL.set("whatsapp")
+    try:
+        assert decide("computer.media.change", from_outside=False).rule == "ask"
+    finally:
+        ACTION_CHANNEL.reset(token)
+
+
+def test_next_song_uses_only_valid_youtube_recommendation():
+    import asyncio
+    from junior.browser.media import BrowserRefused, Player
+
+    class Locator:
+        first = None
+        def __init__(self, href):
+            self.href = href
+            self.first = self
+        async def get_attribute(self, name):
+            return self.href
+
+    class Page:
+        def __init__(self, href):
+            self.href = href
+            self.visited = []
+        def is_closed(self):
+            return False
+        def locator(self, selector):
+            return Locator(self.href)
+        async def goto(self, url, **kwargs):
+            self.visited.append(url)
+        async def wait_for_function(self, script, **kwargs):
+            pass
+
+    player = Player()
+    player.page = Page("https://evil.example/watch?v=fakevideo01")
+    player.video_id, player.session = "oldvideo001", "original"
+    with pytest.raises(BrowserRefused):
+        asyncio.run(player.next())
+    assert player.page.visited == [] and player.session == "original"
+    player.page.href = "/watch?v=fakevideo01&list=other"
+    asyncio.run(player.next())
+    assert player.page.visited == ["https://www.youtube.com/watch?v=fakevideo01"]
+    assert player.video_id == "fakevideo01" and player.session != "original"
 
 
 def test_manual_stop_does_not_close_a_newer_player(client):
