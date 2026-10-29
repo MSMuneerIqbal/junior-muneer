@@ -50,6 +50,19 @@ def test_song_request_matching_is_specific():
     assert is_request("Song blue eyes yo yo honey Singh")
     assert not is_request("song lyrics blue eyes honey singh")
     assert not is_request("where r is song paly i dn see")
+    urdu = "ایک سونگ پلے کرو یار مہک ملک کا جس کا نام ہے ایادن چن باہوں سونا ہے"
+    assert is_request(urdu)
+    assert matches_request(urdu, "Ay Ahdin Chan Baon Sohnra Ay | Mehak Malik | Dance Performance")
+    assert not matches_request(urdu, "Dhole Nun Banda Mul Lay Le | Mehak Malik")
+    assert not is_request("یہ سونگ پلے مت کرو")
+    assert not is_request("یہ سونگ مت پلے کرو")
+    assert is_request("مجھے مہک ملک کا نغمہ سناؤ")
+    assert not is_request("مہک ملک کا نغمہ مت سناؤ")
+
+
+def test_urdu_continuation_is_recognized():
+    from junior.browser.media import is_continue
+    assert is_continue("جاری رکھو")
 
 
 def test_auto_song_request_runs_one_action_without_model_or_approval(client):

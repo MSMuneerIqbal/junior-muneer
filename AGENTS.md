@@ -22,6 +22,11 @@ have not been decided. Do not infer those requirements from the word "product".
 
 ## Where we are (update this at the end of every session)
 
+- **2026-10-29 latest WhatsApp playback follow-up in progress:** Urdu-script playback requests and Urdu-to-Roman
+  video matching added locally; exact-request fake WhatsApp Auto/Manual and real YouTube playback through a mocked
+  WhatsApp transport passed. Full backend and focused music UI passed; a supervised restart follows the commit.
+  The signed-in browser remains unfinished.
+
 - **2026-10-29 browser/music follow-up in progress:** Muneer wants a Settings → Computer choice between his
   signed-in browser and Junior's separate browser. The signed-in choice is not implemented; the existing CDP
   adapter is isolated. Next-song support and WhatsApp request routing have focused tests; a real YouTube

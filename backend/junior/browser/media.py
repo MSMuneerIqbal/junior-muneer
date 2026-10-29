@@ -5,6 +5,8 @@ import json
 import re
 import socket
 import time
+import unicodedata
+from difflib import SequenceMatcher
 from urllib.parse import parse_qs, urlsplit
 from uuid import uuid4
 
@@ -21,17 +23,18 @@ from junior.settings_store import get_setting
 
 HOSTS = ("youtube.com", "youtube-nocookie.com", "googlevideo.com", "ytimg.com", "google.com", "gstatic.com")
 VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
-PLAY = re.compile(r"\b(play|paly|bajao|baja|chalao|chalo|chala|lagao|lgao|lagado|laga|lga|sunao)\b|چلاؤ|چلا|بجاؤ|لگاؤ", re.I)
-SONG = re.compile(r"\b(song|music|gaana|gana|geet|track|youtube)\b|گانا|گانے|سونگ|موسیقی|یوٹیوب", re.I)
+PLAY = re.compile(r"\b(play|paly|bajao|baja|chalao|chalo|chala|lagao|lgao|lagado|laga|lga|sunao)\b|پلے|چلاؤ|چلا|بجاؤ|بجائیں|لگاؤ|لگائیں|سناؤ|سنائیں", re.I)
+SONG = re.compile(r"\b(song|music|gaana|gana|geet|track|youtube)\b|گانا|گانے|سونگ|سانگ|گیت|نغمہ|نغمے|موسیقی|یوٹیوب", re.I)
 STOP = re.compile(r"\b(stop|close|quit|band|rok|roko)\b|بند|روک", re.I)
 CHANGE = re.compile(r"\b(change|next|skip|badal|badlo|badal[o]?)\b|بدل|اگلا", re.I)
-NEGATED = re.compile(r"\b(?:do\s+not|don['’]?t|dnt|never|not|mat|nahin|nahi)\b.{0,35}\b(?:play|paly|bajao|baja|chalao|chalo|chala|lagao|lgao|lagado|laga|lga|sunao)\b|(?:نہ|مت).{0,35}(?:چلا|بجا|لگا)", re.I)
+NEGATED = re.compile(r"\b(?:do\s+not|don['’]?t|dnt|never|not|mat|nahin|nahi)\b.{0,35}\b(?:play|paly|bajao|baja|chalao|chalo|chala|lagao|lgao|lagado|laga|lga|sunao)\b|(?:نہ|مت).{0,35}(?:پلے|چلا|بجا|لگا|سنا)|پلے\s+(?:نہ|مت)\s*کر", re.I)
 HOW_TO = re.compile(r"\b(?:how\s+(?:do|can|to)|why\s+(?:does|do|is)|kaise|kaisay|kyun)\b", re.I)
 ROLE_PLAY = re.compile(r"\bplay\s+(?:the\s+)?role\b", re.I)
 DISCUSSION = re.compile(r"^(?:please\s+)?(?:translate|summari[sz]e|explain|write|draft|describe|tell\s+me\s+about|what\s+is|where\b)\b", re.I)
 PERSONAL_BROWSER = re.compile(r"\b(?:signed[ -]?in|logged[ -]?in|personal browser|my browser|my chrome)\b", re.I)
 EXTRA_TASK = re.compile(r"\b(?:and|then|aur|phir)\b.{0,80}\b(?:send|email|write|create|save|download|upload|delete|message|search)\b", re.I)
 STOPWORDS = {"play", "paly", "song", "music", "youtube", "kro", "karo", "krdo", "kr", "do", "yr", "yaar", "bhai", "wala", "wali", "ka", "ki", "ko", "on", "to", "the", "please", "bajao", "baja", "chalao", "chalo", "chala", "lagao", "laga", "lagado", "lga", "sunao", "gana", "gaana", "geet", "track", "change", "ab", "pc", "mn", "mein", "یار", "ایک", "سونگ", "تو", "چلا", "دو", "یوٹیوب", "پہ"}
+STOPWORDS.update({"پلے", "کرو", "کریں", "کر", "کا", "کی", "کے", "جس", "نام", "ہے", "ہیں", "یہ", "کو", "گانا", "گانے", "سانگ", "گیت", "نغمہ", "نغمے", "مجھے", "میرا", "والی", "والا", "والے", "سناؤ", "سنائیں", "بجاؤ", "بجائیں", "لگاؤ", "لگائیں", "چلائیں"})
 
 
 class VerificationRequired(RuntimeError):
@@ -62,7 +65,7 @@ def is_change_request(text: str) -> bool:
 
 
 def is_continue(text: str) -> bool:
-    return bool(re.fullmatch(r"(?:continue|conitnue|contine|cont|aage|ag[ae]y)\s*[.!]?", (text or "").strip(), re.I))
+    return bool(re.fullmatch(r"(?:continue|conitnue|contine|cont|aage|ag[ae]y|جاری\s+رکھو|جاری\s+رکھیں)\s*[.!؟]?", (text or "").strip(), re.I))
 
 
 def continuation(context, text: str):
@@ -93,11 +96,35 @@ def terms(text: str) -> list[str]:
     return ["dont" if word == "dnt" else word for word in words if len(word) > 1 and word not in STOPWORDS]
 
 
+# Consonant skeletons permit Urdu song/artist names to match common Roman spellings.
+# This is intentionally approximate; several matching words are still required below.
+URDU_CONSONANTS = dict(zip("بپتٹثجچحخدڈذرڑزژسشصضطظعغفقکگلمںنہھءئاوؤییے", [
+    "b", "p", "t", "t", "s", "j", "c", "h", "k", "d", "d", "z", "r", "r", "z", "z",
+    "s", "s", "s", "z", "t", "z", "", "g", "f", "k", "k", "g", "l", "m", "n", "n",
+    "h", "h", "", "", "", "", "", "", "", ""] ))
+
+
+def phonetic_word(word: str) -> str:
+    word = unicodedata.normalize("NFKD", word.casefold())
+    mapped = "".join(URDU_CONSONANTS.get(char, char) for char in word if not unicodedata.combining(char))
+    return re.sub(r"(.)\1+", r"\1", re.sub(r"[^a-z]|[aeiouhwy]", "", mapped))
+
+
+def word_matches(wanted: str, actual: str) -> bool:
+    if actual == wanted or (len(wanted) >= 4 and (actual.startswith(wanted) or wanted.startswith(actual))):
+        return True
+    if not (any("\u0600" <= c <= "\u06ff" for c in wanted) and actual.isascii()):
+        return False
+    first, second = phonetic_word(wanted), phonetic_word(actual)
+    return bool(len(first) >= 2 and len(second) >= 2 and
+                (first == second or (min(len(first), len(second)) >= 3 and SequenceMatcher(None, first, second).ratio() >= 0.8)))
+
+
 def matches_request(text: str, title: str) -> bool:
     wanted, actual = terms(text), terms(title)
     if not wanted:
         return False
-    matches = sum(any(a == w or (len(w) >= 4 and (a.startswith(w) or w.startswith(a))) for a in actual) for w in wanted)
+    matches = sum(any(word_matches(w, a) for a in actual) for w in wanted)
     if "dont" in wanted and "don" in actual and "dont" not in actual:
         matches += 1  # YouTube commonly tokenizes “don't” as “don” and “t”.
     return matches >= max(1, (len(wanted) + 1) // 2)

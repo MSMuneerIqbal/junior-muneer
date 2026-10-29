@@ -124,13 +124,14 @@ def test_whatsapp_action_setting_is_manual_by_default_and_validated(wa):
 
 
 @pytest.mark.parametrize("mode", ["rules", "ask_all"])
-def test_whatsapp_urdu_song_uses_media_and_respects_channel_mode(wa, monkeypatch, mode):
+@pytest.mark.parametrize("utterance", ["یار ایک سونگ تو چلا دو YouTube پہ Blue Eyes", "ایک سونگ پلے کرو یار مہک ملک کا جس کا نام ہے ایادن چن باہوں سونا ہے"])
+def test_whatsapp_urdu_song_uses_media_and_respects_channel_mode(wa, monkeypatch, mode, utterance):
     monkeypatch.setenv("FAKE_AI", "true")
     get_settings.cache_clear()
     with app(ScriptedModel([])) as client:
         client.put("/api/computer/browser", json={"enabled": True, "sites": ["*"]})
         client.patch("/api/settings", json={"whatsapp_action_mode": mode})
-        signed(client, text("یار ایک سونگ تو چلا دو YouTube پہ Blue Eyes", mid=f"wamid.music.{mode}"))
+        signed(client, text(utterance, mid=f"wamid.music.{mode}"))
         wait_for(wa, 2, seconds=30)
         cards = [item for item in wa if item.get("type") == "interactive"]
         approvals = client.get("/api/approvals?status=all&platform=computer").json()
