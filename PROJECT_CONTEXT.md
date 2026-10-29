@@ -9,8 +9,8 @@ and caused misleading approval-loop responses even though WhatsApp and browser/m
 recognize additional Urdu verbs and words, reject negated commands, recognize Urdu continuation, and match Urdu
 artist/title words to Roman video titles using a bounded phonetic comparison. Exact request passed fake WhatsApp
 Auto/Manual tests and a real YouTube play check with a mocked WhatsApp transport and disposable DB (12.6s, zero
-model cost). Full backend and focused music UI passed; a supervised restart follows the commit. The requested
-signed-in browser remains unfinished.
+model cost). Full backend and focused music UI passed. The supervised app restarted healthy at code revision
+84b3e6e; the requested signed-in browser remains unfinished.
 
 2026-10-29 follow-up in progress: Muneer wants Settings → Computer to choose his signed-in browser or Junior's
 separate browser, and wants requests like “song change kro” to change the song. The signed-in browser choice is

@@ -4,12 +4,12 @@ Built from [PLAN.md](PLAN.md) (current system-action scope: section 14h, v10). T
 
 ## Current follow-up: browser and music (2026-10-29)
 
-- [~] Urdu WhatsApp playback follow-up: recognize Urdu-script playback verbs and match Urdu song/artist words to
+- [x] Urdu WhatsApp playback follow-up: recognize Urdu-script playback verbs and match Urdu song/artist words to
   Roman titles with bounded phonetic matching, plus Urdu continuation and negation checks. Fake WhatsApp Auto and
   Manual tests passed; a throwaway WhatsApp webhook and real YouTube test confirmed one completed music action,
   advancing unmuted video and no approval buttons (12.6s, zero model cost; speakers not verified). Full backend
-  regression passed and focused music UI 4 passed. A supervised restart follows the commit; the player still uses
-  a separate browser.
+  regression passed and focused music UI 4 passed. The supervised app restarted healthy at code revision 84b3e6e;
+  the player still uses a separate browser.
 
 - [ ] Add a Settings → Computer choice for the signed-in Chrome/Edge browser or Junior's separate browser.
   The existing debugging connection is isolated and does not implement this choice. A signed-in integration must

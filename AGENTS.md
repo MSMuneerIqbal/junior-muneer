@@ -22,9 +22,9 @@ have not been decided. Do not infer those requirements from the word "product".
 
 ## Where we are (update this at the end of every session)
 
-- **2026-10-29 latest WhatsApp playback follow-up in progress:** Urdu-script playback requests and Urdu-to-Roman
+- **2026-10-29 latest WhatsApp playback follow-up:** Urdu-script playback requests and Urdu-to-Roman
   video matching added locally; exact-request fake WhatsApp Auto/Manual and real YouTube playback through a mocked
-  WhatsApp transport passed. Full backend and focused music UI passed; a supervised restart follows the commit.
+  WhatsApp transport passed. Full backend and focused music UI passed; supervised app restarted at code revision 84b3e6e.
   The signed-in browser remains unfinished.
 
 - **2026-10-29 browser/music follow-up in progress:** Muneer wants a Settings → Computer choice between his
