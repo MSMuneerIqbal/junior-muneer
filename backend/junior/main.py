@@ -140,8 +140,10 @@ def create_app(
         from junior.browser.runtime import BrowserManager
         from junior.browser.fake import FakeBrowserManager
         app.state.browser = FakeBrowserManager() if settings.fake_ai else BrowserManager()
+        from junior.browser.signed_bridge import SignedBrowserBridge
+        app.state.signed_browser = SignedBrowserBridge()
         from junior.browser.media import Player
-        app.state.media_player = Player(fake=settings.fake_ai)
+        app.state.media_player = Player(fake=settings.fake_ai, signed_bridge=app.state.signed_browser)
         app.state.senders = senders() if senders is not None else default_senders(settings, app.state.pc_jobs, app.state.browser, app.state.media_player)
         recover_interrupted_sends()
         recover_background()
@@ -197,6 +199,7 @@ def create_app(
                 await maintenance_reports
             await app.state.browser.close()
             await app.state.media_player.close()
+            await app.state.signed_browser.disconnect()
             await app.state.pc_jobs.close()
             if scheduler:
                 scheduler.cancel()
@@ -242,6 +245,8 @@ def create_app(
     app.include_router(pause_router)
     app.include_router(backup_router)
     app.include_router(settings_router)
+    from junior.scheduler import router as scheduler_router
+    app.include_router(scheduler_router)
     app.include_router(voice_router)
     app.include_router(calls_router)
     app.include_router(gemini_router)

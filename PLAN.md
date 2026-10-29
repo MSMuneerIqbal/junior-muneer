@@ -109,6 +109,10 @@ Upwork and Fiverr are your income, and a ban is not worth the time saved. Copy a
 | Code storage | **Git** (private GitHub repo) | History of every change; easy to move to another PC or the VPS |
 | Later | WhatsApp; Docker + VPS | Last phase |
 
+2026-10-29 follow-up: provide a Settings → Scheduled jobs catalog with individual switches for the existing automatic
+news digest/email, briefing, inbox, memory, feeds, backup and post/order reminder jobs. Keep current job timing and
+permission checks, share existing settings, and leave on-demand actions available. Switches affect future runs.
+
 **Not used:** Playwright, browser control, computer use, an agent Chrome profile. Agents never see or use your site logins.
 
 ## 5. Your accounts and how data gets in and out

@@ -98,8 +98,8 @@ class SettingsUpdate(BaseModel):
 
 
 # Edited through their own pages and endpoints (/api/profile, /api/permissions).
-NOT_HERE = {"profile", "permission_mode", "permission_rules", "permission_unlocked_rules", "memory_tidied_at", "feeds_read_at", "news_emailed_on",
-            "email_checked_at", "email_watch_since", "email_alerts_waiting", "computer_folders"}
+NOT_HERE = {"profile", "permission_mode", "permission_rules", "permission_unlocked_rules", "signed_browser_media", "memory_tidied_at", "feeds_read_at", "news_emailed_on",
+            "email_checked_at", "email_watch_since", "email_alerts_waiting", "computer_folders", "scheduled_backup_enabled", "scheduled_posts_enabled", "scheduled_orders_enabled", "scheduled_feeds_enabled"}
 
 
 @router.get("/api/settings")

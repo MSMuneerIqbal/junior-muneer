@@ -196,13 +196,13 @@ def test_gemini_search_uses_google_search_and_url_reading_with_sources(keys, mon
     assert ctx.helpers.asked == []
 
 
-def test_if_gemini_search_fails_openai_searches(keys, monkeypatch):
+def test_if_gemini_search_fails_no_other_provider_is_used(keys, monkeypatch):
     monkeypatch.setattr(websearch, "GEMINI_CLIENT", FakeGeminiClient(fail=True))
     with TestClient(create_app()):
         set_setting("web_search_provider", "gemini")
         text, ctx = search("anything")
-    assert text == "OpenAI researcher: findings." and ctx.helpers.asked == ["web_researcher"]
-    assert any("Gemini search didn't work" in e.get("label", "") for e in ctx.pending_events)
+    assert "Web search failed with the selected Gemini provider" in text and not ctx.helpers.asked
+    assert any("Gemini search failed" in e.get("label", "") for e in ctx.pending_events)
 
 
 def test_spend_shows_gemini(keys, monkeypatch):
@@ -220,7 +220,7 @@ def test_spend_shows_gemini(keys, monkeypatch):
     assert today["web_search"]["gemini"] == pytest.approx(0.001)
 
 
-def test_a_hanging_gemini_search_gives_up_and_openai_searches(keys, monkeypatch):
+def test_a_hanging_gemini_search_gives_up_without_switching_provider(keys, monkeypatch):
     class Hanging(FakeGeminiClient):
         async def _generate(self, model, contents, config):
             await asyncio.sleep(3600)
@@ -230,4 +230,4 @@ def test_a_hanging_gemini_search_gives_up_and_openai_searches(keys, monkeypatch)
     with TestClient(create_app()):
         set_setting("web_search_provider", "gemini")
         text, ctx = search("anything")
-    assert text == "OpenAI researcher: findings." and ctx.helpers.asked == ["web_researcher"]
+    assert "Web search failed with the selected Gemini provider" in text and not ctx.helpers.asked

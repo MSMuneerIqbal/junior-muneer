@@ -12,6 +12,7 @@ import LimitSummary from "@/components/LimitSummary";
 import ComputerJobs from "@/components/ComputerJobs";
 import DesktopSettings from "@/components/DesktopSettings";
 import BrowserSettings from "@/components/BrowserSettings";
+import ScheduledJobsSettings from "@/components/ScheduledJobsSettings";
 import { BACKEND_URL, fetcher, send } from "@/lib/api";
 import { PERMISSIONS_KEY, SETTINGS_KEY, USAGE_KEY } from "@/lib/keys";
 import type { Settings } from "@/lib/types";
@@ -48,7 +49,7 @@ type Permissions = {
 // The left menu: one section shows at a time. "#news" in the address opens that section.
 type SectionId =
   | "profile" | "budget" | "models" | "search" | "voice" | "calls" | "connections" | "whatsapp" | "posting" | "news"
-  | "computer" | "skills" | "tasks" | "permissions" | "advanced";
+  | "computer" | "skills" | "tasks" | "scheduled" | "permissions" | "advanced";
 type MenuItem = { id: SectionId; title: string }; // its icon: SettingsIcon by id
 const GROUPS: { title: string; items: MenuItem[] }[] = [
   { title: "Account", items: [{ id: "profile", title: "Profile" }, { id: "budget", title: "Budget" }] },
@@ -69,7 +70,7 @@ const GROUPS: { title: string; items: MenuItem[] }[] = [
       { id: "posting", title: "Posting" },
     ],
   },
-  { title: "Automation", items: [{ id: "skills", title: "Skills" }, { id: "tasks", title: "Background tasks" }, { id: "news", title: "News & email" }, { id: "computer", title: "Computer" }] },
+  { title: "Automation", items: [{ id: "skills", title: "Skills" }, { id: "tasks", title: "Background tasks" }, { id: "scheduled", title: "Scheduled jobs" }, { id: "news", title: "News & email" }, { id: "computer", title: "Computer" }] },
   {
     title: "Safety",
     items: [
@@ -627,6 +628,9 @@ function SettingsForm({ initial }: { initial: Settings }) {
         </Row>
       </Section>
 
+      <Section id="scheduled" title="Scheduled jobs" description="See Junior's automatic work and choose which jobs run.">
+        <ScheduledJobsSettings />
+      </Section>
       <Section id="tasks" title="Background tasks" description="Limits for new research, presentations and other background jobs. Running jobs keep the limits they started with.">
         <Row label="Cost allowance per task" hint="Stops further AI work when reached. Responses are bounded to fit the remaining allowance; provider billing can differ slightly.">
           <input type="number" min={0.01} max={10} step={0.05} value={form.task_budget_usd} onChange={(e) => set("task_budget_usd", e.target.value as unknown as number)} className={`${input} max-w-40`} aria-label="Task cost allowance in US dollars" />
@@ -1659,7 +1663,7 @@ export default function SettingsPage() {
                           active === s.id ? "bg-panel-2 text-ink" : "text-ink/80 hover:bg-panel-2/60 hover:text-ink"
                         }`}
                       >
-                        <SettingsIcon name={s.id} className="h-[18px] w-[18px] shrink-0 opacity-90" />
+                        <SettingsIcon name={s.id === "scheduled" ? "tasks" : s.id} className="h-[18px] w-[18px] shrink-0 opacity-90" />
                         {s.title}
                       </button>
                     </li>

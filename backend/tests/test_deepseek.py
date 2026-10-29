@@ -228,7 +228,7 @@ class SlowToolWriter(ScriptedModel):
 
         SlowToolWriter.calls += 1
         if SlowToolWriter.calls == 2:  # after the first tool step: the slow part
-            for n in range(12):  # 1.2 s of writing, longer than the 0.3 s silence limit below
+            for n in range(20):  # 2 s of writing, longer than the 1 s silence limit below
                 await asyncio.sleep(0.1)
                 yield ResponseFunctionCallArgumentsDeltaEvent(
                     type="response.function_call_arguments.delta", delta='"more doc text", ', item_id="fc1",
@@ -241,7 +241,7 @@ def test_a_long_tool_call_isnt_mistaken_for_silence(monkeypatch):
     import junior.agent.runner as runner
     import junior.chat.service as service
 
-    monkeypatch.setattr(service, "STALL_SECONDS", 0.3)
+    monkeypatch.setattr(service, "STALL_SECONDS", 1.0)
     monkeypatch.setattr(runner, "ALIVE_SECONDS", 0.05)
     SlowToolWriter.calls = 0
     model = SlowToolWriter([[function_call("spending", {"period": "today"}, call_id="s1")], chunked_answer("Your doc is ready.")])

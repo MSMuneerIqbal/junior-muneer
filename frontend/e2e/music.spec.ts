@@ -7,6 +7,7 @@ test.afterEach(async ({ request }) => {
 
 for (const mode of ["rules", "ask_all"] as const) {
   test(`YouTube music ${mode === "rules" ? "plays in Auto" : "starts after one Manual approval"}`, async ({ page, request }) => {
+    test.setTimeout(90_000); // Play, change and stop each wait for a separate completed action.
     await request.put("http://127.0.0.1:8100/api/computer/browser", { data: { enabled: true, sites: ["*"] } });
     await request.put("http://127.0.0.1:8100/api/permissions/mode", { data: { mode } });
     await page.goto("/");

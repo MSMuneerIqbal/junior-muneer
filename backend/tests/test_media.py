@@ -41,7 +41,8 @@ def test_song_request_matching_is_specific():
     assert not is_request("how do I play a song on YouTube?")
     assert not is_request("play the role of a music critic")
     assert not is_request("translate this sentence: play the song Blue Eyes")
-    assert not is_request("play the song Blue Eyes in my signed-in browser")
+    assert is_request("play the song Blue Eyes in my signed-in browser")
+    assert matches_request("play the song Blue Eyes in my signed-in browser", "Blue Eyes Full Video Song")
     assert not is_request("play the song Blue Eyes and send an email")
     assert is_request("یار ایک سونگ تو چلا دو YouTube پہ Blue Eyes")
     assert matches_request("یار ایک سونگ تو چلا دو YouTube پہ Blue Eyes", "Blue Eyes Full Video Song")
@@ -79,6 +80,41 @@ def test_auto_song_request_runs_one_action_without_model_or_approval(client):
     assert "Stopped Junior's YouTube player" in stop["text"]
     assert not client.app.state.media_player.session
     assert not client.get("/api/computer/media").json()["active"]
+
+
+def test_explicit_personal_browser_request_never_opens_a_separate_browser(client):
+    events, result = chat(client, "play the song Blue Eyes in my signed-in browser")
+    assert "Select My Chrome profile" in result["text"]
+    assert not [event for event in events if event["type"] == "approval"]
+
+
+def test_continuation_reports_player_error_instead_of_claiming_success(client):
+    _, result = chat(client, "play the song blue eyes honey singh")
+    player = client.app.state.media_player
+    player.problem = "YouTube stopped playback with a player error. The player is still open; check it before trying again."
+    assert client.get("/api/computer/media").json()["playback_error"] == player.problem
+    events, answer = chat(client, "continue", result["conversation_id"])
+    assert "stopped playback" in answer["text"]
+    assert not [event for event in events if event["type"] == "approval"]
+
+
+def test_player_reports_visible_error_and_recovers_after_playback_resumes():
+    import asyncio
+    from junior.browser.media import Player
+
+    class Page:
+        def __init__(self):
+            self.state = {"error": True, "playing": False}
+        async def evaluate(self, script):
+            return self.state
+
+    player = Player()
+    player.page = Page()
+    asyncio.run(player.check_playback())
+    assert "stopped playback" in player.problem
+    player.page.state = {"error": False, "playing": True}
+    asyncio.run(player.check_playback())
+    assert player.problem == ""
 
 
 def test_change_song_auto_and_manual_and_session_guard(client):
@@ -168,6 +204,34 @@ def test_manual_stop_does_not_close_a_newer_player(client):
     assert client.app.state.media_player.session == newer
 
 
+def test_waiting_play_card_cannot_switch_to_another_browser(client):
+    from junior.settings_store import set_setting
+    set_mode("ask_all")
+    events, _ = chat(client, "play the song blue eyes honey singh")
+    card = next(event["item"] for event in events if event["type"] == "approval")
+    set_setting("signed_browser_media", True)
+    result = client.post(f"/api/approvals/{card['id']}/approve", json={}).json()
+    assert result["status"] != "posted"
+    assert not client.app.state.media_player.session
+
+
+def test_waiting_signed_play_card_cannot_use_a_new_connection(client):
+    from junior.settings_store import set_setting
+    class Peer:
+        async def close(self, **kwargs):
+            pass
+    bridge = client.app.state.signed_browser
+    bridge.socket = Peer()
+    set_setting("signed_browser_media", True)
+    set_mode("ask_all")
+    events, _ = chat(client, "play the song blue eyes honey singh")
+    card = next(event["item"] for event in events if event["type"] == "approval")
+    bridge.generation = "new-connection"
+    result = client.post(f"/api/approvals/{card['id']}/approve", json={}).json()
+    assert result["status"] != "posted"
+    assert not client.app.state.media_player.session
+
+
 def test_manual_song_approval_plays_without_continue(client):
     set_mode("ask_all")
     events, result = chat(client, "play the song blue eyes honey singh")
@@ -226,7 +290,7 @@ def test_approval_rechecks_original_user_request(client):
 
 def test_verification_is_reported_and_never_replayed(client, monkeypatch):
     from junior.browser.media import VerificationRequired
-    async def require_verification(payload):
+    async def require_verification(payload, **kwargs):
         raise VerificationRequired("YouTube requested verification. Complete it in the visible player; playback is not confirmed.")
     monkeypatch.setattr(client.app.state.media_player, "play", require_verification)
     events, result = chat(client, "play the song blue eyes honey singh")

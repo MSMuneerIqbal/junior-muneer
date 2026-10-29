@@ -3,6 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { BACKEND_URL, fetcher, send } from "@/lib/api";
+import SignedBrowserSettings from "@/components/SignedBrowserSettings";
 
 type Browser = { enabled: boolean; sites: string[]; allow_all: boolean; connected: boolean; simulation: boolean; url: string;
   adapter: string; transport_connected: boolean; peer_port: number;
@@ -51,13 +52,14 @@ export default function BrowserSettings() {
 
   return <section aria-label="Browser controls" className="flex min-w-0 flex-col gap-3">
     <h3 className="text-sm font-semibold">Browser controls</h3>
-    <p className="text-xs text-muted">Requested YouTube music uses a separate visible temporary player. Auto starts it; Manual asks once. YouTube may require you to complete verification in that window.</p>
+    <p className="text-xs text-muted">Auto starts requested YouTube music; Manual asks once. YouTube may require you to complete verification in the player.</p>
     <p className="text-xs text-muted">Junior opens pages in a background browser with a temporary profile, separate from your signed-in browser. In Auto, user-directed browser actions run as part of the task; in Manual, each action waits for your approval. If approval is needed, ask Junior to continue afterward.</p>
     <p className="text-xs text-muted">Sessions close after 15 minutes, Pause, Plan mode or Computer off. No passwords, payments or private networks. Page snapshots use no vision calls. Downloads up to 20 MB appear in the Downloads gallery.</p>
       {(error || loadError) && <p role="alert" className="text-xs text-danger">{error || "Couldn't load browser settings."}</p>}
     {!data && !loadError && <p className="text-xs text-muted">Loading browser settings…</p>}
     {data && <>
       {data.simulation && <p className="text-xs text-warn">Fake AI uses a simulated browser. No websites are contacted.</p>}
+      <SignedBrowserSettings />
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={data.enabled} disabled={busy}
         onChange={(e) => void update(e.target.checked)} />Enable browser controls</label>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={data.allow_all} disabled={busy}

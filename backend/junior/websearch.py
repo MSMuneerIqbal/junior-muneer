@@ -7,7 +7,7 @@
     gemini     Gemini 2.5 Flash with Google Search grounding and URL reading (google-genai SDK): Google's results,
                summarized with their links. Free with a free-tier Gemini key (1,500 searches a day). Needs GEMINI_API_KEY.
 
-If DeepSeek or Gemini search fails or isn't set up, that question goes to OpenAI search instead (Show work says so).
+If the selected search provider fails, report the failure without switching providers.
 Results are web pages: outside text, fenced, data never instructions.
 """
 
@@ -81,7 +81,7 @@ def results_text(results: list[dict]) -> str:
 # Gemini 2.5 Flash: Google Search is free on it with a free-tier key (1,500 a day); on Gemini 3 models a free key
 # has no search quota (tested 2026-10-20). It also reads links (URL context) in the same request.
 GEMINI_SEARCH_MODEL = "gemini:gemini-2.5-flash"
-GEMINI_SEARCH_SECONDS = 45  # Google hanging: give up, and OpenAI searches instead
+GEMINI_SEARCH_SECONDS = 45  # Don't wait indefinitely if Google hangs.
 GEMINI_PROMPT = (
     "Search the web with Google and answer for an assistant who will pass it on. Today is {today}. Question: {query}\n"
     "Give the key facts as short bullet points, newest first, with dates for news and prices. If a link is in the "
@@ -115,7 +115,7 @@ async def gemini_search(query: str, context) -> str:
             ),
             GEMINI_SEARCH_SECONDS,
         )
-    except Exception as e:  # noqa: BLE001 - rate limits, a bad key, Google down: OpenAI searches instead
+    except Exception as e:  # noqa: BLE001 - report rate limits, a bad key or Google being down
         raise SearchError(f"Gemini search failed ({type(e).__name__}: {str(e)[:120]})") from None
     usage = getattr(response, "usage_metadata", None)
     tokens_in = int(getattr(usage, "prompt_token_count", 0) or 0)
@@ -156,9 +156,10 @@ async def search_for(context, query: str) -> str:
         try:
             found = await gemini_search(query, context)
         except SearchError as e:
-            log.info("Gemini search failed, using OpenAI search: %s", e)
+            log.info("Gemini search failed: %s", e)
             context.emit({"type": "step", "id": f"search-{uuid.uuid4().hex[:8]}", "kind": "tool", "status": "done",
-                          "label": f"Gemini search didn't work ({e}); searched with OpenAI instead"})
+                          "label": f"Gemini search failed ({e}); no other provider was used"})
+            return f"Web search failed with the selected Gemini provider: {e}. Tell the user search failed; do not claim current facts were verified."
         else:
             context.emit({"type": "step", "id": f"search-{uuid.uuid4().hex[:8]}", "kind": "web_search", "status": "done",
                           "label": f"Searched Google with Gemini: {query[:80]}"})
@@ -172,9 +173,10 @@ async def search_for(context, query: str) -> str:
         try:
             results = await deepseek_search(query)
         except SearchError as e:
-            log.info("DeepSeek search failed, using OpenAI search: %s", e)
+            log.info("DeepSeek search failed: %s", e)
             context.emit({"type": "step", "id": f"search-{uuid.uuid4().hex[:8]}", "kind": "tool", "status": "done",
-                          "label": f"DeepSeek search didn't work ({e}); searched with OpenAI instead"})
+                          "label": f"DeepSeek search failed ({e}); no other provider was used"})
+            return f"Web search failed with the selected DeepSeek provider: {e}. Tell the user search failed; do not claim current facts were verified."
         else:
             from junior.models import get_router
             from junior.documents.sources import remember_source

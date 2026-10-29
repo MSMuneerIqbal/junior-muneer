@@ -4,6 +4,14 @@ Built from [PLAN.md](PLAN.md) (current system-action scope: section 14h, v10). T
 
 ## Current follow-up: browser and music (2026-10-29)
 
+- [x] Scheduled jobs: Settings lists nine existing automatic jobs with enable/disable switches; shares the existing
+  news, email, briefing and memory switches and leaves manual actions and existing permissions intact. Full backend
+  passed; desktop and phone focused UI passed. Full dashboard 141 passed/14 skipped/one music timing failure; both
+  music tests passed on rerun with a corrected overall timeout. Supervised app restarted and dashboard HTTP 200.
+- [x] Web-search provider follow-up: respect DeepSeek/Gemini selection on failure without automatic OpenAI search.
+  Live DeepSeek search and isolated chat succeeded; AI-news separately requires OpenAI credits. Supervised app was
+  restarted and the live search setting is DeepSeek; full backend and focused search tests passed.
+
 - [x] Urdu WhatsApp playback follow-up: recognize Urdu-script playback verbs and match Urdu song/artist words to
   Roman titles with bounded phonetic matching, plus Urdu continuation and negation checks. Fake WhatsApp Auto and
   Manual tests passed; a throwaway WhatsApp webhook and real YouTube test confirmed one completed music action,
@@ -14,6 +22,10 @@ Built from [PLAN.md](PLAN.md) (current system-action scope: section 14h, v10). T
 - [ ] Add a Settings → Computer choice for the signed-in Chrome/Edge browser or Junior's separate browser.
   The existing debugging connection is isolated and does not implement this choice. A signed-in integration must
   enforce the existing action modes and payment restrictions, and be tested in a real signed-in profile.
+  **In progress 2026-10-29:** paired local Chrome extension and a YouTube-only player mode are being built. This
+  does not provide general signed-in website control; it must not be described as full browser integration.
+  Pairing, local peer/origin checks, Auto/Manual playback, changed-tab handling and interruption are under test in
+  disposable profiles. Real owner-profile installation and multi-minute playback remain unverified.
 - [~] Support “next song” / “change it” for the player started by this chat, with Auto/Manual, WhatsApp's independent
   mode and stale-card checks. Focused media tests and desktop/phone fake-AI UI checks passed. A disposable real
   YouTube run started Blue Eyes and confirmed the next video advancing (34.7s, no model cost; speakers not verified).

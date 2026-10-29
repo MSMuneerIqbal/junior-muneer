@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Junior Muneer browser connection",
+  "version": "0.1.0",
+  "minimum_chrome_version": "116",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArErLTI4adDYBc+fWmcEZmrs02Fv9pg/JEf72tAU2QP6AFX7lZQ0gYLlb4LBEGIkOAQpcUCNgDbgO0pEJMsCebkB1KpTEyYOqkA4SD0DaxS5+zXH7QIv3WnFMrA9HntKwbG++x0XeY1AwLVXElayhN5YR2HYnLxqJQ9dcY8dZuKS7f76BIksEV1PIXLUc6cPZYMTnN79M21tywsmocI6Cpq5n5rVM31u2uljPDwPtOqDKiMhGVnouSwX7HY+aJPu+gUgEG2Ou0KiEtfcTqjQgeOMsB1lVoRP6YxHpKPuCj1M2uLfZQ3/Gh51nK7yJVaWx2jW4Pw+jyFsO0hKU/J9ueQIDAQAB",
+  "permissions": ["storage", "scripting", "alarms"],
+  "host_permissions": ["http://127.0.0.1/*", "https://www.youtube.com/*"],
+  "background": {"service_worker": "worker.js"},
+  "action": {"default_popup": "popup.html", "default_title": "Junior Muneer"}
+}

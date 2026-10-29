@@ -46,12 +46,13 @@ WhatsApp requests use their own action mode in Settings → WhatsApp, defaulting
 Manual approval does not currently resume a multi-step browser task automatically: ask Junior to continue after approval.
 
 **Music:** ask, for example, “play the song Blue Eyes by Yo Yo Honey Singh”. Junior searches YouTube and starts one
-matching video in a separate visible temporary Chromium player. The browser action rule and the YouTube playback
+matching video in a separate visible temporary Chromium player by default. An optional Chrome extension for the
+signed-in profile is described below. The browser action rule and the YouTube playback
 rule both apply: Auto starts it; Manual needs one approval for the whole playback. YouTube may show ads or require
 you to complete verification in the visible window. The player reports playback only after the video advances; it
 cannot verify your speaker volume. Say “stop the song” to close Junior's player, close the window yourself, or use
 Pause/Plan/Computer off. A Manual stop asks once; an old stop card cannot close a newer player. The player stops after
-15 minutes or when it navigates to another video. It uses its own browser networking, with HTTPS host restrictions
+15 minutes or when it navigates to another video. The separate player uses its own browser networking, with HTTPS host restrictions
 and public-DNS checks for YouTube and its media dependencies; unlike the general browser it does not use the
 numeric-IP-pinning proxy. It has no personal browser cookies or arbitrary browser-action tools.
 
@@ -60,6 +61,23 @@ Install the matching browser once after Python dependencies: from `backend/`, ru
 The Docker image includes it. Browser DOM snapshots and Settings polling use no model calls.
 
 ### Browser connection setup
+
+**Chrome extension for YouTube (experimental):** Settings → Computer → Browser controls → YouTube player browser
+can select Junior's separate player or a paired Chrome profile. This first extension supports YouTube playback,
+next and stop only; general signed-in website browsing is not implemented. Browser controls and YouTube site scope
+must be enabled, and the existing dashboard/WhatsApp Auto or Manual rules still apply. A disconnected extension
+does not fall back to the separate player. Playback is reported only after the video advances with audio unmuted;
+Chrome autoplay, verification, network or YouTube errors may still prevent it.
+
+To connect, open `chrome://extensions` in the Chrome profile you want, enable Developer mode and use **Load unpacked**
+to select this repository's `browser-extension` folder. In Junior's Computer settings generate a pairing code and
+paste it into the extension popup. The code grants local access to this connection; keep it private. Junior stores
+only its hash and the extension stores the code in Chrome's local extension storage. Disconnect from Junior's
+settings revokes the code. The extension controls only tabs it creates and leaves them alone if you navigate them
+elsewhere. It does not import your password or copy browser cookies. The user's regular Chrome networking applies
+to this mode; the isolated browser's IP-pinning proxy does not protect the signed-in Chrome profile. The owner must
+complete sign-in or verification themselves. Real signed-in playback and longer-duration reliability still require
+verification in the chosen profile.
 
 For a compatible running Chrome/Edge instance, open **Settings → Computer → Browser controls → Connect a running
 Chrome or Edge browser**. This is an explicit local debugging connection. Junior opens its own temporary context,
@@ -148,6 +166,12 @@ or unavailable Google Search is shown in the digest's source problems; recent of
 | Reading photos | OpenAI's small vision model or **DeepSeek V4.1 Flash** |
 | Live calls | **OpenAI Realtime** (Natural ~$0.05/min, Economy ~$0.02/min), **Gemini 3.8 Live** or **Gemini 2.5 Flash Live** (~$0.02/min, free tier) |
 | Voice messages | **OpenAI** or **Gemini** (Settings → Voice: the engine, plus the hearing and speaking model). Gemini's voice has 10 replies a day on a free key; then OpenAI speaks |
+
+Web search uses the selected provider. If DeepSeek or Gemini search fails, Junior reports the failure instead of switching to OpenAI. The AI-news workflow and chat-model fallback have separate model choices.
+
+Settings → Scheduled jobs lists the existing automatic news, email, briefing, memory, feeds, backup and reminder jobs.
+Turn each on or off there; this affects future scheduled runs, while manual requests remain available. News and
+briefing times can be changed in Settings → News & email.
 
 The **Today** panel shows today's spend by type, by provider (OpenAI, DeepSeek, Gemini) and web search by engine, against
 your daily cap. Every call to an AI is in **Activity**.

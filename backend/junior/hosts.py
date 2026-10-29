@@ -37,6 +37,12 @@ def trusted_origin(scope) -> bool:
         return True  # the webhook keeps its existing signature/authentication boundary
     headers = {k.lower(): v.decode("latin-1").strip() for k, v in scope.get("headers", [])}
     origin = headers.get(b"origin")
+    if scope.get("path") == "/api/computer/signed-browser/ws":
+        from junior.browser.signed_bridge import EXTENSION_ORIGIN, local_peer
+        client = scope.get("client")
+        return (scope["type"] == "websocket" and _host(scope) in {"127.0.0.1", "localhost", "::1", "[::1]"}
+                and not any(key in headers for key in (b"forwarded", b"x-forwarded-for", b"x-forwarded-host", b"x-real-ip"))
+                and bool(client) and local_peer(client[0]) and origin == EXTENSION_ORIGIN)
     if not origin:
         unsafe = scope["type"] == "websocket" or scope.get("method", "GET") not in {"GET", "HEAD", "OPTIONS"}
         return not (unsafe and headers.get(b"sec-fetch-site") == "cross-site")

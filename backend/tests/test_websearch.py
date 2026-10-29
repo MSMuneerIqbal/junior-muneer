@@ -82,22 +82,22 @@ def test_deepseek_search_returns_fenced_results_and_counts_its_cost(search):
 
 
 @pytest.mark.parametrize("status", [401, 402, 500])
-def test_when_deepseek_search_fails_openai_searches_instead(search, status):
+def test_when_deepseek_search_fails_no_other_provider_is_used(search, status):
     context, _, answer, helpers = search
     set_setting("web_search_provider", "deepseek")
     answer["status"] = status
     ctx = context()
-    assert run(websearch.search_for(ctx, "weather in Lahore")) == "OpenAI researcher: findings with sources."
-    assert helpers.asked and any("searched with OpenAI instead" in e.get("label", "") for e in ctx.pending_events)
+    assert "Web search failed with the selected DeepSeek provider" in run(websearch.search_for(ctx, "weather in Lahore"))
+    assert not helpers.asked and any("no other provider was used" in e.get("label", "") for e in ctx.pending_events)
 
 
-def test_without_a_deepseek_key_openai_searches(search, monkeypatch):
+def test_without_a_deepseek_key_reports_failure_without_fallback(search, monkeypatch):
     context, calls, _, helpers = search
     monkeypatch.setenv("DEEPSEEK_API_KEY", "")
     get_settings.cache_clear()
     set_setting("web_search_provider", "deepseek")
-    run(websearch.search_for(context(), "anything"))
-    assert calls == [] and helpers.asked
+    assert "needs DEEPSEEK_API_KEY" in run(websearch.search_for(context(), "anything"))
+    assert calls == [] and not helpers.asked
 
 
 def test_spend_today_shows_each_provider_and_each_search_engine(search):

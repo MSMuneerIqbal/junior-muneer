@@ -38,6 +38,7 @@ DEFAULTS: dict[str, Any] = {
     "desktop_apps": ["notepad.exe"],
     "browser_enabled": False,  # temporary isolated browser; opt in and choose exact origins first
     "browser_sites": [],
+    "signed_browser_media": False,  # opt-in; YouTube media only, via explicitly paired Chrome extension
     "computer_folders": None,  # None = Desktop, Documents and Downloads; else your list of full paths
     "voice_engine": "openai",  # voice messages: "openai" or "gemini" (Settings -> Voice)
     "voice_hear_model": "",  # "" = the engine's default (agents/models.toml)
@@ -85,6 +86,11 @@ DEFAULTS: dict[str, Any] = {
     "whatsapp_action_mode": "ask_all",  # WhatsApp requests default to Manual independently of dashboard.
     # Phase 7: when your own feeds were last read (every 3 hours).
     "feeds_read_at": "",
+    # Scheduled jobs without existing dedicated switches. On-demand actions are unaffected.
+    "scheduled_backup_enabled": True,
+    "scheduled_posts_enabled": True,
+    "scheduled_orders_enabled": True,
+    "scheduled_feeds_enabled": True,
     # Permission rules (/api/permissions): ask_all · rules, and your rule per action type.
     "permission_mode": "rules",
     "permission_rules": {},

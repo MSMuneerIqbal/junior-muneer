@@ -1,8 +1,21 @@
 import { expect, test } from "@playwright/test";
 
 test.afterEach(async ({ request }) => {
+  await request.put("http://127.0.0.1:8100/api/computer/signed-browser/media", { data: { enabled: false } });
+  await request.post("http://127.0.0.1:8100/api/computer/signed-browser/disconnect");
   await request.put("http://127.0.0.1:8100/api/computer/browser", { data: { enabled: false, sites: [] } });
   await request.put("http://127.0.0.1:8100/api/permissions/mode", { data: { mode: "rules" } });
+});
+
+test("signed-in Chrome player mode and local pairing controls", async ({ page, request }) => {
+  await page.goto("/settings#computer");
+  const signed = page.getByRole("region", { name: "Signed-in Chrome player" });
+  await expect(signed.getByText("Chrome extension not connected")).toBeVisible();
+  await signed.getByRole("combobox", { name: "YouTube browser" }).selectOption("chrome");
+  await expect.poll(async () => (await (await request.get("http://127.0.0.1:8100/api/computer/signed-browser")).json()).media_enabled).toBe(true);
+  await signed.getByRole("button", { name: "Generate pairing code" }).click();
+  await expect(signed.getByRole("textbox", { name: "Pairing code" })).toHaveValue(/[A-Za-z0-9_-]{40,100}/);
+  await expect(signed.getByText(/General website actions still use/)).toBeVisible();
 });
 
 test("allow all public websites can be switched on and off", async ({ page }, info) => {

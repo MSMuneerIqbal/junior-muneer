@@ -4,7 +4,7 @@ import json
 import re
 
 from agents import RunContextWrapper, function_tool
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response, WebSocket
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from junior import gate
@@ -144,23 +144,26 @@ def get_config(request: Request):
 
 @router.get("/api/computer/media")
 def media_status(request: Request):
-    return {"active": bool(request.app.state.media_player.session)}
+    player = request.app.state.media_player
+    return {"active": bool(player.session), "playback_error": player.problem}
 
 
 @router.put("/api/computer/browser")
 async def put_config(body: BrowserConfig, request: Request):
-    await request.app.state.browser.disconnect()
-    await request.app.state.media_player.close()
-    set_setting("browser_enabled", body.enabled)
-    set_setting("browser_sites", body.sites)
+    async with request.app.state.media_player.lock:
+        await request.app.state.browser.disconnect()
+        await request.app.state.media_player.close()
+        set_setting("browser_enabled", body.enabled)
+        set_setting("browser_sites", body.sites)
     audit("setting", "browser_config", detail=body.model_dump())
     return config(request.app.state.browser)
 
 
 @router.post("/api/computer/browser/disconnect")
 async def disconnect(request: Request):
-    await request.app.state.browser.disconnect()
-    await request.app.state.media_player.close()
+    async with request.app.state.media_player.lock:
+        await request.app.state.browser.disconnect()
+        await request.app.state.media_player.close()
     return config(request.app.state.browser)
 
 
@@ -177,6 +180,70 @@ async def preview(request: Request):
 class BrowserConnection(BaseModel):
     model_config = ConfigDict(extra="forbid")
     port: int = Field(default=9222, ge=1024, le=65535)
+
+
+class SignedMediaMode(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    enabled: bool
+
+
+def signed_status(request: Request):
+    from pathlib import Path
+    return {"connected": request.app.state.signed_browser.connected,
+            "media_enabled": get_setting("signed_browser_media"),
+            "extension_folder": str(Path(__file__).resolve().parents[3] / "browser-extension")}
+
+
+def require_local(request: Request):
+    from junior.browser.signed_bridge import local_peer
+    from urllib.parse import urlsplit
+    hostname = urlsplit("http://" + request.headers.get("host", "")).hostname
+    forwarded = any(name in request.headers for name in ("forwarded", "x-forwarded-for", "x-forwarded-host", "x-real-ip"))
+    if forwarded or hostname not in {"localhost", "127.0.0.1", "::1"} or not local_peer(request.client.host if request.client else None):
+        raise HTTPException(403, "The signed-in browser can only be paired on this computer.")
+
+
+@router.get("/api/computer/signed-browser")
+def signed_browser_status(request: Request):
+    require_local(request)
+    return signed_status(request)
+
+
+@router.post("/api/computer/signed-browser/pair")
+async def signed_browser_pair(request: Request, response: Response):
+    require_local(request)
+    from junior.browser.signed_bridge import issue_pairing_code
+    async with request.app.state.media_player.lock:
+        await request.app.state.media_player.close()
+        await request.app.state.signed_browser.disconnect()
+        response.headers["Cache-Control"] = "no-store"
+        return {**signed_status(request), "pairing_code": issue_pairing_code()}
+
+
+@router.post("/api/computer/signed-browser/disconnect")
+async def signed_browser_disconnect(request: Request):
+    require_local(request)
+    from junior.browser.signed_bridge import revoke_pairing
+    async with request.app.state.media_player.lock:
+        await request.app.state.media_player.close()
+        await request.app.state.signed_browser.disconnect()
+        revoke_pairing()
+    return signed_status(request)
+
+
+@router.put("/api/computer/signed-browser/media")
+async def signed_browser_media(body: SignedMediaMode, request: Request):
+    require_local(request)
+    async with request.app.state.media_player.lock:
+        await request.app.state.media_player.close()
+        set_setting("signed_browser_media", body.enabled)
+    audit("setting", "signed_browser_media", detail={"enabled": body.enabled})
+    return signed_status(request)
+
+
+@router.websocket("/api/computer/signed-browser/ws")
+async def signed_browser_socket(socket: WebSocket):
+    await socket.app.state.signed_browser.serve(socket)
 
 
 @router.post("/api/computer/browser/connect")

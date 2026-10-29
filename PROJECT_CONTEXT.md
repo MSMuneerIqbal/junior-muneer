@@ -1,8 +1,19 @@
 # Junior Muneer: project context
 
+2026-10-29: Muneer asked why choosing DeepSeek or Gemini for web search still used OpenAI. The live web-search setting was Gemini; DeepSeek's `deepseek-flash` already maps to 1017 and its search API returned three results with the configured key. Changed the live search setting to DeepSeek. A throwaway real DeepSeek chat used DeepSeek search and answered with sources in 8.8 seconds ($0.00549). Regular search no longer falls back to OpenAI on DeepSeek/Gemini failure. AI-news agents and main-chat fallback are separate paths; a live AI-news check failed with OpenAI insufficient credits. Search-provider selection does not change those paths.
+
+2026-10-29 scheduled-jobs work: Settings → Scheduled jobs lists nine existing scheduler automations and provides per-job switches. News, email, briefing, inbox and memory use their existing settings; backups, post/order reminders and feeds have new scheduler-only switches. They don't stop work already running or disable manual actions. Full backend and targeted scheduler/settings/search tests passed; desktop/phone scheduled UI passed. Full dashboard 141 passed/14 skipped/one music timeout; both music tests passed on rerun after increasing the total test timeout. TypeScript and ESLint passed. Supervised app restarted healthy, with nine jobs and DeepSeek search selected. Signed-in Chrome remains YouTube-only and unverified in the owner's profile.
+
 Last reviewed: **2026-10-27**, after cost/workflow acceptance (P11-08).
 
 ## Active continuation (2026-10-27)
+
+2026-10-29 signed-in Chrome work in progress: a locally paired extension and opt-in YouTube-only player mode are
+under development in `browser-extension/` and `junior/browser/signed_bridge.py`. General signed-in website
+navigation, DOM observation and actions remain unimplemented. Chrome profile networking is separate from the
+isolated browser's IP-pinning proxy; do not claim equivalent protection. The old user-player error was reproduced
+around 45 seconds in multiple signed-out disposable profiles, including when support hosts were allowed. Real
+signed-in playback must be tested beyond that interval; no personal Chrome profile has yet been connected.
 
 2026-10-29 latest WhatsApp issue: a user-directed Urdu-script playback verb routed to general browser actions
 and caused misleading approval-loop responses even though WhatsApp and browser/music rules were Auto. In progress:
