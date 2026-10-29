@@ -22,6 +22,11 @@ have not been decided. Do not infer those requirements from the word "product".
 
 ## Where we are (update this at the end of every session)
 
+- **Live music test 2026-10-29:** At Muneer's request, Junior received the actual Blue Eyes request through a
+  temporary database, found the matching YouTube video and reported one posted media action. Video advanced with
+  audio unmuted (12.0s, $0 model cost); the disposable test player was then closed. Speaker output was not verified.
+  The older Google verification remains an earlier outcome; do not automatically bypass/retry a future challenge.
+
 - **2026-10-29 music fix:** Muneer reported repeated YouTube approval/continue cards for a song. A direct
   one-action YouTube player, music continuation deduplication, Auto/Manual and WhatsApp checks were implemented.
   The general browser blocks media and remains unchanged. Real browser probe played the requested video once;

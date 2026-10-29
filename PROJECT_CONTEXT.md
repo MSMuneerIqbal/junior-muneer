@@ -4,6 +4,12 @@ Last reviewed: **2026-10-27**, after cost/workflow acceptance (P11-08).
 
 ## Active continuation (2026-10-27)
 
+2026-10-29 live follow-up: Muneer explicitly requested another YouTube test. Using the live-check workflow and a
+temporary database, the exact Blue Eyes song request returned one posted `computer.media.play` card and a player
+confirmed advancing with audio unmuted; 12.0 seconds and $0 model cost. The disposable player and DB were closed.
+Actual speaker output was not independently heard/verified. An earlier integration attempt hit Google verification;
+do not automatically bypass or retry any future verification challenge. General Manual browser-task resumption remains open.
+
 2026-10-29: Muneer reported a YouTube song request looping through cards 104–107 and wants it fixed; afterwards he
 asks which signed-in browser design is best. Current isolated browser is headless and deliberately blocks streaming;
 browser Auto also requires an explicit origin in the user's own request. New `junior/browser/media.py` detects a

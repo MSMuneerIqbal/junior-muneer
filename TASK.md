@@ -739,6 +739,9 @@ with its links arrives in the chat you asked from, WhatsApp included.
   latest focused play/stop UI 4 passed. Real YouTube browser probe played the requested video; subsequent isolated
   integration test met a Google unusual-traffic verification and did not verify playback. Owner app restarted healthy
   at dfd8ae1; the separate signed-in-browser integration remains a future design discussion.
+  Follow-up requested live test 2026-10-29: the same Blue Eyes request produced one posted action; real video advanced
+  and was unmuted in an isolated temporary player (12.0s, $0 model cost). Test player closed; physical speaker output
+  was not independently verified.
 
 - [~] **Wider PC scope and close player 2026-10-28:** Add opt-in all-local-drives and other-app-windows scopes,
   preserve selected folders/apps, and support normal window close for supported/allowed apps. Protected paths,
