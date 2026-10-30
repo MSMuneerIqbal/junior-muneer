@@ -161,13 +161,16 @@ or unavailable Google Search is shown in the digest's source problems; recent of
 
 | What | Choices |
 |---|---|
-| Chat model | OpenAI GPT-6 family, **DeepSeek** (V4.1 Flash, V4 Pro) or **Google Gemini** (3.8 Flash, 3.1 Flash-Lite: free tier; 4 Argon: heavy). If DeepSeek or Gemini is busy or rate-limited, OpenAI answers |
+| Chat model | OpenAI GPT-6 family, **DeepSeek** (V4.1 Flash, V4 Pro) or **Google Gemini** (3.8 Flash, 3.1 Flash-Lite: free tier; 4 Argon: heavy). The selected model is used for chat and voice-message answers and live-call tasks. |
 | Web search | OpenAI (hosted search), **DeepSeek Search API** (~$0.0008 a search) or **Gemini** (Google Search + reading links, free tier) |
 | Reading photos | OpenAI's small vision model or **DeepSeek V4.1 Flash** |
 | Live calls | **OpenAI Realtime** (Natural ~$0.05/min, Economy ~$0.02/min), **Gemini 3.8 Live** or **Gemini 2.5 Flash Live** (~$0.02/min, free tier) |
-| Voice messages | **OpenAI** or **Gemini** (Settings → Voice: the engine, plus the hearing and speaking model). Gemini's voice has 10 replies a day on a free key; then OpenAI speaks |
+| Voice messages | **OpenAI** or **Gemini** (Settings → Voice: the engine, plus the hearing and speaking model). Gemini may use another Gemini hearing model if the selected model is unavailable; it does not switch to OpenAI. |
 
-Web search uses the selected provider. If DeepSeek or Gemini search fails, Junior reports the failure instead of switching to OpenAI. The AI-news workflow and chat-model fallback have separate model choices.
+Web search uses the selected provider. If the selected chat or search provider fails, Junior reports the failure instead of switching to OpenAI. Specialist agents can have separate model choices.
+
+The selected helper model is also used for the Computer and Browser Agents. When no helper model is selected,
+those agents use the selected chat model; other specialists may have their own model settings.
 
 Settings → Scheduled jobs lists the existing automatic news, email, briefing, memory, feeds, backup and reminder jobs.
 Turn each on or off there; this affects future scheduled runs, while manual requests remain available. News and
@@ -185,7 +188,7 @@ Keys go in `backend\.env` (created on the first run; see `backend\.env.example`)
 
 | Key | For |
 |---|---|
-| `OPENAI_API_KEY` | Chat, voice, OpenAI calls and search (needed) |
+| `OPENAI_API_KEY` | OpenAI chat, voice, calls and search; required for OpenAI-based specialists |
 | `DEEPSEEK_API_KEY` | DeepSeek models, search and photos (optional) |
 | `GEMINI_API_KEY` | Gemini chat models, Gemini web search and Gemini Live calls (optional; aistudio.google.com/apikey) |
 | `GMAIL_ADDRESS`, `GMAIL_APP_PASSWORD` | Emails to yourself (daily news, "email me") |

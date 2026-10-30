@@ -679,12 +679,8 @@ class CallManager:
         spent_before = len(context.usage)
         router_ = get_router()
         spec = self.registry.get("junior_muneer")
-        # Calls never wait on other providers (DeepSeek): use the OpenAI default.
-        model = router_.model_for("junior_muneer", spec.model)
-        if router_.provider_of(chosen_model(spec, router_)) == "openai":
-            model = chosen_model(spec, router_)
-        elif router_.provider_of(model) != "openai":
-            model = router_.tiers["strong"]
+        # Use the owner's selected main model for call tasks, as in typed chat.
+        model = chosen_model(spec, router_)
         agent, model_name = build_agent(spec, router_, self.model_provider(), model_override=model)
         try:
             result = await run_once(

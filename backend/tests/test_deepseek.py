@@ -117,7 +117,7 @@ class StalledModel(ScriptedModel):
         yield None  # never reached
 
 
-def test_busy_deepseek_falls_back_to_openai(monkeypatch):
+def test_busy_deepseek_reports_failure_without_switching_models(monkeypatch):
     import junior.chat.service as service
 
     monkeypatch.setattr(service, "FIRST_WORDS_SECONDS", 0.3)
@@ -131,13 +131,8 @@ def test_busy_deepseek_falls_back_to_openai(monkeypatch):
     with TestClient(create_app(model_provider=lambda: provider)) as client:
         client.patch("/api/settings", json={"main_model": "deepseek:deepseek-flash"})
         events = chat(client, "hi")
-        done = events[-1]
-        assert done["type"] == "done" and done["text"] == "Hi from OpenAI!"
-        assert used == ["deepseek:deepseek-flash", "gpt-6.1-sol"]
-        note = next(e for e in events if e["type"] == "step" and e.get("name") == "fallback")
-        assert note["label"] == "DeepSeek is busy right now, so gpt-6.1-sol answered"
-        saved = client.get(f"/api/conversations/{done['conversation_id']}/messages").json()[1]
-        assert saved["steps"][0]["name"] == "fallback"  # shows in Show work
+        assert events[-1]["type"] == "error" and "no other model was used" in events[-1]["message"]
+        assert used == ["deepseek:deepseek-flash"]
 
 
 def test_deepseek_stalling_mid_answer_gives_a_clear_error(monkeypatch):
@@ -162,7 +157,7 @@ def test_openai_is_never_cut_off_by_the_deadline(monkeypatch):
         assert chat(client, "hi")[-1]["type"] == "done"
 
 
-def test_voice_messages_use_openai_even_when_deepseek_is_chosen():
+def test_voice_messages_use_the_selected_deepseek_model():
     from junior.voice import FakeVoice
 
     used = []
@@ -180,10 +175,10 @@ def test_voice_messages_use_openai_even_when_deepseek_is_chosen():
             while ws.receive_json()["type"] not in ("done", "error"):
                 pass
         chat(client, "typed hello")
-    assert used == ["gpt-6.1-sol", "deepseek:deepseek-flash"]  # voice: OpenAI; typed: DeepSeek
+    assert used == ["deepseek:deepseek-flash", "deepseek:deepseek-flash"]
 
 
-def test_lookups_in_calls_use_openai_even_when_deepseek_is_chosen():
+def test_lookups_in_calls_use_the_selected_deepseek_model():
     import asyncio as aio
 
     from junior.calls import CallManager
@@ -201,7 +196,7 @@ def test_lookups_in_calls_use_openai_even_when_deepseek_is_chosen():
         await call.task
 
     aio.run(go())
-    assert used == ["gpt-6.1-sol"]
+    assert used == ["deepseek:deepseek-flash"]
 
 
 def test_a_turn_that_never_ends_is_stopped_at_the_overall_limit(monkeypatch):
@@ -259,12 +254,12 @@ def test_a_slow_tool_isnt_mistaken_for_silence(monkeypatch):
     import junior.agent.tools as tools
     import junior.chat.service as service
 
-    monkeypatch.setattr(service, "STALL_SECONDS", 0.3)
+    monkeypatch.setattr(service, "STALL_SECONDS", 1.0)
 
     real = tools.spending.on_invoke_tool
 
     async def slow(ctx, args):
-        await __import__("asyncio").sleep(1.0)  # the tool works for longer than the silence limit
+        await __import__("asyncio").sleep(2.5)  # the tool works for longer than the silence limit
         return await real(ctx, args)
 
     monkeypatch.setattr(tools.spending, "on_invoke_tool", slow)
@@ -274,4 +269,4 @@ def test_a_slow_tool_isnt_mistaken_for_silence(monkeypatch):
         client.patch("/api/settings", json={"main_model": "deepseek:deepseek-flash"})
         events = chat(client, "how much did I spend?")
     assert events[-1]["type"] == "done" and events[-1]["text"] == "You spent a little."
-    assert _time.monotonic() - started >= 1.0
+    assert _time.monotonic() - started >= 2.5

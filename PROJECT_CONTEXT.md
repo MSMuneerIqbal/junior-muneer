@@ -1,19 +1,51 @@
 # Junior Muneer: project context
 
-2026-10-29: Muneer asked why choosing DeepSeek or Gemini for web search still used OpenAI. The live web-search setting was Gemini; DeepSeek's `deepseek-flash` already maps to 1017 and its search API returned three results with the configured key. Changed the live search setting to DeepSeek. A throwaway real DeepSeek chat used DeepSeek search and answered with sources in 8.8 seconds ($0.00549). Regular search no longer falls back to OpenAI on DeepSeek/Gemini failure. AI-news agents and main-chat fallback are separate paths; a live AI-news check failed with OpenAI insufficient credits. Search-provider selection does not change those paths.
+2026-10-30: The owner reported a PC video request failed because Computer Agent used OpenAI despite the selected
+DeepSeek main/helper models. Computer and Browser Agents now use the selected helper model, or the selected main
+model if helper is unset; `/api/models` reports the choice. Their existing PC/browser action permissions remain.
+Focused tests passed; the supervised app restarted and reports DeepSeek for both agents. A real-model synthetic
+video request prepared a waiting approval card (9.7s/$0.00619224); playback and the owner's personal video were not
+tested. Full backend passed and full dashboard 146 passed/14 skipped.
 
-2026-10-29 scheduled-jobs work: Settings → Scheduled jobs lists nine existing scheduler automations and provides per-job switches. News, email, briefing, inbox and memory use their existing settings; backups, post/order reminders and feeds have new scheduler-only switches. They don't stop work already running or disable manual actions. Full backend and targeted scheduler/settings/search tests passed; desktop/phone scheduled UI passed. Full dashboard 141 passed/14 skipped/one music timeout; both music tests passed on rerun after increasing the total test timeout. TypeScript and ESLint passed. Supervised app restarted healthy, with nine jobs and DeepSeek search selected. Signed-in Chrome remains YouTube-only and unverified in the owner's profile.
+2026-10-30: Muneer asked for the servers to be stopped and later started Junior himself. The subsequent Computer
+Agent fix was activated by a supervised restart. The current voice, settings and Chrome work is uncommitted; full
+regressions and spoken Drive verification remain to be finished. Check live state rather than assuming it is running.
+
+2026-10-30 settings follow-up: the main Settings form now saves changed fields automatically, retains edits made
+while a save is pending, and reports errors. It merges externally refreshed settings without overwriting local
+edits. Desktop/phone tests verified the selected DeepSeek model in both saved settings and `/api/models`, external
+changes and save failures. Typed chat now reports provider outages rather than automatically switching to OpenAI.
+Full backend passed; full dashboard 146 passed/14 skipped.
+
+2026-10-30: Muneer reported Gemini voice messages failing with OpenAI quota errors and Gemini Live calls ending on
+Drive/search. Logs showed Gemini 2.5 Flash 503 then free-tier 429, followed by an automatic OpenAI fallback; call
+`ask_junior` and voice chat were also hardwired to OpenAI. Changed these paths to respect the selected providers;
+Gemini transcription can try other Gemini hearing models for transient/quota errors, with correct model accounting.
+Failed call tools return a failure instead of ending Gemini Live. Focused tests and a real synthetic English Gemini
+transcription passed; a real synthetic call-tool lookup used DeepSeek chat/search in 9.8s ($0.005102), with no
+user Drive data. Full backend passed; full dashboard 146 passed/14 skipped. A real user live-call/Drive check remains.
+Windows command
+policy blocked deletion of the synthetic WAV in Temp. Chrome ad-aware playback verification needs extension reload.
+
+2026-10-29 owner-profile Chrome check: the extension is installed and paired. A popup status fix and a connection-attempt
+race fix passed disposable extension/bridge tests. A real Junior request opened Blue Eyes in the owner's Chrome; the
+user confirmed playback but Junior initially returned an unconfirmed result. The cause of that false negative still
+needs investigation. General signed-in website actions are not implemented. Do not record pairing secrets.
+
+2026-10-29: Muneer asked why choosing DeepSeek or Gemini for web search still used OpenAI. The live web-search setting was Gemini; DeepSeek's `deepseek-flash` already maps to 1017 and its search API returned three results with the configured key. Changed the live search setting to DeepSeek. A throwaway real DeepSeek chat used DeepSeek search and answered with sources in 8.8 seconds ($0.00549). Regular search no longer falls back to OpenAI on DeepSeek/Gemini failure. AI-news uses separate models; a live AI-news check failed with OpenAI insufficient credits. The former main-chat OpenAI fallback was removed in the 2026-10-30 follow-up above.
+
+2026-10-29 scheduled-jobs work: Settings → Scheduled jobs lists nine existing scheduler automations and provides per-job switches. News, email, briefing, inbox and memory use their existing settings; backups, post/order reminders and feeds have new scheduler-only switches. They don't stop work already running or disable manual actions. Full backend and targeted scheduler/settings/search tests passed; desktop/phone scheduled UI passed. Full dashboard 141 passed/14 skipped/one music timeout; both music tests passed on rerun after increasing the total test timeout. TypeScript and ESLint passed. The subsequent owner-profile YouTube check is recorded above; general signed-in browsing remains unfinished.
 
 Last reviewed: **2026-10-27**, after cost/workflow acceptance (P11-08).
 
 ## Active continuation (2026-10-27)
 
-2026-10-29 signed-in Chrome work in progress: a locally paired extension and opt-in YouTube-only player mode are
+Historical 2026-10-29 signed-in Chrome continuation (see the newer owner-profile check above): a locally paired extension and opt-in YouTube-only player mode are
 under development in `browser-extension/` and `junior/browser/signed_bridge.py`. General signed-in website
 navigation, DOM observation and actions remain unimplemented. Chrome profile networking is separate from the
 isolated browser's IP-pinning proxy; do not claim equivalent protection. The old user-player error was reproduced
 around 45 seconds in multiple signed-out disposable profiles, including when support hosts were allowed. Real
-signed-in playback must be tested beyond that interval; no personal Chrome profile has yet been connected.
+signed-in playback must be tested beyond that interval; the owner subsequently paired Chrome and confirmed playback.
 
 2026-10-29 latest WhatsApp issue: a user-directed Urdu-script playback verb routed to general browser actions
 and caused misleading approval-loop responses even though WhatsApp and browser/music rules were Auto. In progress:

@@ -5,6 +5,8 @@ let ownedVideoId = null;
 let mediaEpoch = 0;
 let heartbeat = null;
 let connected = false;
+let connectionState = "disconnected";
+let connectionEpoch = 0;
 const validId = (value) => typeof value === "string" && /^[A-Za-z0-9_-]{11}$/.test(value);
 function isVideo(tab, videoId) {
   try {
@@ -16,8 +18,10 @@ function isVideo(tab, videoId) {
 const isOwnedVideo = (tab) => isVideo(tab, ownedVideoId);
 
 function disconnect() {
+  connectionEpoch++;
   mediaEpoch++;
   connected = false;
+  connectionState = "disconnected";
   if (heartbeat) clearInterval(heartbeat);
   heartbeat = null;
   const old = socket;
@@ -27,8 +31,11 @@ function disconnect() {
 
 async function connect() {
   disconnect();
+  const epoch = connectionEpoch;
   const { pairing } = await chrome.storage.local.get("pairing");
+  if (epoch !== connectionEpoch) return;
   if (typeof pairing !== "string") return;
+  connectionState = "connecting";
   const current = new WebSocket("ws://127.0.0.1:8000/api/computer/signed-browser/ws");
   socket = current;
   current.onopen = () => {
@@ -37,13 +44,13 @@ async function connect() {
       if (socket === current && current.readyState === WebSocket.OPEN) current.send('{"ping":true}');
     }, 20000);
   };
-  current.onclose = () => { if (socket === current) disconnect(); };
-  current.onerror = () => { if (socket === current) disconnect(); };
+  current.onclose = () => { if (socket === current) { disconnect(); connectionState = "failed"; } };
+  current.onerror = () => { if (socket === current) { disconnect(); connectionState = "failed"; } };
   current.onmessage = async (event) => {
     if (socket !== current) return;
     let message;
     try { message = JSON.parse(event.data); } catch { current.close(); return; }
-    if (message.connected === true) { connected = true; return; }
+    if (message.connected === true) { connected = true; connectionState = "connected"; return; }
     if (message.pong === true) return;
     if (!connected || !/^[a-f0-9]{32}$/.test(message.id || "")) { current.close(); return; }
     let result;
@@ -56,7 +63,7 @@ async function connect() {
 async function waitForPlayback(tabId, videoId, epoch, alive) {
   const started = Date.now();
   let previous = 0;
-  while (Date.now() - started < 25000) {
+  while (Date.now() - started < 55000) {
     if (!alive() || epoch !== mediaEpoch) return { outcome: "failed", detail: "The player action was stopped." };
     const tab = await chrome.tabs.get(tabId);
     let current;
@@ -68,6 +75,7 @@ async function waitForPlayback(tabId, videoId, epoch, alive) {
       let result;
       try { [result] = await chrome.scripting.executeScript({ target: { tabId }, func: () => {
         const video = document.querySelector("video");
+        if (document.querySelector(".html5-video-player.ad-showing")) return 0;
         if (video && video.paused) void video.play().catch(() => {});
         return video && !video.paused && !video.muted && video.volume > 0 ? video.currentTime : 0;
       }}); } catch { await new Promise((r) => setTimeout(r, 500)); continue; }
@@ -146,7 +154,8 @@ async function run(command, payload, alive) {
   return { outcome: "failed", detail: "This operation is not available in the signed-in browser yet." };
 }
 
-chrome.runtime.onMessage.addListener((message) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === "status") { sendResponse({ state: connectionState }); return; }
   if (message?.type === "connect") void connect();
   if (message?.type === "disconnect") {
     if (connected && socket?.readyState === WebSocket.OPEN) socket.send('{"unpair":true}');

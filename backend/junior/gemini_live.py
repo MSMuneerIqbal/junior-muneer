@@ -360,10 +360,14 @@ class GeminiCall:
                 await self._save_you()
             if self.you_saving is not None:  # tools need your words saved (the "your own words" checks)
                 await self.you_saving
-            if self.call.context.helpers is None and fc.name in ("web_search", "ai_news", "pakistan_news", "ask_junior"):
-                result = "That needs the OpenAI key (OPENAI_API_KEY in backend/.env), which isn't set. Say so briefly."
-            else:
-                result = await self.manager.run_tool(self.call, fc.name, json.dumps(dict(fc.args or {})))
+            try:
+                if self.call.context.helpers is None and fc.name in ("web_search", "ai_news", "pakistan_news", "ask_junior"):
+                    result = "The requested assistant is unavailable. Check the selected provider and its API key."
+                else:
+                    result = await self.manager.run_tool(self.call, fc.name, json.dumps(dict(fc.args or {})))
+            except Exception as error:  # A failed tool must not terminate the live conversation.
+                log.warning("Live call tool %s failed (%s)", fc.name, type(error).__name__)
+                result = "That task failed. Tell the user it could not be completed; the call can continue."
             responses.append({"id": fc.id, "name": fc.name, "response": {"result": result}})
         if responses:
             await self.gw.send_tool_responses(session, responses)

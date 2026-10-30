@@ -424,7 +424,7 @@ class Player:
                     raise BrowserRefused("Connect the signed-in Chrome extension in Settings → Computer first.")
                 self.signed_session = True
                 self.video_id = payload["video_id"]
-                task = asyncio.create_task(self.signed_bridge.command("media_play", {"video_id": self.video_id}, timeout=35))
+                task = asyncio.create_task(self.signed_bridge.command("media_play", {"video_id": self.video_id}, timeout=65))
                 try:
                     while not task.done():
                         await asyncio.wait({task}, timeout=1)
@@ -505,7 +505,7 @@ class Player:
             if not self.signed_bridge or not self.signed_bridge.connected:
                 raise BrowserRefused("The signed-in Chrome extension is disconnected.")
             self.session = uuid4().hex
-            result = await self.signed_bridge.command("media_next", {}, timeout=35)
+            result = await self.signed_bridge.command("media_next", {}, timeout=65)
             if not isinstance(result, dict) or result.get("outcome") != "sent":
                 raise RuntimeError("The next video could not be confirmed in Chrome.")
             self.problem = ""

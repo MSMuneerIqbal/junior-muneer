@@ -1,5 +1,5 @@
 """Gemini as the third chat provider (Google's OpenAI-compatible endpoint), Gemini web search (Google Search + URL
-reading), and OpenAI stepping in when Gemini is rate-limited or busy."""
+reading), and clear errors when Gemini is rate-limited or busy."""
 
 import asyncio
 from types import SimpleNamespace as NS
@@ -123,7 +123,7 @@ class RateLimited(ScriptedModel):
         yield None  # never reached
 
 
-def test_a_rate_limited_gemini_hands_the_answer_to_openai():
+def test_a_rate_limited_gemini_does_not_switch_models():
     used = []
     openai_model = ScriptedModel([chunked_answer("Hi from OpenAI!")])
 
@@ -134,10 +134,8 @@ def test_a_rate_limited_gemini_hands_the_answer_to_openai():
     with TestClient(create_app(model_provider=lambda: provider)) as client:
         client.patch("/api/settings", json={"main_model": "gemini:gemini-3.1-flash-lite"})
         events = chat(client, "hi")
-    assert events[-1]["type"] == "done" and events[-1]["text"] == "Hi from OpenAI!"
-    assert used == ["gemini:gemini-3.1-flash-lite", "gpt-6.1-sol"]
-    note = next(e for e in events if e["type"] == "step" and e.get("name") == "fallback")
-    assert note["label"] == "Gemini hit its rate limit, so gpt-6.1-sol answered"
+    assert events[-1]["type"] == "error" and "rate limit" in events[-1]["message"]
+    assert used == ["gemini:gemini-3.1-flash-lite"]
 
 
 def test_openai_rate_limits_are_not_hidden():

@@ -4,6 +4,28 @@ Built from [PLAN.md](PLAN.md) (current system-action scope: section 14h, v10). T
 
 ## Current follow-up: browser and music (2026-10-29)
 
+- [~] Computer Agent model routing (2026-10-30): the owner reported PC file playback failing because Computer Agent
+  used OpenAI despite DeepSeek being selected. Route Computer and Browser Agents through the selected helper model,
+  or selected chat model if helper is unset; preserve action approvals and test the delegated path. Other specialists
+  can still use their own model defaults. Focused tests passed, the owner app restarted and reports DeepSeek for both
+  agents. A real synthetic video request prepared an approval card through DeepSeek (9.7s/$0.00619224); no real
+  playback was attempted. Full backend passed; full dashboard 146 passed/14 skipped. Actual owner video playback
+  through this new routing has not been checked.
+
+- [x] Settings persistence (2026-10-30): automatically save edits, patch only changed fields, retain in-flight edits,
+  and display failures. Model choice must persist and reach the actual agent; typed chat no longer falls back to
+  OpenAI if the selected provider fails. Desktop/phone focused tests and provider failure tests passed.
+  Full backend passed; full dashboard 146 passed/14 skipped, including save failure and external-change checks.
+
+- [~] Voice and live call provider routing (2026-10-30): selected chat model is now used for voice messages and call
+  `ask_junior`; Gemini speech-to-text tries other Gemini models on temporary/quota errors without switching to OpenAI.
+  Gemini speech does not switch to OpenAI. A failing call tool returns a failure without stopping the call; provider
+  creation no longer requires an OpenAI key for other models. Focused tests passed; a real synthetic English Gemini
+  transcription passed. A real synthetic call-tool web lookup used DeepSeek chat/search and returned a source in
+  9.8s ($0.005102). Supervised app restarted with Gemini voice/DeepSeek chat and search. Full backend passed and full
+  dashboard 146 passed/14 skipped. A real user live-call/Drive check remains outstanding. The synthetic WAV remains in Windows Temp after policy blocked
+  its deletion. Chrome player now waits longer and excludes ads during verification; extension reload is needed.
+
 - [x] Scheduled jobs: Settings lists nine existing automatic jobs with enable/disable switches; shares the existing
   news, email, briefing and memory switches and leaves manual actions and existing permissions intact. Full backend
   passed; desktop and phone focused UI passed. Full dashboard 141 passed/14 skipped/one music timing failure; both
@@ -25,7 +47,9 @@ Built from [PLAN.md](PLAN.md) (current system-action scope: section 14h, v10). T
   **In progress 2026-10-29:** paired local Chrome extension and a YouTube-only player mode are being built. This
   does not provide general signed-in website control; it must not be described as full browser integration.
   Pairing, local peer/origin checks, Auto/Manual playback, changed-tab handling and interruption are under test in
-  disposable profiles. Real owner-profile installation and multi-minute playback remain unverified.
+  disposable profiles. The owner installed/paired Chrome and confirmed a live song was playing; Junior initially
+  reported playback unconfirmed. The false negative, sustained playback and general signed-in website actions remain
+  to be verified and completed.
 - [~] Support “next song” / “change it” for the player started by this chat, with Auto/Manual, WhatsApp's independent
   mode and stale-card checks. Focused media tests and desktop/phone fake-AI UI checks passed. A disposable real
   YouTube run started Blue Eyes and confirmed the next video advancing (34.7s, no model cost; speakers not verified).

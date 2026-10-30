@@ -22,11 +22,46 @@ have not been decided. Do not infer those requirements from the word "product".
 
 ## Where we are (update this at the end of every session)
 
+- **2026-10-30 cleanup:** Muneer requested temporary files removed and the work pushed to main. The untracked stream
+  probe was deleted. Automatic command policy rejected removal of the synthetic voice WAV and lookup test folder;
+  prior throwaway test folders in Windows Temp also remain. Do not bypass the rejection. Full backend passed after
+  a timing-test correction; full dashboard 146 passed/14 skipped, TypeScript and ESLint passed. The owner has
+  connected Chrome, but general signed-in browsing and real spoken Drive verification remain unfinished.
+
+- **2026-10-30 in progress:** Owner reported the Computer Agent used OpenAI for a PC video despite DeepSeek being
+  selected. Computer and Browser Agents now choose the configured helper model or, if unset, the configured main
+  model. Focused tests passed; the supervised app restarted and reports DeepSeek for both agents. A real synthetic
+  video request prepared an approval card (9.7s/$0.00619224), with no real playback. Full backend passed; full UI
+  146 passed/14 skipped. The owner's video and spoken Drive request remain unverified.
+  Check active work and preserve the WhatsApp tunnel before any restart.
+
+- **2026-10-30 earlier stop:** Muneer asked to stop the servers and later started Junior again. The temporary
+  scratch probe was removed at his request. The subsequent Computer Agent fix was activated by a supervised restart;
+  check live state rather than assuming it remains running.
+
+- **2026-10-30 in progress:** Muneer reported settings selections appearing changed without taking effect. The main
+  Settings form now auto-saves only changed fields, preserves in-flight edits and reports failures. Focused desktop/
+  phone checks verified a selected model is persisted and reported by the backend, save failures and external
+  changes. Full backend and full UI passed (146/14 skipped); voice and Chrome follow-ups below remain active.
+
+- **2026-10-30 in progress:** Fixed voice-message and Gemini Live call routing to use selected chat model and not
+  force OpenAI; Gemini hearing tries other Gemini models for temporary/quota failures, and failed live-call tools
+  no longer terminate the call. Focused tests and real synthetic English Gemini transcription passed; supervised
+  app restarted. Full backend and full UI passed; actual user live-call/Drive verification remains. A synthetic WAV in Windows Temp
+  could not be deleted because automatic policy blocked the command. Chrome extension pairing/status and ad-aware
+  playback changes are in the same worktree; the user must reload the extension for its latest files.
+
+- **2026-10-29 signed-in Chrome pairing follow-up:** Owner installed and connected the extension. Fixed a race in
+  overlapping connection attempts and made the popup show connection success/failure; owner confirmed connection.
+  A live Junior request opened Blue Eyes in that Chrome profile. Junior initially reported playback unconfirmed;
+  owner confirmed the song was playing. Investigate the false negative before claiming reliable playback detection.
+  General signed-in browsing remains unimplemented. No pairing codes or personal page content are recorded here.
+
 - **2026-10-29:** Settings → Scheduled jobs lists nine automatic jobs; full backend and targeted desktop/phone checks passed. Full dashboard 141 passed/14 skipped/one music timeout; both music tests passed after increasing their total test timeout. Supervised app restarted healthy. DeepSeek Search was selected on the live profile after a successful real API and throwaway chat check; regular search no longer falls back to OpenAI. AI-news and the Gmail watcher still use OpenAI and reported insufficient OpenAI credits. The signed-in Chrome work below and actual Chrome-profile testing remain unfinished. Automatic policy blocked cleanup of two throwaway live-check folders in Windows Temp; they remain there.
 
 - **2026-10-29 signed-in Chrome work in progress:** paired extension and YouTube-only player mode under test.
   General signed-in website controls are not built. Real owner-profile installation and long playback remain
-  unverified; see TASK.md and PROJECT_CONTEXT.md. Preserve the existing untracked stream diagnostic file.
+  general website control is unimplemented; see the newer owner-profile check above, TASK.md and PROJECT_CONTEXT.md.
 
 - **2026-10-29 latest WhatsApp playback follow-up:** Urdu-script playback requests and Urdu-to-Roman
   video matching added locally; exact-request fake WhatsApp Auto/Manual and real YouTube playback through a mocked

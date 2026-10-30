@@ -65,19 +65,16 @@ def openai_model_provider() -> ModelProvider:
     """Gives the SDK model for any model name: OpenAI ones, or 'provider:model'
     (e.g. 'deepseek:deepseek-flash') through that provider's OpenAI-style API."""
     settings = get_settings()
-    key = settings.openai_api_key
-    if not key:
-        raise NoApiKeyError(
-            "No OpenAI API key yet. Paste it into backend/.env as OPENAI_API_KEY=... "
-            "and restart the backend."
-        )
-    openai_client = ai_client(key)
     clients: dict[str, AsyncOpenAI] = {}
 
     def provide(name: str) -> Model:
         provider = ModelRouter.provider_of(name)
         if provider == "openai":
-            return OpenAIResponsesModel(model=name, openai_client=openai_client)
+            if not settings.openai_api_key:
+                raise NoApiKeyError("No OpenAI API key yet. Paste it into backend/.env and restart the backend.")
+            if provider not in clients:
+                clients[provider] = ai_client(settings.openai_api_key)
+            return OpenAIResponsesModel(model=name, openai_client=clients[provider])
         info = get_router().providers.get(provider)
         if info is None:
             raise NoApiKeyError(f"Unknown model provider {provider!r} in agents/models.toml.")
@@ -125,7 +122,8 @@ def _status(s: dict) -> str:
 
 
 # Agents whose model you can choose in Settings -> Models, and the setting for each.
-CHOOSABLE = {"junior_muneer": "main_model", "summarizer": "helper_model"}
+CHOOSABLE = {"junior_muneer": "main_model", "summarizer": "helper_model",
+             "computer_agent": "helper_model", "browser_agent": "helper_model"}
 
 
 def chosen_model(spec: AgentSpec, router: ModelRouter) -> str:
@@ -137,6 +135,8 @@ def chosen_model(spec: AgentSpec, router: ModelRouter) -> str:
     from junior.settings_store import get_setting
 
     choice = get_setting(setting)
+    if not choice and spec.name in {"computer_agent", "browser_agent"}:
+        choice = get_setting("main_model")
     return choice if choice and choice in router.prices else default
 
 

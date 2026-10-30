@@ -247,24 +247,31 @@ def voice_engine() -> str:
     return get_setting("voice_engine") or "openai"
 
 
-class GeminiThenOpenAI:
-    """Gemini first; when Gemini is busy or down (it answers "503 high demand" at times), OpenAI does that one
-    recording or answer, so a voice message never goes unanswered."""
+class GeminiVoiceWithFallback:
+    """Keep Gemini voice on Gemini; try another audio-capable Gemini model for transient hearing failures."""
 
-    def __init__(self, gemini, openai_voice) -> None:
-        self.gemini, self.openai_voice = gemini, openai_voice
+    def __init__(self, gemini) -> None:
+        self.gemini = gemini
 
     async def transcribe(
         self, path: Path, model: str, prompt: str, language: str | None = None
     ) -> TranscriptResult:
-        try:
-            return await self.gemini.transcribe(path, model, prompt, language)
-        except Exception as e:
-            log.warning("Gemini couldn't hear the recording (%s); OpenAI does it", e)
-            backup = get_router().audio_model("transcribe")
-            result = await self.openai_voice().transcribe(path, backup, prompt, language)
-            result.model = backup
-            return result
+        candidates = list(dict.fromkeys([model, "gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-2.5-flash"]))
+        for candidate in candidates:
+            try:
+                result = await self.gemini.transcribe(path, candidate, prompt, language)
+                if candidate != model:
+                    result.model = candidate
+                return result
+            except Exception as error:
+                code = getattr(error, "code", None)
+                transient = isinstance(error, TimeoutError) or code in (429, 500, 502, 503, 504) or any(
+                    marker in str(error).upper() for marker in ("429", "503", "RESOURCE_EXHAUSTED", "UNAVAILABLE")
+                )
+                if not transient:
+                    raise
+                log.warning("Gemini transcription model %s unavailable (%s)", candidate, type(error).__name__)
+        raise RuntimeError("Gemini transcription is unavailable or its quota is exhausted. Try again later or choose another voice engine.")
 
     async def speak(
         self, text: str, model: str, voice: str, speed: float, instructions: str
@@ -278,11 +285,8 @@ class GeminiThenOpenAI:
         except Exception as e:
             if started:  # half an answer already went out: don't repeat it in another voice
                 raise
-            log.warning("Gemini couldn't speak the answer (%s); OpenAI does it", e)
-        async for chunk in self.openai_voice().speak(
-            text, get_router().audio_model("speech"), get_setting("tts_voice"), speed, instructions
-        ):
-            yield chunk
+            log.warning("Gemini couldn't speak the answer (%s)", type(e).__name__)
+            raise RuntimeError("Gemini speech is unavailable or its quota is exhausted. Try again later or choose another voice engine.") from None
 
 
 def engine_voice(openai_voice):
@@ -291,10 +295,10 @@ def engine_voice(openai_voice):
     def pick() -> "VoiceClient":
         if voice_engine() == "gemini":
             if GEMINI_VOICE is not None:
-                return GeminiThenOpenAI(GEMINI_VOICE(), openai_voice)
+                return GeminiVoiceWithFallback(GEMINI_VOICE())
             if get_settings().fake_ai:
                 return FakeVoice()
-            return GeminiThenOpenAI(GeminiVoice(), openai_voice)
+            return GeminiVoiceWithFallback(GeminiVoice())
         return openai_voice()
 
     return pick

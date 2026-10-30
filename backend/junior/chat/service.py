@@ -8,7 +8,7 @@ from typing import Any
 
 from openai import APIConnectionError, InternalServerError, RateLimitError
 
-from junior.agent.builder import ModelProvider, NoApiKeyError, build_agent, chosen_model
+from junior.agent.builder import ModelProvider, NoApiKeyError, build_agent
 from junior.agent.context import TurnContext
 from junior.agent.helpers import HelperRunner
 from junior.agent.runner import TurnResult, stream_turn
@@ -309,17 +309,8 @@ class ChatService:
             router = get_router()
             provider = task_provider(self.model_provider(), context, router)
             spec = self.registry.get(MAIN_AGENT)
-            # Other providers (DeepSeek) are for typed chat only: a voice message is
-            # answered by the default OpenAI model, so voice never waits on them.
-            voice_override = None
-            if audio_id is not None:
-                default = router.model_for(MAIN_AGENT, spec.model)
-                voice_override = (
-                    default if router.provider_of(default) == "openai" else router.tiers["strong"]
-                )
-                if router.provider_of(chosen_model(spec, router)) == "openai":
-                    voice_override = None  # your OpenAI choice is fine for voice too
-            agent, model_name = build_agent(spec, router, provider, model_override=voice_override)
+            # Voice messages use the same selected chat model as typed messages.
+            agent, model_name = build_agent(spec, router, provider)
             context.helpers = HelperRunner(self.registry, provider)
             items, context.user_message_ids, pasted = build_input(conversation_id, settings["user_name"])
             if pasted:
@@ -327,7 +318,6 @@ class ChatService:
                 # drafted from it waits for your OK (ground rules 3, 5 and 6).
                 context.mark_outside()
             result: TurnResult | None = None
-            fallback_step = None
             stream = stream_turn(agent, model_name, router, items, context, budget)
             other_provider = router.provider_of(model_name) != "openai"
             first = True
@@ -353,8 +343,7 @@ class ChatService:
                             f"This answer took over {TURN_SECONDS // 60} minutes, so I stopped it. "
                             "Please try again, or ask for it as a background task."
                         ) from None
-                    # Another provider (DeepSeek, Gemini) silent, rate-limited (free tiers) or down before any
-                    # words: OpenAI answers instead. Anything else, or OpenAI itself failing, goes up as before.
+                    # Report provider outages and timeouts without silently switching the selected model.
                     limited = isinstance(e, (RateLimitError, InternalServerError, APIConnectionError))
                     if not (isinstance(e, TimeoutError) or (other_provider and limited)):
                         raise
@@ -365,28 +354,8 @@ class ChatService:
                         raise RuntimeError(
                             f"{model_name} stopped responding mid-answer. Please try again."
                         ) from None
-                    why = "hit its rate limit" if isinstance(e, RateLimitError) else "is busy right now"
-                    # Busy: answer with the default OpenAI model instead.
-                    spec = self.registry.get(MAIN_AGENT)
-                    backup = router.model_for(MAIN_AGENT, spec.model)
-                    if router.provider_of(backup) != "openai":
-                        backup = router.tiers["strong"]
-                    label = router.providers.get(router.provider_of(model_name), {}).get(
-                        "label", model_name
-                    )
-                    log.warning("%s didn't answer (%s); using %s", model_name, type(e).__name__, backup)
-                    fallback_step = {
-                        "id": "fallback",
-                        "kind": "tool",
-                        "name": "fallback",
-                        "label": f"{label} {why}, so {backup} answered",
-                        "status": "done",
-                    }
-                    yield {"type": "step", **fallback_step}
-                    agent, model_name = build_agent(spec, router, provider, model_override=backup)
-                    stream = stream_turn(agent, model_name, router, items, context, budget)
-                    other_provider = False
-                    continue
+                    why = "hit its rate limit" if isinstance(e, RateLimitError) else "is unavailable or busy"
+                    raise RuntimeError(f"{model_name} {why}. Please try again; no other model was used.") from None
                 first = False
                 if event["type"] == "step" and event.get("kind") in ("tool", "web_search") and event.get("id"):
                     if event.get("status") == "running":
@@ -397,8 +366,6 @@ class ChatService:
                     result = event["result"]
                 elif event["type"] != "alive":  # "still writing": only for the silence check above
                     yield event
-            if result is not None and fallback_step:
-                result.steps.insert(0, fallback_step)
         except (NoApiKeyError, BudgetExceeded) as e:
             self._save_partial_usage(conversation_id, context)
             self._audit_run(conversation_id, context, "blocked", error=str(e))

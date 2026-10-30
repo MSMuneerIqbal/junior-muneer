@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { GitHubConnect } from "@/components/GitHubConnect";
 import { SettingsIcon } from "@/components/icons";
@@ -545,13 +545,27 @@ function SettingsForm({ initial }: { initial: Settings }) {
   const { data: voiceModels } = useSWR<VoiceModels>("/api/voice/models", fetcher);
   const [form, setForm] = useState(initial);
   const [saved, setSaved] = useState(initial);
+  const savedRef = useRef(initial);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const failedSave = useRef("");
   const changed = (Object.keys(form) as (keyof Settings)[]).some(
     (k) => String(form[k]) !== String(saved[k]),
   );
-  const set = <K extends keyof Settings>(key: K, value: Settings[K]) =>
+  const set = <K extends keyof Settings>(key: K, value: Settings[K]) => {
+    setStatus(null);
     setForm((f) => ({ ...f, [key]: value }));
+  };
+
+  useEffect(() => {
+    const previous = savedRef.current;
+    savedRef.current = initial;
+    // Synchronize settings changed through another control with the external SWR cache.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSaved(initial);
+    setForm((current) => Object.fromEntries((Object.keys(initial) as (keyof Settings)[]).map((key) =>
+      [key, String(current[key]) === String(previous[key]) ? initial[key] : current[key]])) as Settings);
+  }, [initial]);
 
   useEffect(() => {
     if (!status?.ok) return;
@@ -559,32 +573,42 @@ function SettingsForm({ initial }: { initial: Settings }) {
     return () => clearTimeout(t);
   }, [status]);
 
-  async function save() {
+  const save = useCallback(async () => {
+    if (saving) return;
+    const snapshot = form;
+    const changes = Object.fromEntries((Object.keys(snapshot) as (keyof Settings)[])
+      .filter((key) => key !== "paused" && String(snapshot[key]) !== String(saved[key]))
+      .map((key) => [key, snapshot[key]]));
+    if (!Object.keys(changes).length) return;
     setSaving(true);
     setStatus(null);
     try {
-      const result = await send<Settings>("PATCH", SETTINGS_KEY, {
-        ...form,
-        daily_cap_usd: Number(form.daily_cap_usd),
-        task_budget_usd: Number(form.task_budget_usd),
-        task_timeout_seconds: Number(form.task_timeout_seconds),
-        task_max_retries: Number(form.task_max_retries),
-        tts_speed: Number(form.tts_speed),
-        call_minutes_per_day: Number(form.call_minutes_per_day),
-        paused: undefined,
-      });
+      const result = await send<Settings>("PATCH", SETTINGS_KEY, changes);
       await mutate(SETTINGS_KEY, result, { revalidate: false });
-      await mutate(USAGE_KEY);
-      await mutate("/api/models");
-      setForm(result);
+      await Promise.allSettled([mutate(USAGE_KEY), mutate("/api/models")]);
+      // Keep edits made while this request was in flight; refresh untouched fields from the server.
+      setForm((current) => Object.fromEntries((Object.keys(result) as (keyof Settings)[]).map((key) =>
+        [key, String(current[key]) === String(snapshot[key]) ? result[key] : current[key]])) as Settings);
       setSaved(result);
+      failedSave.current = "";
       setStatus({ ok: true, text: "Saved. Applies from your next message or call." });
     } catch (e) {
+      failedSave.current = JSON.stringify(changes);
       setStatus({ ok: false, text: e instanceof Error ? e.message : "Couldn't save" });
     } finally {
       setSaving(false);
     }
-  }
+  }, [form, saved, saving, mutate]);
+
+  useEffect(() => {
+    if (!changed || saving) return;
+    const changes = Object.fromEntries((Object.keys(form) as (keyof Settings)[])
+      .filter((key) => key !== "paused" && String(form[key]) !== String(saved[key]))
+      .map((key) => [key, form[key]]));
+    if (!Object.keys(changes).length || JSON.stringify(changes) === failedSave.current) return;
+    const timer = setTimeout(() => void save(), 800);
+    return () => clearTimeout(timer);
+  }, [changed, saving, form, saved, save]);
 
   return (
     <div className="flex flex-col gap-6 pb-28">
@@ -680,14 +704,14 @@ function SettingsForm({ initial }: { initial: Settings }) {
       <Section
         id="models"
         title="Models"
-        description="Which AI writes his typed answers: OpenAI, DeepSeek or Google Gemini. If DeepSeek or Gemini is busy or hits its limit, OpenAI answers instead."
+        description="Choose which AI writes chat and voice-message answers. If it is unavailable, Junior reports the error without switching models."
       >
         {models ? (
           <>
             <Row
               wide
               label="Chat model"
-              hint="For typed messages. Prices are US$ per 1 million tokens, in / out (a message is usually under 2,000)."
+              hint="For chat and voice-message answers and live-call tasks. Prices are US$ per 1 million tokens, in / out."
             >
               <ModelPicker
                 label="Chat model"
@@ -697,7 +721,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
                 onChange={(m) => set("main_model", m)}
               />
             </Row>
-            <Row wide label="Helper model" hint="Summarizes long chats in the background. A cheap model is fine.">
+            <Row wide label="Helper model" hint="Used for chat summaries, the Computer Agent and the Browser Agent. When unset, those two agents use your selected chat model.">
               <ModelPicker
                 label="Helper model"
                 value={form.helper_model}
@@ -718,16 +742,15 @@ function SettingsForm({ initial }: { initial: Settings }) {
           hint={
             <>
               DeepSeek is much cheaper and answers from the results directly; Gemini searches Google and can read
-              links (free tier, 5,000 searches a month); OpenAI uses a small helper. If DeepSeek or Gemini fails,
-              OpenAI searches instead. News from official sources always uses OpenAI&apos;s search.
+              links; OpenAI uses a small helper. If the selected provider fails, Junior reports the error without switching providers. The news workflow uses separate models.
               {form.web_search_provider === "gemini" && limits && !limits.gemini_ready && (
                 <span className="mt-1 block text-warn">
-                  Gemini search needs <code>GEMINI_API_KEY</code> in backend/.env; until then OpenAI searches.
+                  Gemini search needs <code>GEMINI_API_KEY</code> in backend/.env.
                 </span>
               )}
               {form.web_search_provider === "deepseek" && models && !models.choices.some((c) => c.provider === "DeepSeek" && c.ready) && (
                 <span className="mt-1 block text-warn">
-                  DeepSeek search needs <code>DEEPSEEK_API_KEY</code> in backend/.env; until then OpenAI searches.
+                  DeepSeek search needs <code>DEEPSEEK_API_KEY</code> in backend/.env.
                 </span>
               )}
             </>
@@ -767,7 +790,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
           hint={
             <>
               Who hears your recorded voice messages (dashboard mic and WhatsApp voice notes) and reads his answers
-              aloud. Live calls have their own engine under Live calls.
+              aloud. Live calls have their own engine under Live calls. Gemini may try another Gemini hearing model if the selected model is busy or over quota; it does not switch to OpenAI.
               {form.voice_engine === "gemini" && limits && !limits.gemini_ready && (
                 <span className="mt-1 block text-warn">
                   Gemini needs <code>GEMINI_API_KEY</code> in backend/.env (from aistudio.google.com/apikey), then a restart.
@@ -1115,7 +1138,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
       >
         <div className="flex w-full max-w-xl items-center gap-3 rounded-2xl border border-line bg-panel px-4 py-3 shadow-lg">
           <span role="status" className={`flex-1 text-sm ${status && !status.ok ? "text-danger" : status ? "text-ok" : ""}`}>
-            {status ? status.text : "You have unsaved changes"}
+            {saving ? "Saving changes…" : status ? status.text : "Saving changes automatically…"}
           </span>
           {changed && (
             <>

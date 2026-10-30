@@ -112,7 +112,14 @@ def test_database_tool_answers_spending_question(db):
 
 def test_without_a_key_there_is_a_clear_message():
     with pytest.raises(NoApiKeyError, match="backend/.env"):
-        openai_model_provider()
+        openai_model_provider()("gpt-6-luna")
+
+
+def test_other_provider_does_not_require_an_openai_key(monkeypatch):
+    from junior.config import get_settings
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-deepseek-key")
+    get_settings.cache_clear()
+    assert openai_model_provider()("deepseek:deepseek-flash") is not None
 
 
 def test_web_search_is_delegated_to_the_cheap_researcher(db, monkeypatch):

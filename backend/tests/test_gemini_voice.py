@@ -209,24 +209,50 @@ class BusyGemini(FakeVoice):
         yield b""
 
 
-def test_when_gemini_is_busy_openai_hears_the_recording_and_its_cost_is_openais(client, monkeypatch):
+def test_when_gemini_is_busy_no_openai_transcription_is_used(client, monkeypatch):
     monkeypatch.setattr(voice_mod, "GEMINI_VOICE", BusyGemini)
     client.patch("/api/settings", json={"voice_engine": "gemini"})
-    got = upload(client).json()
-    assert got["text"] == "openai heard you"
-    assert OpenAISide.calls == [{"job": "hear", "model": "gpt-4o-transcribe"}]
-    assert got["cost_usd"] == pytest.approx(6 / 60 * 0.006)
-    with session_scope() as s:
-        assert s.scalars(select(Usage).where(Usage.agent == "transcriber")).all()[-1].model == "gpt-4o-transcribe"
+    response = upload(client)
+    assert response.status_code == 502 and "Gemini transcription is unavailable" in response.json()["detail"]
+    assert OpenAISide.calls == []
 
 
-def test_when_gemini_is_busy_openai_reads_the_answer_in_your_openai_voice(client, model, monkeypatch):
+def test_when_gemini_is_busy_no_openai_speech_is_used(client, model, monkeypatch):
     monkeypatch.setattr(voice_mod, "GEMINI_VOICE", BusyGemini)
     client.patch("/api/settings", json={"voice_engine": "gemini", "tts_voice": "ash"})
-    done = answer(client, model, "Walaikum salam!")
-    r = client.get(f"/api/voice/speak/{done['message_id']}.mp3")
-    assert r.status_code == 200 and len(r.content) > 0
-    assert OpenAISide.calls == [{"job": "speak", "model": "gpt-4o-mini-tts", "voice": "ash"}]
+    async def attempt():
+        with pytest.raises(RuntimeError, match="Gemini speech is unavailable"):
+            async for _ in voice_mod.engine_voice(OpenAISide)().speak("hello", "gemini-2.5-flash-preview-tts", "Kore", 1, ""):
+                pass
+    asyncio.run(attempt())
+    assert OpenAISide.calls == []
+
+
+def test_gemini_fallback_uses_another_gemini_model_and_records_it(client, monkeypatch):
+    class Alternate(GeminiSide):
+        async def transcribe(self, path, model, prompt, language=None):
+            if model == "gemini-2.5-flash":
+                raise RuntimeError("429 RESOURCE_EXHAUSTED")
+            return await super().transcribe(path, model, prompt, language)
+    monkeypatch.setattr(voice_mod, "GEMINI_VOICE", Alternate)
+    client.patch("/api/settings", json={"voice_engine": "gemini"})
+    result = upload(client)
+    assert result.status_code == 200 and result.json()["text"] == "Gemini ne suna"
+    assert not OpenAISide.calls and GeminiSide.calls[-1]["model"] == "gemini-3.1-flash-lite"
+    with session_scope() as s:
+        assert s.scalars(select(Usage).where(Usage.agent == "transcriber")).all()[-1].model == "gemini-3.1-flash-lite"
+
+
+def test_invalid_gemini_key_does_not_try_other_models_or_openai(client, monkeypatch):
+    calls = []
+    class BadKey(GeminiSide):
+        async def transcribe(self, path, model, prompt, language=None):
+            calls.append(model)
+            raise ValueError("invalid API key")
+    monkeypatch.setattr(voice_mod, "GEMINI_VOICE", BadKey)
+    client.patch("/api/settings", json={"voice_engine": "gemini"})
+    assert upload(client).status_code == 502
+    assert calls == ["gemini-2.5-flash"] and not OpenAISide.calls
 
 
 # ---- picking the models (Settings -> Voice) ---------------------------------------------------

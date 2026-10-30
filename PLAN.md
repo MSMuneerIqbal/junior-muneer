@@ -1,5 +1,14 @@
 # Junior Muneer: Project Plan (v10: controlled PC/browser actions and reusable skills)
 
+> **Settings follow-up 2026-10-30:** Persist settings changes automatically, show failures, keep edits made while a
+> save is in flight, and avoid overwriting settings changed elsewhere. Model choices must reach the executing agent;
+> unavailable chat/search providers are reported without automatically switching to OpenAI.
+
+> **Voice provider follow-up 2026-10-30:** Voice messages and live-call tasks use the selected chat model; Gemini
+> hearing may retry other Gemini hearing models for temporary or quota failures, without switching to OpenAI. Gemini
+> speech reports its own failure. A failing live-call tool must not end the Gemini conversation. Preserve permissions,
+> limits, usage tracking and the user's chosen voice and search settings.
+
 > **Music playback 2026-10-29:** A direct song request becomes one YouTube playback action, not a chain of navigation
 > cards. Dashboard Auto respects browser and playback rules; Manual and WhatsApp ask once. Playback uses a separate
 > visible temporary browser with restricted YouTube/media hosts and public-DNS checks, without the general browser's

@@ -167,6 +167,19 @@ def test_tools_run_with_the_same_safety_rules(gemini, monkeypatch):
         assert s.scalars(select(Memory.content)).all() == ["Muneer charges $25 an hour"]
 
 
+def test_tool_failure_does_not_end_the_call(gemini, monkeypatch):
+    from junior.calls import CallManager
+    async def fail(*args, **kwargs):
+        raise RuntimeError("provider unavailable")
+    monkeypatch.setattr(CallManager, "run_tool", fail)
+    request = NS(server_content=None, usage_metadata=None, tool_call=NS(function_calls=[
+        NS(id="fc-1", name="ask_junior", args={"question": "Find a file"})]))
+    fake = FakeGemini([[request], turn(said="The task failed, but we can keep talking.")])
+    got = call(monkeypatch, fake, until=1)
+    assert not any(event["type"] == "error" for event in got["json"])
+    assert "task failed" in fake.tool_responses[0][0]["response"]["result"]
+
+
 def test_interruptions_reach_the_browser(gemini, monkeypatch):
     cut = NS(server_content=NS(input_transcription=None, output_transcription=None, model_turn=None, interrupted=True,
                                turn_complete=False), usage_metadata=None, tool_call=None)

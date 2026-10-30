@@ -16,7 +16,8 @@ def test_extension_pairs_and_only_controls_its_own_tab(tmp_path):
     async def check():
         connected = asyncio.get_running_loop().create_future()
         video = base64.b64encode((Path(__file__).parent / "fixtures" / "signed_browser_test.webm").read_bytes()).decode("ascii")
-        html = f'<video src="data:video/webm;base64,{video}" autoplay loop></video>'.encode()
+        html = (f'<div class="html5-video-player ad-showing"><video src="data:video/webm;base64,{video}" autoplay loop></video></div>'
+                '<script>setTimeout(() => document.querySelector(".html5-video-player").classList.remove("ad-showing"), 2500)</script>').encode()
         async def fixture_http(reader, writer):
             try:
                 await asyncio.wait_for(reader.readuntil(b"\r\n\r\n"), 5)
@@ -40,7 +41,7 @@ def test_extension_pairs_and_only_controls_its_own_tab(tmp_path):
             extension = tmp_path / "extension"
             shutil.copytree(Path(__file__).resolve().parents[2] / "browser-extension", extension)
             worker = extension / "worker.js"
-            source = worker.read_text(encoding="utf-8").replace("127.0.0.1:8000", f"127.0.0.1:{port}").replace("< 25000", "< 8000").replace("https://www.youtube.com", fixture_origin)
+            source = worker.read_text(encoding="utf-8").replace("127.0.0.1:8000", f"127.0.0.1:{port}").replace("< 55000", "< 8000").replace("https://www.youtube.com", fixture_origin)
             worker.write_text(source, encoding="utf-8")
             async with async_playwright() as pw:
                 context = await pw.chromium.launch_persistent_context(str(tmp_path / "profile"), channel="chromium", headless=True,
@@ -52,6 +53,7 @@ def test_extension_pairs_and_only_controls_its_own_tab(tmp_path):
                 await popup.locator("#code").fill("x" * 43)
                 await popup.locator("#pair").click()
                 ws = await asyncio.wait_for(connected, 15)
+                await popup.locator("#status").get_by_text("Connected to Junior on this computer.").wait_for(timeout=10000)
                 async def response():
                     while True:
                         message = json.loads(await ws.recv())
@@ -66,6 +68,8 @@ def test_extension_pairs_and_only_controls_its_own_tab(tmp_path):
                     if "fakevideo01" in page.url:
                         diagnostics.append(await page.evaluate("""() => {let v=document.querySelector('video'); return v ? {paused:v.paused,muted:v.muted,time:v.currentTime,error:v.error?.code} : {url:location.href,title:document.title,body:document.body?.innerText?.slice(0,100)}}"""))
                 assert result["id"] == "a" * 32 and result["result"]["outcome"] == "sent", (result, diagnostics)
+                owned_page = next(page for page in context.pages if "fakevideo01" in page.url)
+                assert await owned_page.locator('.ad-showing').count() == 0
                 assert not unrelated.is_closed() and unrelated.url.endswith("original001")
                 await ws.send(json.dumps({"id": "b" * 32, "command": "media_stop", "payload": {}}))
                 result = await asyncio.wait_for(response(), 10)
@@ -87,5 +91,7 @@ def test_extension_pairs_and_only_controls_its_own_tab(tmp_path):
                 await asyncio.sleep(1)
                 assert not any("fakevideo01" in page.url and not page.is_closed() for page in context.pages)
                 assert not owned.is_closed() and not unrelated.is_closed()
+                await ws.close(code=1008)
+                await popup.locator("#status").get_by_text("Could not connect.", exact=False).wait_for(timeout=10000)
                 await context.close()
     asyncio.run(check())

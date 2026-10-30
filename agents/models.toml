@@ -111,7 +111,7 @@ audio_output = 12.00
 text_input = 0.50
 text_output = 2.00   # not listed separately; the audio models' text output is small
 
-# Other providers for chat (Settings → Models). Voice messages stay on OpenAI.
+# Other providers for chat (Settings → Models). Voice messages and call tasks use the selected chat model too.
 # A model from a provider is written "provider:model", e.g. "deepseek:deepseek-flash".
 # Choose them in Settings -> Models, or here in [tiers] / [agents].
 [providers.deepseek]

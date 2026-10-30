@@ -70,6 +70,31 @@ def test_a_path_you_typed_works_for_the_computer_agent_too(home):
     assert "outside the allowed folders" not in str(tool_output)
 
 
+def test_computer_agent_uses_selected_helper_without_bypassing_approval(home):
+    used = []
+    model = ScriptedModel([
+        step(function_call("ask_computer_agent", {"task": "make plan.txt on my Desktop saying gym at 6"}, call_id="c1")),
+        step(function_call("pc_write", {"file": "Desktop/plan.txt", "content": "gym at 6\n"}, call_id="c2")),
+        step(assistant_message("The card is ready.")),
+        chunked_answer("Please approve the card."),
+    ])
+    with TestClient(create_app(model_provider=lambda: (lambda name: used.append(name) or model))) as client:
+        client.patch("/api/settings", json={"main_model": "gemini:gemini-3.1-flash-lite", "helper_model": "deepseek:deepseek-flash"})
+        events = chat(client, "make plan.txt on my Desktop saying gym at 6")
+        card = next(e["item"] for e in events if e["type"] == "approval")
+        assert card["status"] == "waiting" and not (home / "Desktop" / "plan.txt").exists()
+        assert used[:2] == ["gemini:gemini-3.1-flash-lite", "deepseek:deepseek-flash"]
+        agents = {a["agent"]: a["model"] for a in client.get("/api/models").json()["agents"]}
+        assert agents["computer_agent"] == agents["browser_agent"] == "deepseek:deepseek-flash"
+
+
+def test_pc_and_browser_agents_use_chat_model_when_helper_is_unset():
+    with TestClient(create_app()) as client:
+        client.patch("/api/settings", json={"main_model": "deepseek:deepseek-flash", "helper_model": ""})
+        agents = {a["agent"]: a["model"] for a in client.get("/api/models").json()["agents"]}
+        assert agents["computer_agent"] == agents["browser_agent"] == "deepseek:deepseek-flash"
+
+
 def test_turned_off_means_the_agent_isnt_even_asked(home):
     model = ScriptedModel([
         step(function_call("ask_computer_agent", {"task": "list Desktop"}, call_id="c1")),
